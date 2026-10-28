@@ -1,0 +1,43 @@
+name: Probe sources
+
+# Stage 0.3: check every free data source from a US GitHub runner (geo-blocks, 403s).
+# Manual only. No LLM calls here; MCO output is a channel id and a count, never content.
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Comma-separated subset (ccxt,coinmetrics,fred,fng,coingecko,rss,mco,hyperliquid); empty = all"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      PYTHONUTF8: "1"
+      FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+      COINGECKO_DEMO_KEY: ${{ secrets.COINGECKO_DEMO_KEY }}
+      PROBE_ONLY: ${{ inputs.only }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3 (no floating major tag)
+        with:
+          version: "0.11.7"
+          python-version: "3.12"
+          working-directory: backend
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Probe
+        run: |
+          if [ -n "$PROBE_ONLY" ]; then
+            uv run python scripts/probe_sources.py --only "$PROBE_ONLY"
+          else
+            uv run python scripts/probe_sources.py
+          fi

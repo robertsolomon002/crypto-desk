@@ -12,6 +12,6 @@ feeds:
 
 # MCO's YouTube channel feed (private pipeline, Decision 6). Channel id found in Stage 0.3.
 mco:
-  channel_id: null
+  channel_id: UCngIhBkikUe6e7tZTjpKK7Q # More Crypto Online (verified 2026-10-28 via channel page and feed author)
   max_videos_per_day: 4
   crypto_keywords: [btc, bitcoin, eth, ethereum, sol, solana, crypto, altcoin, altcoins]
