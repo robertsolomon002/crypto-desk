@@ -699,7 +699,7 @@ Each version ships to friends before the next one starts. No fixed dates: priori
 
 ## 14. Progress tracker
 
-- [ ] 0.1 Accounts and keys [Rob] · [x] 0.2 Scaffold monorepo · [ ] 0.3 Verification spike
+- [x] 0.1 Accounts and keys [Rob] · [x] 0.2 Scaffold monorepo · [ ] 0.3 Verification spike
 - [ ] 1.1 Schema and market data · [ ] 1.2 Context, on-chain, macro · [ ] 1.3 Analytics engine · [ ] 1.4 Daily jobs
 - [ ] 2.1 Read API and auth · [ ] 2.2 Deploy
 - [ ] 3.1 Shell and Overview · [ ] 3.2 Charts · [ ] 3.3 Cycles and Stats · [ ] 3.4 Data, Settings, invite friends [Rob]
