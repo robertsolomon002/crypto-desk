@@ -2,7 +2,7 @@
 
 **Prepared for:** Rob (built by Claude Code, one substage per session)
 **Date:** 2026-10-26. v3 replaces v1 and v2. The project changed from a weekly forecasting study into a multi-tab web app, so everything earlier is superseded.
-**Status:** Stage 0.2 done (monorepo scaffolded, CI set up). Stage 0.1 account setup still pending with Rob.
+**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Next: Stage 1.1. Telegram, Discord and Cloudflare keys still pending with Rob (needed by 1.4 and 2.2).
 **Repo:** `robertsolomon002/crypto-desk` (public code; all data and MCO-derived content stay private in the database). Local folder `C:\Users\rober\code\crypto-desk`.
 
 **What it is:** a private, invite-only web app in the spirit of a paid crypto "terminal", built on free data. It has these tabs:
@@ -46,10 +46,10 @@ Every number the app shows, and every number the agent uses, can be inspected in
 | Tab | Contents | Priority |
 |---|---|---|
 | **Overview** | Coin cards (price, 1d/7d/30d change, regime, distance from ATH, latest signal, MCO's current bias), Fear & Greed, macro events this week, top headlines, data freshness | v1 |
-| **Charts** | TradingView Lightweight Charts candles (1D, 1W; 4H if free data allows). Indicators: SMA/EMA (20/50/200), the 20-week SMA "bull market support band", Bollinger Bands, RSI, MACD, volume. Overlays: key levels, zigzag swing pivots, MCO levels and approved MCO wave labels. Ratio mode (SOL/BTC, ETH/BTC) | v1 |
+| **Charts** | TradingView Lightweight Charts candles (1D, 1W; 4H resampled from Coinbase 1h, D22). Indicators: SMA/EMA (20/50/200), the 20-week SMA "bull market support band", Bollinger Bands, RSI, MACD, volume. Overlays: key levels, zigzag swing pivots, MCO levels and approved MCO wave labels. Ratio mode (SOL/BTC, ETH/BTC) | v1 |
 | **Cycles** | BTC (and ETH where data allows) cycle overlays: the current cycle vs 2013, 2017 and 2021, aligned by **halving**, **cycle bottom** or **cycle top**; y-axis as a multiple of the anchor price (log) or % drawdown from ATH. "Day N of cycle" stats table. Year-over-year overlay (each year from Jan 1, normalized). ROI-since-bottom table | v1 |
 | **Stats** | Monthly returns heatmap (year × month), weekly and day-of-week seasonality, return distribution with the current week's percentile, drawdown chart, rolling volatility, rolling correlation between coins | v1 |
-| **On-chain & Macro** | BTC/ETH: MVRV, realized price vs price, NUPL (derived), active addresses, hash rate (BTC), from free Coin Metrics community data. Fear & Greed history. BTC dominance. Macro from FRED: broad dollar index, 10-year yield, fed funds rate, M2, each overlayable on BTC | v1.1 |
+| **On-chain & Macro** | BTC/ETH: MVRV, realized price vs price (derived, D21), NUPL (derived), active addresses, hash rate (BTC), from free Coin Metrics community data. Fear & Greed history. BTC dominance (daily snapshots from Stage 1.2 on; no free history, D23). Macro from FRED: broad dollar index, 10-year yield, fed funds rate, M2, each overlayable on BTC | v1.1 |
 | **Agent** | Chat with a LangGraph agent using `desk-mcp` tools. Model picker. Every tool call is shown as a card, and "View data" opens the exact result in the Data tab. Optional "Ask the desk" mode runs the multi-agent desk (Section 3.3). Friends use their own key | v1.1 |
 | **MCO** | Feed of daily summaries of MCO's latest public YouTube videos: per coin, bias, primary and alternative scenario, key levels, invalidation and targets, with a link to the video. Bias timeline vs price. MCO levels and approved wave labels can be toggled on the Charts tab. Admin review queue for wave labels | v1.2 |
 | **Signals** | Weekly brief from the multi-agent desk; current signals per coin (lean long or flat, confidence, entry zone, invalidation, target); scorecard comparing the desk, two baselines and MCO's bias; alerts to Telegram and Discord | v1.3 |
@@ -73,7 +73,7 @@ Every number the app shows, and every number the agent uses, can be inspected in
    2. MCO summaries skip lower-priority videos;
    3. the weekly brief writer moves from Sonnet to Haiku.
    Weekly signals are never skipped.
-10. **Models:** Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) for agents and the desk, Claude Sonnet 5.5 (`claude-sonnet-5-5`) for the weekly brief writer, and a Gemini Flash-class model for video summaries (Section 3.4). All ids and prices are verified in Stage 0.3. Friends pick any model their key allows; the default is a cheap one.
+10. **Models:** Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) for agents and the desk, Claude Sonnet 5.5 (`claude-sonnet-5-5`) for the weekly brief writer, and a Gemini Flash-class model for video summaries (Section 3.4). All ids and prices are verified in Stage 0.3. Friends pick any model their key allows; the default is a cheap one. *Updated 2026-10-28 (D24, approved by Rob): Claude Haiku 5.5 (`claude-haiku-5-5`) replaces Haiku 4.5 everywhere; the video model is Gemini 3.5 Flash-Lite with 3.8 Flash as backup (D25).*
 11. **Alerts:** Telegram (to Rob) and Discord (a channel Rob's friends can join). Events: weekly brief ready, key-level crossings, new MCO video summarized, ops failures. Ops failures go to admin channels only.
 12. **Your own MCP server (`desk-mcp`)** wraps the same analytics functions the API uses. The in-app agent uses it, and Rob can also use it from the Claude desktop app. Each tool is defined once and reused in both places.
 13. **Build order:**
@@ -88,9 +88,9 @@ Every number the app shows, and every number the agent uses, can be inspected in
 
 ### 3.1 Data and analytics (backend package `desk`)
 
-- **Prices:** daily OHLCV from Coinbase through `ccxt` (canonical). Long BTC history for the 2013 cycle comes from Coin Metrics community `PriceUSD` (or Bitstamp through `ccxt`); verify in Stage 0.3. Weekly bars are resampled from daily, with weeks running Monday 00:00 UTC to the next Monday 00:00 UTC. Only closed candles are stored. **Binance is geo-blocked for US cloud IPs and in Ontario: never use it.**
-- **Context:** Fear & Greed (alternative.me, full history); BTC dominance (CoinGecko Demo key; history depth to verify, otherwise snapshot daily from now on); FRED series (free key); RSS headlines (CoinDesk, Cointelegraph, Decrypt, The Block); a macro calendar YAML (FOMC and CPI dates, from official schedules).
-- **On-chain:** Coin Metrics community API for BTC and ETH (market cap, realized cap, MVRV, active addresses, hash rate). The exact metric names and free availability are verified in Stage 0.3. NUPL is derived as (market cap − realized cap) / market cap.
+- **Prices:** daily OHLCV from Coinbase through `ccxt` (canonical). Coinbase daily history starts 2015-07-20 (BTC), 2016-05-18 (ETH) and 2021-06-17 (SOL). BTC before that (the 2013 cycle) comes from Coin Metrics community `PriceUSD` (from 2010-07-18, close only); Bitstamp is the fallback exchange (D20). Weekly bars are resampled from daily, with weeks running Monday 00:00 UTC to the next Monday 00:00 UTC. Only closed candles are stored. **Binance is geo-blocked for US cloud IPs and in Ontario: never use it.**
+- **Context:** Fear & Greed (alternative.me, full history); BTC dominance (CoinGecko Demo key; no history on Demo, so a daily snapshot from now on, D23); FRED series (free key); RSS headlines (CoinDesk, Cointelegraph, Decrypt, The Block); a macro calendar YAML (FOMC and CPI dates, from official schedules).
+- **On-chain:** Coin Metrics community API for BTC and ETH: `PriceUSD`, `CapMrktCurUSD`, `CapMVRVCur`, `SplyCur`, `AdrActCnt`, `HashRate` (verified free). `CapRealUSD` is not free, so realized cap is derived as market cap / MVRV, realized price as realized cap / supply, and NUPL as (market cap − realized cap) / market cap (D21).
 - **Analytics** (pure functions, each with an `as_of` parameter):
   - indicators (SMA/EMA, Bollinger, RSI, MACD, realized volatility);
   - regime label (`uptrend`, `downtrend`, `range`, `high-vol`, with frozen rules in `docs/DECISIONS.md`);
@@ -137,7 +137,7 @@ START ─┬─> technical_analyst (market tools) ─┐
 
 ### 3.4 MCO pipeline (private)
 
-1. **Discover (daily, 06:30 UTC):** fetch MCO's channel RSS feed (`https://www.youtube.com/feeds/videos.xml?channel_id=<id>`; verify the channel id). Keep new videos not yet processed. Filter to crypto videos (title or description mentions BTC, ETH, SOL, crypto or altcoins). At most 4 per day, newest first.
+1. **Discover (daily, 06:30 UTC):** fetch MCO's channel RSS feed (`https://www.youtube.com/feeds/videos.xml?channel_id=UCngIhBkikUe6e7tZTjpKK7Q`). It returned 404 from a GitHub runner, so fall back to the YouTube Data API v3 uploads playlist (D26). Keep new videos not yet processed. Filter to crypto videos (title or description mentions BTC, ETH, SOL, crypto or altcoins). At most 4 per day, newest first.
 2. **Summarize:** send the public video URL to the Gemini API, which can take a YouTube URL as input (verify support, quotas and free-tier limits in Stage 0.3). Fallback if that fails: summarize the title and description only, marked "low detail". YouTube transcript downloads are usually blocked from cloud IPs, so they are not used in CI. The output is a strict JSON schema: per coin mentioned, the bias (`bullish`, `bearish` or `neutral`), the current wave position as text, the primary scenario, the alternative scenario, key levels (price plus label), invalidation, targets, a timeframe, a confidence that the extraction is right (`high`, `medium`, `low`), and `pivot_labels` (wave label, approximate date, approximate price, chart timeframe). Plus a 120-word overall summary.
 3. **Snap wave labels:** match each extracted `pivot_label` to the nearest zigzag pivot of the right type (high or low) within a tolerance window (time and price). Unmatched labels are flagged.
 4. **Admin review:** Rob sees each video's extracted labels drawn on the chart and approves, edits (drag a label to another pivot) or rejects them. **Only approved labels are visible to members.** Levels and the summary are visible right away, marked "AI-extracted".
@@ -159,7 +159,7 @@ START ─┬─> technical_analyst (market tools) ─┐
 
 ### 3.6 Security and privacy
 
-- **Auth:** Clerk (free tier). Restricted sign-up, invite-only. Google or email login. The backend verifies Clerk JWTs on every request, and roles are stored in Clerk metadata or the DB. Verify Clerk free-tier features in Stage 0.3.
+- **Auth:** Clerk (free tier). Access mode "Invite-only" (verified on the free plan, D29). Google or email login. The backend verifies Clerk JWTs on every request, and roles are stored in Clerk metadata or the DB.
 - **User keys:**
   - kept in `localStorage`;
   - sent in a request header only to our backend;
@@ -241,7 +241,7 @@ Data stays far below Neon's free storage limit (verify the limit). Daily candles
 | Scheduled jobs | GitHub Actions cron (free for public repos) | Runs `desk jobs ...` against Neon |
 | Agents | LangGraph + LangChain (Anthropic, OpenAI, OpenRouter via the OpenAI-compatible client) + `langchain-mcp-adapters`; LangSmith free tier for tracing | Same skills as ESSCONTI; agents, evals and observability |
 | MCP | Official `mcp` Python SDK (`FastMCP`), stdio | `desk-mcp` for the in-app agent and for Rob's Claude desktop app |
-| Video summaries | Gemini API (Flash-class model, free tier if quotas allow) | Reads public YouTube videos by URL from the cloud |
+| Video summaries | Gemini API (`gemini-3.5-flash-lite` on the free tier, D25) | Reads public YouTube videos by URL from the cloud |
 | Alerts | Telegram Bot API, Discord webhook | Free |
 
 ## 7. Budget
@@ -251,11 +251,11 @@ Data stays far below Neon's free storage limit (verify the limit). Daily candles
 
 | Item | Est. per month |
 |---|---|
-| Weekly desk on 3 coins + up to ~3 watchlist coins (Haiku, about 9 calls per coin) | $1.00 to $2.00 |
+| Weekly desk on 3 coins + up to ~3 watchlist coins (Haiku 5.5, about 9 calls per coin) | $0.10 to $0.40 |
 | Weekly brief writer (Sonnet 5.5) | $0.45 |
-| MCO summaries (Gemini Flash-class, up to ~4 videos a day; possibly $0 on the free tier) | $0 to $1.50 |
-| Rob's own agent chat (Haiku default, capped) | up to $2.00 |
-| **Total** | **about $2 to $4, hard cap $8** |
+| MCO summaries (Gemini 3.5 Flash-Lite, up to ~4 videos a day, free tier; about $0.30 if paid) | $0 |
+| Rob's own agent chat (Haiku 5.5 default, capped) | up to $1.00 |
+| **Total** | **about $0.50 to $2, hard cap $8** (re-estimated in Stage 0.3 with Haiku 5.5, D24) |
 
 - **Friends:** their own key. A typical friend asking ~50 questions a month on a cheap model spends cents to a dollar or so. `docs/FRIENDS_SETUP.md` explains how to set an OpenRouter spending limit.
 
@@ -317,7 +317,7 @@ Data stays far below Neon's free storage limit (verify the limit). Daily candles
   2. **Google Cloud:** a project `crypto-desk` with billing enabled (needed for the free tier), Cloud Run, Artifact Registry and Secret Manager APIs enabled, and **a budget alert at $1**.
   3. **Neon:** a free project `crypto-desk`; copy the pooled connection string.
   4. **Cloudflare:** a free account (Pages).
-  5. **Clerk:** an application with Google plus email sign-in and sign-up mode set to restricted (invite-only); copy the publishable key and secret key.
+  5. **Clerk:** an application with Google plus email sign-in and Access mode set to Invite-only (User & authentication → Access mode; the old "restricted" sign-up mode); copy the publishable key and secret key.
   6. **Anthropic API key:** monthly limit $6, auto-reload off.
   7. **Google AI Studio (Gemini) API key.**
   8. **OpenRouter account and key with a $2 limit** (to test the friends' path).
@@ -581,7 +581,8 @@ Data stays far below Neon's free storage limit (verify the limit). Daily candles
 
 - **6.1 MCO ingest pipeline** (plan mode).
   Prompt: "Read ROADMAP.md Sections 1 to 10, especially Section 3.4 and Decision 6, and the Gemini findings in `docs/DATA_SOURCES.md`.
-  1. Implement `mco/discover.py`: channel RSS, the crypto filter, a cap of 4 per day, and dedupe by video id.
+  **[Rob] first:** enable the YouTube Data API v3 in the `crypto-desk-gemini` project, create an API key restricted to it, and add `YOUTUBE_API_KEY` to `.env` and GitHub secrets (D26).
+  1. Implement `mco/discover.py`: channel RSS with the YouTube Data API uploads playlist as fallback (D26), the crypto filter, a cap of 4 per day, and dedupe by video id.
   2. Implement `mco/summarize.py`: send the public video URL to Gemini with `prompts/mco_extract_v1.md`, get strict JSON (Section 3.4), validate it with Pydantic, repair once, and fall back to title and description marked 'low detail'. Record cost in `llm_spend`.
   3. Implement `mco/snap.py`: match `pivot_labels` to zigzag pivots of the right type within a tolerance (default ±5 daily bars and ±3% price on 1D; scale for 1W); store the result as `pending`, with unmatched labels flagged.
   4. Write `jobs/mco_daily.py` and `mco.yml` (cron `30 6 * * *` plus `workflow_dispatch`). It sends a `new_mco_summary` alert (title, per-coin bias, link) to Telegram and Discord.
@@ -699,7 +700,7 @@ Each version ships to friends before the next one starts. No fixed dates: priori
 
 ## 14. Progress tracker
 
-- [x] 0.1 Accounts and keys [Rob] · [x] 0.2 Scaffold monorepo · [ ] 0.3 Verification spike
+- [x] 0.1 Accounts and keys [Rob] · [x] 0.2 Scaffold monorepo · [x] 0.3 Verification spike
 - [ ] 1.1 Schema and market data · [ ] 1.2 Context, on-chain, macro · [ ] 1.3 Analytics engine · [ ] 1.4 Daily jobs
 - [ ] 2.1 Read API and auth · [ ] 2.2 Deploy
 - [ ] 3.1 Shell and Overview · [ ] 3.2 Charts · [ ] 3.3 Cycles and Stats · [ ] 3.4 Data, Settings, invite friends [Rob]
@@ -711,13 +712,11 @@ Each version ships to friends before the next one starts. No fixed dates: priori
 
 ## 15. Open items
 
-- To confirm in Stage 0.3:
-  - free on-chain coverage (Coin Metrics community metrics);
-  - BTC dominance history on CoinGecko Demo;
-  - Gemini YouTube URL support and quotas;
-  - Clerk free invite-only support;
-  - Cloud Run SSE limits;
-  - whether Coinbase has 4H candles.
-- MCO's channel id, and whether Rob wants other YouTube analysts added in the same pipeline (each needs the same private, attributed treatment).
+- Resolved in Stage 0.3 (see `docs/DATA_SOURCES.md` and D20 to D30): on-chain coverage (realized cap derived), dominance history (not free; daily snapshots), Gemini YouTube URLs (free preview, 8 h/day), Clerk invite-only (free), Cloud Run streaming (supported, timeout up to 60 min), Coinbase 4H (no; resampled from 1h), MCO channel id.
+- Still open from Stage 0.3:
+  - live Telegram and Discord test messages (once Rob adds those secrets, before Stage 1.4);
+  - Gemini free-tier RPM/RPD are only visible in AI Studio; check them there before Stage 6.1, and retry `gemini-3.8-flash` (503 during the probe);
+  - YouTube Data API key for MCO discovery from CI (Stage 6.1, D26).
+- Whether Rob wants other YouTube analysts added in the same pipeline (each needs the same private, attributed treatment).
 - Whether friends should get their own watchlists (v1 has one shared watchlist managed by Rob).
 - Optional later: Telegram or Discord bot commands (for example `/price SOL`, `/cycle`) that answer from the API.

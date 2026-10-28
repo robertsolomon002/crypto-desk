@@ -1,16 +1,16 @@
-# RSS headline feeds (Section 3.1). URLs are candidates until Stage 0.3 probes each one
-# and records the result in docs/DATA_SOURCES.md. Headlines are untrusted text.
+# RSS headline feeds (Section 3.1). All four verified locally and from a GitHub runner on
+# 2026-10-28 (docs/DATA_SOURCES.md). Headlines are untrusted text.
 feeds:
   - name: CoinDesk
-    url: https://www.coindesk.com/arc/outboundfeeds/rss/ # unverified (Stage 0.3)
+    url: https://www.coindesk.com/arc/outboundfeeds/rss/
   - name: Cointelegraph
-    url: https://cointelegraph.com/rss # unverified (Stage 0.3)
+    url: https://cointelegraph.com/rss
   - name: Decrypt
-    url: https://decrypt.co/feed # unverified (Stage 0.3)
+    url: https://decrypt.co/feed
   - name: The Block
-    url: https://www.theblock.co/rss.xml # unverified (Stage 0.3)
+    url: https://www.theblock.co/rss.xml
 
-# MCO's YouTube channel feed (private pipeline, Decision 6). Channel id found in Stage 0.3.
+# MCO's YouTube channel (private pipeline, Decision 6). RSS 404s from GitHub runners: D26.
 mco:
   channel_id: UCngIhBkikUe6e7tZTjpKK7Q # More Crypto Online (verified 2026-10-28 via channel page and feed author)
   max_videos_per_day: 4

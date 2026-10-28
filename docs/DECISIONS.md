@@ -129,3 +129,82 @@ The backend writes `frontend/openapi.json` (`desk api openapi`), `npm run gen:ap
 - One `.env` at the repo root for both apps; Vite reads it with `envDir: '..'` and only exposes `VITE_*` variables.
 - The CLI gains an `api` group (`desk api serve`, `desk api openapi`) next to the Section 4 groups.
 - `.gitattributes` forces LF line endings so Windows and Ubuntu agree.
+
+## D20. Price history: Coinbase canonical, Coin Metrics for early BTC
+
+*2026-10-28, Stage 0.3.*
+
+Coinbase (`ccxt` id `coinbase`) stays canonical for daily OHLCV: BTC from 2015-07-20, ETH from 2016-05-18, SOL from 2021-06-17, no key, works from US cloud IPs. BTC before 2015-07-20 (needed for the 2013 cycle) comes from Coin Metrics `PriceUSD` (from 2010-07-18), stored with `source=coinmetrics` and close-only (no OHLC). Bitstamp (BTC from 2011-08-18) is the fallback exchange if Coinbase fails. See `docs/DATA_SOURCES.md`.
+
+## D21. On-chain: realized cap is derived
+
+*2026-10-28, Stage 0.3.*
+
+`CapRealUSD` is not in the Coin Metrics community catalog. Realized cap is derived as `CapMrktCurUSD / CapMVRVCur`, realized price as realized cap / `SplyCur`, and NUPL as (market cap − realized cap) / market cap. Stored metrics: PriceUSD, CapMrktCurUSD, CapMVRVCur, SplyCur, AdrActCnt, HashRate (BTC; ETH hash rate ends at the Merge).
+
+## D22. 4H candles: resampled from Coinbase 1h
+
+*2026-10-28, Stage 0.3.*
+
+Coinbase has no native 4h timeframe (it has 1h, 2h and 6h). 4H bars are resampled from closed Coinbase 1h candles on 00/04/08/12/16/20 UTC boundaries, keeping one canonical source. Only recent history (for example the last 180 days) is kept for 4H. Bitstamp's native 4h is the fallback.
+
+## D23. BTC dominance: daily snapshot from now on
+
+*2026-10-28, Stage 0.3.*
+
+CoinGecko Demo has current dominance (`/global`) but no history: `/global/market_cap_chart` is Pro-only (401, error 10005) and coin history is capped at 365 days (error 10012). The daily job stores a `dominance:btc` (and `dominance:eth`) snapshot from Stage 1.2 onward, and the UI says when the series starts.
+
+## D24. Server models: Haiku 5.5 replaces Haiku 4.5 (supersedes part of D10)
+
+*2026-10-28, Stage 0.3, approved by Rob.*
+
+Claude Haiku 5.5 (`claude-haiku-5-5`, $0.10/$0.50 per MTok for prompts up to 100K tokens) replaces Haiku 4.5 ($1/$5) for agents, chat and desk nodes; both passed the structured-output probe. Sonnet 5.5 (`claude-sonnet-5-5`, $2/$10) stays the brief writer. Decision 9 degradation: chat drops to Haiku 5.5 with effort `low`; the brief writer drops to Haiku 5.5. Friends' defaults: OpenRouter `anthropic/claude-haiku-5.5`, Anthropic `claude-haiku-5-5`; the OpenAI default is chosen in Stage 5.1 against OpenAI's own model docs. Haiku 5.5 counts about 25% more tokens for the same text (new tokenizer) and does not accept `budget_tokens`, prefill or non-default sampling parameters.
+
+## D25. Video summaries: Gemini 3.5 Flash-Lite on the free tier
+
+*2026-10-28, Stage 0.3.*
+
+`gemini-3.5-flash-lite` read a 14-minute MCO video by YouTube URL in 10 s (about 84K input tokens) and returned schema-valid JSON. `gemini-3.8-flash` and `gemini-3.6-flash` returned 503 "high demand" at first; a later 3.8 Flash retry succeeded after 299 s. Stage 6.1 uses a chain: `gemini-3.5-flash-lite` → `gemini-3.8-flash`, each with backoff retries, then the title-and-description fallback marked "low detail". The probe's BTC bias ("bullish") contradicted its own downside C-wave targets, so `summarize.py` adds a deterministic consistency check (bias vs target direction relative to price) that marks the extraction `low` confidence, and wave labels stay behind Rob's approval (Decision 7). YouTube URL input is a free preview feature, and free-tier data may be used by Google (acceptable: only public videos and our prompt).
+
+## D26. MCO discovery: RSS with a YouTube Data API fallback
+
+*2026-10-28, Stage 0.3.*
+
+MCO's channel id is `UCngIhBkikUe6e7tZTjpKK7Q`. Its RSS feed works from Rob's PC but failed on all three GitHub runner attempts (404, 500, 500). `mco/discover.py` tries the RSS feed first, then YouTube Data API v3 `playlistItems.list` on the uploads playlist (1 quota unit per call, 10,000 units/day by default). Stage 6.1 adds a [Rob] step: enable the YouTube Data API v3 in the `crypto-desk-gemini` project and add `YOUTUBE_API_KEY`.
+
+## D27. Structured output uses `json_schema`
+
+*2026-10-28, Stage 0.3.*
+
+Forced `tool_choice` returns 400 on Claude Sonnet 5.5 (and Opus 5.5 / Fable 5.1). All structured-output calls use `with_structured_output(Schema, method="json_schema")`, which worked on Haiku 4.5, Haiku 5.5, Sonnet 5.5 and OpenRouter. Code never sets `tool_choice` to `any` or a named tool.
+
+## D28. Agent constructor: `langchain.agents.create_agent` or an explicit graph
+
+*2026-10-28, Stage 0.3.*
+
+`langgraph.prebuilt.create_react_agent` is deprecated since LangGraph 1.0 in favor of `create_agent` in the `langchain` package (not yet a dependency; PyPI latest 1.4.7). Stage 5.1 adds `langchain` and uses `create_agent`, or builds the tool loop as an explicit `StateGraph`, after checking the installed source. Streaming uses `astream` with `stream_mode=["messages", "updates"]` (or `astream_events`) mapped to SSE `token`, `tool_start` and `tool_end` events. The `langchain-mcp-adapters` stdio round trip works (`MultiServerMCPClient` → `get_tools()`).
+
+## D29. Clerk: Invite-only works on the free plan
+
+*2026-10-28, Stage 0.3.*
+
+Clerk renamed the sign-up mode setting to **Access mode** (User & authentication → Access mode); "Invite-only" is the dashboard label for `restricted`. Rob selected it on the free Hobby plan with no upgrade prompt. Hobby allows 50,000 monthly retained users; the "Secured by Clerk" branding stays (removing it is paid). Waitlist mode is the fallback.
+
+## D30. Fallback per service
+
+*2026-10-28, Stage 0.3.*
+
+| Service | Fallback if the free tier changes or fails |
+|---|---|
+| Coinbase (prices) | Bitstamp via ccxt; Coin Metrics `PriceUSD` (close only) |
+| Coin Metrics community | Derive what we can from price data; hide the affected on-chain panels |
+| CoinGecko Demo (dominance) | Skip the day; keep the series gap-tolerant |
+| FRED, Fear & Greed, RSS | Skip and mark stale in the Data tab freshness view |
+| Gemini free tier | Paid Flash-Lite (about $0.30/month at 4 videos a day) under the D9 cap, else title and description only |
+| YouTube RSS | YouTube Data API v3 (D26) |
+| Cloud Run | Render or Fly.io free web service |
+| Neon | Supabase free Postgres |
+| Clerk | Supabase Auth, or Clerk Waitlist mode |
+| Cloudflare Pages | GitHub Pages or Netlify free |
+| LangSmith | Tracing off (it is optional) |
+| Anthropic server key | Haiku 5.5 via OpenRouter on a capped key |

@@ -1,16 +1,24 @@
-# LLM models (Decision 10). Ids and prices are verified in Stage 0.3 and recorded in
-# docs/DATA_SOURCES.md; update this file then. Prices are USD per million tokens.
+# LLM models (Decision 10, updated by D24 and D25). Ids and prices verified 2026-10-28 in
+# Stage 0.3 and recorded in docs/DATA_SOURCES.md. Prices are USD per million tokens.
 server:
-  agent: claude-haiku-4-5-20251001 # agents, chat and the desk nodes
+  agent: claude-haiku-5-5 # agents, chat and the desk nodes (D24)
   brief_writer: claude-sonnet-5-5 # weekly brief
-  brief_writer_degraded: claude-haiku-4-5-20251001 # Decision 9, step 3
-  chat_degraded: null # Decision 9, step 1: cheaper model for Rob's chat, chosen in Stage 0.3
-  video_summary: null # Gemini Flash-class model id, chosen in Stage 0.3
+  brief_writer_degraded: claude-haiku-5-5 # Decision 9, step 3
+  chat_degraded: claude-haiku-5-5 # Decision 9, step 1: same model at effort "low", fewer tokens
+  video_summary: # tried in order, each with backoff retries; then title+description (D25)
+    - gemini-3.5-flash-lite
+    - gemini-3.8-flash
 
 # Defaults offered to friends who bring their own key (cheap first).
 byo_defaults:
-  openrouter: null # chosen in Stage 0.3
-  anthropic: claude-haiku-4-5-20251001
-  openai: null # chosen in Stage 0.3
+  openrouter: anthropic/claude-haiku-5.5
+  anthropic: claude-haiku-5-5
+  openai: null # chosen in Stage 5.1 from OpenAI's own model docs
 
-prices: {} # filled in Stage 0.3
+prices: # input, output per MTok; Anthropic https://platform.claude.com/docs/en/about-claude/pricing
+  claude-haiku-5-5: { input: 0.10, output: 0.50 } # prompts <= 100K tokens; 0.50 / 2.50 above
+  claude-haiku-4-5: { input: 1.00, output: 5.00 }
+  claude-sonnet-5-5: { input: 2.00, output: 10.00 }
+  # Gemini runs on the free tier ($0). Paid-tier prices, for the D9 cap if that changes:
+  gemini-3.5-flash-lite: { input: 0.30, output: 2.50 }
+  gemini-3.8-flash: { input: 0.75, output: 3.75 } # until 2026-12-31; then 1.50 / 7.50
