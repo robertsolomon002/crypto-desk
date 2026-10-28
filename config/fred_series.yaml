@@ -1,0 +1,15 @@
+# FRED macro series for the On-chain & Macro tab (Section 1). Verified in Stage 0.3.
+# Stored in `series` as key "fred:<id>".
+series:
+  - id: DTWEXBGS
+    label: Broad U.S. dollar index
+    units: index
+  - id: DGS10
+    label: 10-year Treasury yield
+    units: percent
+  - id: DFF
+    label: Effective federal funds rate
+    units: percent
+  - id: M2SL
+    label: M2 money supply
+    units: billions USD

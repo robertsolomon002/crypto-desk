@@ -1,0 +1,31 @@
+# App-wide settings. Secrets never go here (use .env / GitHub secrets / Secret Manager).
+
+features: # Decision 1: switch features off per deployment
+  mco: true # also MCO_ENABLED env var; off if the app ever goes public without permission
+  agent: false # v1.1
+  signals: false # v1.3
+  onchain_macro: false # v1.1
+
+budget: # Decision 9. The cap itself is enforced in backend/src/desk/agents/cost.py
+  server_llm_cap_usd_per_month: 8.0
+  degrade_order: [chat_model, mco_low_priority, brief_writer_haiku]
+
+agent: # Section 3.2
+  max_tool_calls: 10
+  timeout_seconds: 90
+  messages_per_user_per_hour: 30
+
+signals: # Decision 8 and Section 3.5
+  version: v1
+  horizon_days: 7
+  confidence_min: 0.5
+  confidence_max: 0.95
+  max_watchlist_coins_in_desk: 3
+  paper_cost_per_side: 0.002
+
+alerts: # Decision 11: which channels get each event
+  brief_ready: [telegram, discord]
+  level_cross: [telegram, discord]
+  new_mco_summary: [telegram, discord]
+  mco_review_pending: [telegram]
+  ops_failure: [telegram, discord_ops] # admin channels only

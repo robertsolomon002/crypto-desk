@@ -1,0 +1,16 @@
+# LLM models (Decision 10). Ids and prices are verified in Stage 0.3 and recorded in
+# docs/DATA_SOURCES.md; update this file then. Prices are USD per million tokens.
+server:
+  agent: claude-haiku-4-5-20251001 # agents, chat and the desk nodes
+  brief_writer: claude-sonnet-5-5 # weekly brief
+  brief_writer_degraded: claude-haiku-4-5-20251001 # Decision 9, step 3
+  chat_degraded: null # Decision 9, step 1: cheaper model for Rob's chat, chosen in Stage 0.3
+  video_summary: null # Gemini Flash-class model id, chosen in Stage 0.3
+
+# Defaults offered to friends who bring their own key (cheap first).
+byo_defaults:
+  openrouter: null # chosen in Stage 0.3
+  anthropic: claude-haiku-4-5-20251001
+  openai: null # chosen in Stage 0.3
+
+prices: {} # filled in Stage 0.3

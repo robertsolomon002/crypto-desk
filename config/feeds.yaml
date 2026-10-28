@@ -1,0 +1,17 @@
+# RSS headline feeds (Section 3.1). URLs are candidates until Stage 0.3 probes each one
+# and records the result in docs/DATA_SOURCES.md. Headlines are untrusted text.
+feeds:
+  - name: CoinDesk
+    url: https://www.coindesk.com/arc/outboundfeeds/rss/ # unverified (Stage 0.3)
+  - name: Cointelegraph
+    url: https://cointelegraph.com/rss # unverified (Stage 0.3)
+  - name: Decrypt
+    url: https://decrypt.co/feed # unverified (Stage 0.3)
+  - name: The Block
+    url: https://www.theblock.co/rss.xml # unverified (Stage 0.3)
+
+# MCO's YouTube channel feed (private pipeline, Decision 6). Channel id found in Stage 0.3.
+mco:
+  channel_id: null
+  max_videos_per_day: 4
+  crypto_keywords: [btc, bitcoin, eth, ethereum, sol, solana, crypto, altcoin, altcoins]

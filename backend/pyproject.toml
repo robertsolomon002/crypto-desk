@@ -1,0 +1,64 @@
+[project]
+name = "desk"
+version = "0.1.0"
+description = "Crypto Desk backend: data, analytics, API, desk-mcp and agents"
+authors = [
+    { name = "robertsolomon002", email = "robert.solomon@mail.mcgill.ca" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.20.1",
+    "ccxt>=4.5.90",
+    "fastapi>=0.162.0",
+    "feedparser>=6.0.14",
+    "httpx>=0.28.1",
+    "langchain-anthropic>=1.7.7",
+    "langchain-core>=1.7.0",
+    "langchain-google-genai>=4.4.2",
+    "langchain-mcp-adapters>=0.3.2",
+    "langchain-openai>=1.7.3",
+    "langgraph>=1.2.18",
+    "langsmith>=0.14.14",
+    "mcp>=1.30.0",
+    "numpy>=2.5.4",
+    "pandas>=3.1.0",
+    "psycopg[binary]>=3.3.6",
+    "pydantic-settings>=2.16.2",
+    "pyjwt[crypto]>=2.15.1",
+    "pyyaml>=6.0.3",
+    "sqlalchemy>=2.0",
+    "typer>=0.27.3",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[project.scripts]
+desk = "desk.cli:app"
+desk-mcp = "desk.mcp_server.server:main"
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1",
+    "respx>=0.23.1",
+    "ruff>=0.17.3",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "DTZ"]
+
+[tool.ruff.lint.per-file-ignores]
+"migrations/*" = ["DTZ"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = ["live: hits a real network source; skipped unless RUN_LIVE=1"]

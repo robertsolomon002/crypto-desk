@@ -2,7 +2,7 @@
 
 **Prepared for:** Rob (built by Claude Code, one substage per session)
 **Date:** 2026-10-26. v3 replaces v1 and v2. The project changed from a weekly forecasting study into a multi-tab web app, so everything earlier is superseded.
-**Status:** Planning complete. No code yet.
+**Status:** Stage 0.2 done (monorepo scaffolded, CI set up). Stage 0.1 account setup still pending with Rob.
 **Repo:** `robertsolomon002/crypto-desk` (public code; all data and MCO-derived content stay private in the database). Local folder `C:\Users\rober\code\crypto-desk`.
 
 **What it is:** a private, invite-only web app in the spirit of a paid crypto "terminal", built on free data. It has these tabs:
@@ -188,7 +188,7 @@ crypto-desk/
       signals/     run.py  baselines.py  score.py
       notify/      telegram.py  discord.py
       jobs/        daily.py  weekly.py  levelwatch.py  mco_daily.py
-      cli.py       # Typer: desk data|analytics|jobs|mcp|admin
+      cli.py       # Typer: desk data|analytics|jobs|mcp|admin|api
     tests/
   frontend/
     package.json  vite.config.ts  tsconfig.json  index.html
@@ -330,7 +330,7 @@ Data stays far below Neon's free storage limit (verify the limit). Daily candles
 - **0.2 Scaffold the monorepo.**
   Prompt: "Read ROADMAP.md Sections 1 to 10. Scaffold the repo exactly as in Section 4.
   1. **Backend:** a `uv` project (Python 3.12) with package `desk`, a Typer CLI `desk` and an entry point `desk-mcp`. Dependencies: FastAPI, uvicorn, SQLAlchemy 2.0, Alembic, psycopg (v3), pydantic-settings, ccxt, pandas, numpy, httpx, feedparser, pyyaml, `mcp`, langgraph, langchain-core, langchain-anthropic, langchain-openai, langchain-google-genai, langchain-mcp-adapters, langsmith, `clerk-backend-api` or PyJWT with JWKS. Dev dependencies: pytest, pytest-asyncio, respx, ruff. A Dockerfile and a `docker-compose.yml` with local Postgres.
-  2. **Frontend:** Vite, React and TypeScript (strict), Tailwind, shadcn/ui, TanStack Query, React Router, `lightweight-charts`, `echarts` with `echarts-for-react`, `@clerk/clerk-react`, Vitest, React Testing Library, Playwright, ESLint and Prettier.
+  2. **Frontend:** Vite, React and TypeScript (strict; pinned to 6.0 until typescript-eslint supports 7, D14), Tailwind, shadcn/ui, TanStack Query, React Router, `lightweight-charts`, `echarts` with `echarts-for-react`, `@clerk/react` (`@clerk/clerk-react` is deprecated, D15), Vitest, React Testing Library, Playwright, ESLint and Prettier.
   3. **Config files** with commented defaults from Sections 2, 3 and 7.
   4. **`.env.example`:** keep the file Rob already has (same variable names) and add any new ones it needs, with comments.
   5. **README stub** with the not-financial-advice notice.
@@ -699,7 +699,7 @@ Each version ships to friends before the next one starts. No fixed dates: priori
 
 ## 14. Progress tracker
 
-- [ ] 0.1 Accounts and keys [Rob] · [ ] 0.2 Scaffold monorepo · [ ] 0.3 Verification spike
+- [ ] 0.1 Accounts and keys [Rob] · [x] 0.2 Scaffold monorepo · [ ] 0.3 Verification spike
 - [ ] 1.1 Schema and market data · [ ] 1.2 Context, on-chain, macro · [ ] 1.3 Analytics engine · [ ] 1.4 Daily jobs
 - [ ] 2.1 Read API and auth · [ ] 2.2 Deploy
 - [ ] 3.1 Shell and Overview · [ ] 3.2 Charts · [ ] 3.3 Cycles and Stats · [ ] 3.4 Data, Settings, invite friends [Rob]

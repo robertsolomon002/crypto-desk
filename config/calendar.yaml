@@ -1,0 +1,10 @@
+# Macro calendar (Section 3.1). Filled in Stage 1.2 from the official schedules, with source URLs:
+#   FOMC: federalreserve.gov FOMC calendar. CPI: bls.gov CPI release schedule.
+# Dates are UTC dates; `time_utc` is the release/decision time in UTC.
+# Example entry:
+#   - date: 2026-12-09
+#     time_utc: "19:00"
+#     kind: fomc            # fomc | cpi
+#     title: FOMC rate decision
+#     source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+events: []

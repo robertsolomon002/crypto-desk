@@ -1,0 +1,21 @@
+# Coins tracked by the desk (Decision 3).
+# core: always on. watchlist: managed by Rob in Settings (max 10; eligibility: a Coinbase USD
+# market and at least 1 year of history). This file only seeds the `coins` table (Stage 1.1).
+# source_market is the ccxt Coinbase symbol; exact symbols and history depth are verified in Stage 0.3.
+max_watchlist: 10
+
+core:
+  - symbol: BTC
+    name: Bitcoin
+    aliases: [bitcoin, btc, xbt]
+    source_market: BTC/USD
+  - symbol: ETH
+    name: Ethereum
+    aliases: [ethereum, eth, ether]
+    source_market: ETH/USD
+  - symbol: SOL
+    name: Solana
+    aliases: [solana, sol]
+    source_market: SOL/USD
+
+watchlist: []

@@ -1,0 +1,28 @@
+# Cycle anchors for the Cycles tab (Section 3.1).
+# Halving dates are fixed protocol events (UTC dates).
+# Bottoms and tops are search WINDOWS. Stage 1.3 finds the actual daily close low/high inside
+# each window and checks it against an independent source. Do not hard-code exact dates here
+# until that check is done and recorded in docs/DECISIONS.md.
+halvings:
+  - 2012-11-28
+  - 2016-07-09
+  - 2020-05-11
+  - 2024-04-20
+
+cycles:
+  BTC:
+    - name: "2013"
+      top_window: [2013-11-01, 2013-12-31]
+      bottom_window: [2014-12-01, 2015-02-28]
+    - name: "2017"
+      top_window: [2017-12-01, 2017-12-31]
+      bottom_window: [2018-11-15, 2019-01-31]
+    - name: "2021"
+      top_window: [2021-10-15, 2021-11-30]
+      bottom_window: [2022-11-01, 2022-12-31]
+    - name: current
+      top_window: null # filled once the current cycle top is confirmed
+      bottom_window: null
+
+# Default anchor mode for the Cycles tab: halving | bottom | top
+default_anchor: halving
