@@ -208,3 +208,17 @@ Clerk renamed the sign-up mode setting to **Access mode** (User & authentication
 | Cloudflare Pages | GitHub Pages or Netlify free |
 | LangSmith | Tracing off (it is optional) |
 | Anthropic server key | Haiku 5.5 via OpenRouter on a capped key |
+
+## D31. Market data storage rules
+
+*2026-10-28, Stage 1.1.*
+
+- **Closed candles only:** a daily bar is stored once `open time + 1 day <= now (UTC)`. Coinbase also returns the day in progress, which is dropped.
+- **Incremental updates** refetch from (last stored Coinbase day − 3 days) and upsert on (coin, date), so re-runs are idempotent and late corrections are picked up. A coin with no rows pages forward from 2010-01-01 in 300-day windows (empty windows before listing are skipped).
+- **BTC backfill (D20)** runs once: Coin Metrics `PriceUSD` for days before the first Coinbase day, stored close-only (`open`, `high`, `low`, `volume` null, `source=coinmetrics`). Coin Metrics never overwrites Coinbase days.
+- **Weekly bars** are computed on the fly from daily (weeks start Monday 00:00 UTC and are labeled by that Monday; open first, high max, low min, close last, volume sum). Close-only days count their close as open, high and low. Weeks not fully covered by data (the current week, or a first partial week) are dropped unless asked for.
+- **Validation** reports gaps, duplicate days, OHLC inconsistencies (`low <= open, close <= high`, prices > 0) and close-to-close moves over 40%. Flags are reported by `desk data status`, not stored or auto-corrected; Rob decides. Known real flags: Coinbase ETH has no candles for 2016-05-21 and 2016-05-22; big moves on BTC 2010-11-06, 2011-05-10, 2013-04-11, ETH 2020-03-12, SOL 2022-11-09.
+- **`candles_4h` table** added now for D22 (not in the original Section 5) so Stage 3.2 only fills it.
+- **Schema:** every Section 5 table is in migration `0001`; constraint names follow a naming convention in `models.Base.metadata`. Postgres-only types (JSONB, ARRAY, `ON CONFLICT`) are used freely: there is no SQLite path.
+- **Tests:** Postgres tests use `TEST_DATABASE_URL` and create and drop their own throwaway database, never `DATABASE_URL` (which is Neon in `.env`). They run in a separate Ubuntu CI job with a Postgres service container (GitHub's Windows runners cannot run Linux service containers), which also checks that migrations round-trip and match the models (`alembic check`). On the Windows leg they are skipped.
+

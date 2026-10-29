@@ -1,0 +1,37 @@
+{
+  "page1": {
+    "data": [
+      {
+        "asset": "btc",
+        "time": "2010-07-18T00:00:00.000000000Z",
+        "PriceUSD": "0.08584"
+      },
+      {
+        "asset": "btc",
+        "time": "2010-07-19T00:00:00.000000000Z",
+        "PriceUSD": "0.0808"
+      },
+      {
+        "asset": "btc",
+        "time": "2010-07-20T00:00:00.000000000Z",
+        "PriceUSD": "0.0747357288135593"
+      }
+    ],
+    "next_page_token": "0.MjAxMC0wNy0yMFQwMDowMDowMFo",
+    "next_page_url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=PriceUSD&frequency=1d&start_time=2010-07-18&end_time=2010-07-22&paging_from=start&page_size=3&next_page_token=0.MjAxMC0wNy0yMFQwMDowMDowMFo"
+  },
+  "page2": {
+    "data": [
+      {
+        "asset": "btc",
+        "time": "2010-07-21T00:00:00.000000000Z",
+        "PriceUSD": "0.0791928626534191"
+      },
+      {
+        "asset": "btc",
+        "time": "2010-07-22T00:00:00.000000000Z",
+        "PriceUSD": "0.0584697603740503"
+      }
+    ]
+  }
+}

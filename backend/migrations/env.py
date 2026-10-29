@@ -23,8 +23,9 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # The URL comes from DATABASE_URL (.env or the environment), never from alembic.ini.
+# Tests pass their own connection in `config.attributes["connection"]` and skip this.
 _db_url = get_settings().database_url
-if _db_url is not None:
+if _db_url is not None and "connection" not in config.attributes:
     config.set_main_option(
         "sqlalchemy.url", normalize_url(_db_url.get_secret_value()).replace("%", "%%")
     )
@@ -66,6 +67,13 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    connection = config.attributes.get("connection")
+    if connection is not None:
+        context.configure(connection=connection, target_metadata=target_metadata)
+        with context.begin_transaction():
+            context.run_migrations()
+        return
+
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",

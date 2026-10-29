@@ -23,6 +23,9 @@ cd frontend; npm install; npx playwright install chromium; cd ..
 # Local Postgres (needs Docker Desktop running); set DATABASE_URL=postgresql://desk:desk@localhost:5432/desk in .env
 docker compose up -d db
 
+# Schema and market data (backend/): migrate, fetch daily candles, check them
+cd backend; uv run alembic upgrade head; uv run desk data update --market; uv run desk data status
+
 # Backend API on http://127.0.0.1:8000 (docs at /docs)
 cd backend; uv run desk api serve --reload
 
@@ -30,7 +33,7 @@ cd backend; uv run desk api serve --reload
 cd frontend; npm run dev
 ```
 
-Checks: `uv run ruff check .`, `uv run ruff format --check .` and `uv run pytest` in `backend/`; `npm run typecheck`, `npm run lint`, `npm test` and `npm run test:e2e` in `frontend/`.
+Checks: `uv run ruff check .`, `uv run ruff format --check .` and `uv run pytest` in `backend/` (Postgres tests also need `$env:TEST_DATABASE_URL="postgresql://desk:desk@localhost:5432/desk"`; they create and drop their own throwaway database, never Neon); `npm run typecheck`, `npm run lint`, `npm test` and `npm run test:e2e` in `frontend/`.
 
 After any API change: `uv run desk api openapi --out ../frontend/openapi.json` in `backend/`, then `npm run gen:api` in `frontend/`. CI fails if either is stale.
 

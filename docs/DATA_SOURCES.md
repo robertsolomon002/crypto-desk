@@ -23,6 +23,8 @@ Decisions that follow from these findings are D20 to D29 in `DECISIONS.md`.
 
 - No keys needed for public OHLCV. Not geo-blocked from the US runner.
 - History depth was found by paging 300-day windows from 2010 (`fetch_ohlcv(since=..., limit=300)`).
+- `coinbase.fetch_ohlcv` (installed source) sends `start=since`, `end=since + limit × timeframe` and caps `limit` at 300; the response also includes the candle still in progress. `desk.data.market.fetch_daily` pages 300-day windows itself, dedupes the overlapping boundary candle and drops the open day (D31).
+- Full daily refresh from scratch for BTC, ETH and SOL took about 11 s locally (Stage 1.1). Coinbase has no ETH candles for 2016-05-21 and 2016-05-22.
 - Coinbase has no native 4H candles; 4H bars can be resampled from closed 1h candles (D22).
 
 ### Coin Metrics community API
@@ -30,7 +32,7 @@ Decisions that follow from these findings are D20 to D29 in `DECISIONS.md`.
 - Base `https://community-api.coinmetrics.io/v4`, no key. Rate limit from response headers: `x-ratelimit-limit: 6000, 6000;w=20` (6,000 requests per 20-second sliding window, plan `download`).
 - Free catalog (`/catalog-v2/asset-metrics?assets=btc,eth`), 31 metrics per asset: AdrActCnt, AdrBalCnt, BlkCnt, CapMVRVCur, CapMrktCurUSD, CapMrktEstUSD, FeeTotNtv, FlowInEx*/FlowOutEx*, HashRate, IssTot*, PriceBTC, PriceUSD, ROI1yr, ROI30d, ReferenceRate*, SplyCur, SplyEx*, SplyExpFut10yr, TxCnt, TxTfrCnt, volume_reported_spot_usd_1d.
 - **`CapRealUSD` is not free.** Realized cap is derived as `CapMrktCurUSD / CapMVRVCur` (D21).
-- Use `paging_from=start` to read history from the beginning; the default pages from the newest end.
+- Use `paging_from=start` to read history from the beginning; the default pages from the newest end. Values are strings; the response carries `next_page_url` (with `next_page_token`) until the range is exhausted.
 
 | Metric | BTC from | ETH from |
 |---|---|---|

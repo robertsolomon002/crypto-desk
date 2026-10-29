@@ -2,7 +2,7 @@
 
 **Prepared for:** Rob (built by Claude Code, one substage per session)
 **Date:** 2026-10-26. v3 replaces v1 and v2. The project changed from a weekly forecasting study into a multi-tab web app, so everything earlier is superseded.
-**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Next: Stage 1.1. Telegram, Discord and Cloudflare keys still pending with Rob (needed by 1.4 and 2.2).
+**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Stage 1.1 done (schema, migration `0001`, daily market data; D31). Next: Stage 1.2. Telegram, Discord and Cloudflare keys still pending with Rob (needed by 1.4 and 2.2).
 **Repo:** `robertsolomon002/crypto-desk` (public code; all data and MCO-derived content stay private in the database). Local folder `C:\Users\rober\code\crypto-desk`.
 
 **What it is:** a private, invite-only web app in the spirit of a paid crypto "terminal", built on free data. It has these tabs:
@@ -208,7 +208,8 @@ crypto-desk/
 Core tables, created with Alembic migrations:
 - **Market and analytics:**
   - `coins`: symbol, name, aliases, source market, active, is_watchlist, added_at.
-  - `candles_daily`: coin, date, OHLCV, source; unique on (coin, date).
+  - `candles_daily`: coin, date, OHLCV, source; unique on (coin, date). Coin Metrics backfill rows are close-only (D31).
+  - `candles_4h`: coin, bar open time, OHLCV, source; recent history only, resampled from Coinbase 1h (D22). *Added in Stage 1.1.*
   - `series`: key (for example `fng`, `fred:DGS10`, `cm:BTC:CapMVRVCur`, `dominance:btc`), date, value, source; unique on (key, date).
   - `news`: id, source, title, url, published_at, coins[].
   - `calendar_events`.
@@ -701,7 +702,7 @@ Each version ships to friends before the next one starts. No fixed dates: priori
 ## 14. Progress tracker
 
 - [x] 0.1 Accounts and keys [Rob] · [x] 0.2 Scaffold monorepo · [x] 0.3 Verification spike
-- [ ] 1.1 Schema and market data · [ ] 1.2 Context, on-chain, macro · [ ] 1.3 Analytics engine · [ ] 1.4 Daily jobs
+- [x] 1.1 Schema and market data · [ ] 1.2 Context, on-chain, macro · [ ] 1.3 Analytics engine · [ ] 1.4 Daily jobs
 - [ ] 2.1 Read API and auth · [ ] 2.2 Deploy
 - [ ] 3.1 Shell and Overview · [ ] 3.2 Charts · [ ] 3.3 Cycles and Stats · [ ] 3.4 Data, Settings, invite friends [Rob]
 - [ ] 4.1 On-chain & Macro tab · [ ] 4.2 desk-mcp and Claude desktop [Rob]
