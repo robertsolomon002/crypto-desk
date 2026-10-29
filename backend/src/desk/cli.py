@@ -15,6 +15,7 @@ jobs_app = typer.Typer(help="Scheduled jobs (Stages 1.4, 6.1, 7.1).", no_args_is
 mcp_app = typer.Typer(help="The desk-mcp server.", no_args_is_help=True)
 admin_app = typer.Typer(help="Admin tasks.", no_args_is_help=True)
 api_app = typer.Typer(help="Run the API and export its OpenAPI schema.", no_args_is_help=True)
+notify_app = typer.Typer(help="Send alerts (Telegram, Discord).", no_args_is_help=True)
 
 app.add_typer(data_app, name="data")
 app.add_typer(analytics_app, name="analytics")
@@ -22,6 +23,7 @@ app.add_typer(jobs_app, name="jobs")
 app.add_typer(mcp_app, name="mcp")
 app.add_typer(admin_app, name="admin")
 app.add_typer(api_app, name="api")
+app.add_typer(notify_app, name="notify")
 
 
 @app.command()
@@ -67,10 +69,6 @@ def api_openapi(
 def _data() -> None: ...
 
 
-def _counts(added: dict[str, int]) -> str:
-    return ", ".join(f"{k} +{n}" for k, n in added.items()) or "nothing to fetch"
-
-
 @data_app.command("update")
 def data_update(
     market: Annotated[
@@ -98,101 +96,25 @@ def data_update(
     reported and the others still run; the exit code is 1 if any source failed. A source whose
     API key is missing is skipped with a warning.
     """
-    from collections.abc import Callable
-
-    from desk.config import get_settings
-    from desk.data import calendar as cal
-    from desk.data import coinmetrics, fred, http
-    from desk.data import dominance as dom
     from desk.data import market as mkt
-    from desk.data import news as rss
-    from desk.data import sentiment as fng
-    from desk.data.coins import active_coins, seed_coins
+    from desk.data.update import SOURCES, update_all
     from desk.db import get_engine, session_factory
 
-    chosen = {
-        "market": market, "onchain": onchain, "sentiment": sentiment, "macro": macro,
-        "dominance": dominance, "news": news, "calendar": calendar,
-    }  # fmt: skip
-    if not any(chosen.values()):
-        chosen = dict.fromkeys(chosen, True)
-    settings = get_settings()
-    sessions = session_factory(get_engine())
-    now = mkt.utc_now()
-    with sessions.begin() as session:
-        seed_coins(session)
-    with sessions() as session:
-        coins = active_coins(session, coin)
-    if coin and not coins:
-        typer.echo(f"No active coin matches {coin!r}.")
-        raise typer.Exit(1)
-
-    def run_market() -> None:
-        exchange = mkt.make_exchange()
-        with coinmetrics.make_client() as cm:
-            for c in coins:
-                with sessions.begin() as session:
-                    added = mkt.update_coin(session, c, exchange, cm)
-                typer.echo(f"  {c.symbol}: {_counts(added)}")
-
-    def run_onchain() -> None:
-        with coinmetrics.make_client() as cm:
-            for c in coins:
-                if c.symbol not in coinmetrics.ASSETS:
-                    continue
-                with sessions.begin() as session:
-                    added = coinmetrics.update_onchain(session, cm, c.symbol, now)
-                typer.echo(f"  {c.symbol}: {_counts(added)}")
-
-    def run_sentiment() -> None:
-        with http.make_client() as client, sessions.begin() as session:
-            typer.echo(f"  fng +{fng.update(session, client, now)}")
-
-    def run_macro() -> None:
-        if settings.fred_api_key is None:
-            typer.echo("  skipped: FRED_API_KEY is not set")
-            return
-        with fred.make_client() as client, sessions.begin() as session:
-            added = fred.update(session, client, settings.fred_api_key.get_secret_value(), now)
-        typer.echo(f"  {_counts(added)}")
-
-    def run_dominance() -> None:
-        if settings.coingecko_demo_key is None:
-            typer.echo("  skipped: COINGECKO_DEMO_KEY is not set")
-            return
-        key = settings.coingecko_demo_key.get_secret_value()
-        with dom.make_client(key) as client, sessions.begin() as session:
-            typer.echo(f"  {_counts(dom.update(session, client))}")
-
-    def run_news() -> None:
-        with sessions() as session:
-            aliases = {c.symbol: c.aliases for c in active_coins(session)}
-        with http.make_client() as client, sessions.begin() as session:
-            added, failed = rss.update(session, client, aliases, now)
-        typer.echo(f"  headlines +{added}")
-        if failed:
-            raise RuntimeError(f"no items from: {', '.join(failed)}")
-
-    def run_calendar() -> None:
-        with sessions.begin() as session:
-            n, deleted = cal.sync(session)
-        typer.echo(f"  {n} events in calendar.yaml, {deleted} stale rows removed")
-
-    runners: dict[str, Callable[[], None]] = {
-        "market": run_market, "onchain": run_onchain, "sentiment": run_sentiment,
-        "macro": run_macro, "dominance": run_dominance, "news": run_news,
-        "calendar": run_calendar,
-    }  # fmt: skip
-    failures = []
-    for name, run in runners.items():
-        if not chosen[name]:
-            continue
-        typer.echo(f"{name}:")
-        try:
-            run()
-        except Exception as exc:  # one source failing must not stop the others
-            failures.append(name)
-            typer.echo(f"  FAILED: {type(exc).__name__}: {exc}", err=True)
+    flags = {"market": market, "onchain": onchain, "sentiment": sentiment, "macro": macro,
+             "dominance": dominance, "news": news, "calendar": calendar}  # fmt: skip
+    chosen = [s for s in SOURCES if flags[s]] or list(SOURCES)
+    try:
+        results = update_all(
+            session_factory(get_engine()),
+            mkt.utc_now(),
+            chosen,
+            coin,
+            echo=lambda line, err: typer.echo(line, err=err),
+        )
+    except ValueError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(1) from None
+    failures = [name for name, r in results.items() if not r.ok]
     if failures:
         typer.echo(f"Failed sources: {', '.join(failures)}", err=True)
         raise typer.Exit(1)
@@ -385,6 +307,81 @@ def analytics_refresh_cache() -> None:
 
 @jobs_app.callback()
 def _jobs() -> None: ...
+
+
+@jobs_app.command("daily")
+def jobs_daily(
+    summary_file: Annotated[
+        Path | None, typer.Option(help="Also write the summary here (read by the alert step).")
+    ] = None,
+    cache: Annotated[bool, typer.Option(help="Refresh the analytics cache.")] = True,
+) -> None:
+    """Daily job: update every source, check freshness, refresh the cache, record job_runs.
+
+    Exit code 1 if anything failed; the workflow then sends an ops_failure alert."""
+    from desk.db import get_engine, session_factory
+    from desk.jobs.daily import run_daily
+
+    result = run_daily(
+        session_factory(get_engine()),
+        refresh_cache=cache,
+        echo=lambda line, err: typer.echo(line, err=err),
+    )
+    summary = result.summary()
+    typer.echo("")
+    typer.echo(summary)
+    if summary_file:
+        summary_file.write_text(summary + "\n", encoding="utf-8")
+    if result.status != "success":
+        raise typer.Exit(1)
+
+
+@notify_app.callback()
+def _notify() -> None: ...
+
+
+@notify_app.command("send")
+def notify_send(
+    event: Annotated[str, typer.Argument(help="Event name from settings.yaml `alerts`.")],
+    title: Annotated[str, typer.Option(help="Short title.")],
+    body: Annotated[str, typer.Option(help="Message body.")] = "",
+    body_file: Annotated[
+        Path | None, typer.Option(help="Read the body from a file (used by workflows).")
+    ] = None,
+    url: Annotated[str | None, typer.Option(help="Link to include (http or https).")] = None,
+) -> None:
+    """Send one alert to the event's channels. Exit 1 if a configured channel failed."""
+    from desk.notify import Alert, send
+
+    if body_file is not None:
+        body = (
+            body_file.read_text(encoding="utf-8").strip()
+            if body_file.exists()
+            else "No summary was written; see the run log."
+        )
+    status = send(Alert(event, title, body, url))
+    for channel, state in status.items():
+        typer.echo(f"{channel}: {state}")
+    if not status:
+        typer.echo(f"No channels are routed for {event!r} in settings.yaml.")
+    if any(state.startswith("failed") for state in status.values()):
+        raise typer.Exit(1)
+
+
+@notify_app.command("test")
+def notify_test() -> None:
+    """Send a test message to every configured channel (one per channel)."""
+    from desk.notify import Alert, send
+
+    routes = {"ops_failure": ["telegram", "discord_ops"], "brief_ready": ["discord"]}
+    failed = False
+    for event, channels in routes.items():
+        alert = Alert(event, "Test message", "Alerts are configured correctly.")
+        for channel, state in send(alert, routes={event: channels}).items():
+            typer.echo(f"{channel}: {state}")
+            failed |= state.startswith("failed")
+    if failed:
+        raise typer.Exit(1)
 
 
 @admin_app.callback()

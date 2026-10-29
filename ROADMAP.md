@@ -2,7 +2,7 @@
 
 **Prepared for:** Rob (built by Claude Code, one substage per session)
 **Date:** 2026-10-26. v3 replaces v1 and v2. The project changed from a weekly forecasting study into a multi-tab web app, so everything earlier is superseded.
-**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Stage 1.1 done (schema, migration `0001`, daily market data; D31). Stage 1.2 done (context, on-chain, macro, news and calendar data; D32). Stage 1.3 done (analytics engine, look-ahead test, cycle anchors verified, cache; D33 to D35). Next: Stage 1.4. Telegram, Discord and Cloudflare keys still pending with Rob (needed by 1.4 and 2.2).
+**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Stage 1.1 done (schema, migration `0001`, daily market data; D31). Stage 1.2 done (context, on-chain, macro, news and calendar data; D32). Stage 1.3 done (analytics engine, look-ahead test, cycle anchors verified, cache; D33 to D35). Stage 1.4 code done (daily job, alerts, `daily.yml`; D36); waiting for Rob's first manual run of the Daily workflow. Telegram and Discord are set up; the Cloudflare key is still pending with Rob (needed by 2.2).
 **Repo:** `robertsolomon002/crypto-desk` (public code; all data and MCO-derived content stay private in the database). Local folder `C:\Users\rober\code\crypto-desk`.
 
 **What it is:** a private, invite-only web app in the spirit of a paid crypto "terminal", built on free data. It has these tabs:
@@ -716,7 +716,6 @@ Each version ships to friends before the next one starts. No fixed dates: priori
 
 - Resolved in Stage 0.3 (see `docs/DATA_SOURCES.md` and D20 to D30): on-chain coverage (realized cap derived), dominance history (not free; daily snapshots), Gemini YouTube URLs (free preview, 8 h/day), Clerk invite-only (free), Cloud Run streaming (supported, timeout up to 60 min), Coinbase 4H (no; resampled from 1h), MCO channel id.
 - Still open from Stage 0.3:
-  - live Telegram and Discord test messages (once Rob adds those secrets, before Stage 1.4);
   - Gemini free-tier RPM/RPD are only visible in AI Studio; check them there before Stage 6.1, and retry `gemini-3.8-flash` (503 during the probe);
   - YouTube Data API key for MCO discovery from CI (Stage 6.1, D26).
 - [Rob] Double-check `config/calendar.yaml` (FOMC and CPI dates for 2026-10 to 2027-12) against the Fed and BLS pages; BLS blocks scripts, so the 2027 CPI dates were not machine-verified. Add 2028 dates by late 2027.

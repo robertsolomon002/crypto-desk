@@ -1,0 +1,60 @@
+name: Daily
+
+# Stage 1.4: refresh every source into Neon, check freshness, refresh the analytics cache.
+# 00:20 UTC, 20 minutes after the daily candle closes. On failure an ops_failure alert with the
+# summary and the run link goes to the admin channels (Telegram, Discord ops). Untrusted text
+# (error messages that may quote source data) only travels through files and env vars.
+on:
+  schedule:
+    - cron: "20 0 * * *"
+  workflow_dispatch:
+    inputs:
+      notify_test:
+        description: "Also send a test message to every alert channel"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily
+  cancel-in-progress: false # never kill a run mid-write; queue the next one
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      PYTHONUTF8: "1"
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+      COINGECKO_DEMO_KEY: ${{ secrets.COINGECKO_DEMO_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      DISCORD_OPS_WEBHOOK_URL: ${{ secrets.DISCORD_OPS_WEBHOOK_URL }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      NOTIFY_TEST: ${{ inputs.notify_test }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3 (no floating major tag)
+        with:
+          version: "0.11.7"
+          python-version: "3.12"
+          working-directory: backend
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Test alert channels
+        if: env.NOTIFY_TEST == 'true'
+        run: uv run desk notify test
+      - name: Daily refresh
+        run: uv run desk jobs daily --summary-file "$RUNNER_TEMP/daily_summary.txt"
+      - name: Alert admins on failure
+        if: failure()
+        run: >-
+          uv run desk notify send ops_failure --title "Daily job failed"
+          --body-file "$RUNNER_TEMP/daily_summary.txt" --url "$RUN_URL"
