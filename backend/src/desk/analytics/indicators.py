@@ -6,6 +6,7 @@ NaN rather than partial-window values.
 
 import datetime as dt
 import math
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
@@ -93,3 +94,60 @@ def indicators(daily: pd.DataFrame, as_of: dt.date | None = None) -> pd.DataFram
     out["vol30"] = realized_vol(close, 30)
     out["vol90"] = realized_vol(close, 90)
     return out.join(weekly_band(d))
+
+
+@dataclass(frozen=True)
+class IndicatorRequest:
+    """Selectable chart indicators (API `GET /indicators`). Empty selections are skipped."""
+
+    sma: tuple[int, ...] = ()
+    ema: tuple[int, ...] = ()
+    bollinger: tuple[int, float] | None = None
+    rsi: int | None = None
+    macd: tuple[int, int, int] | None = None
+    vol: tuple[int, ...] = ()
+    band: bool = False
+
+    def validate(self) -> None:
+        for n in (*self.sma, *self.ema, *self.vol):
+            if not 2 <= n <= 400:
+                raise ValueError("window lengths must be between 2 and 400")
+        if self.bollinger and not (2 <= self.bollinger[0] <= 400 and 0 < self.bollinger[1] <= 5):
+            raise ValueError("bollinger needs n in 2..400 and k in (0, 5]")
+        if self.rsi is not None and not 2 <= self.rsi <= 100:
+            raise ValueError("rsi n must be between 2 and 100")
+        if self.macd:
+            fast, slow, signal = self.macd
+            if not (1 <= fast < slow <= 200 and 1 <= signal <= 100):
+                raise ValueError("macd needs 1 <= fast < slow <= 200 and 1 <= signal <= 100")
+
+
+def custom(
+    daily: pd.DataFrame, req: IndicatorRequest, as_of: dt.date | None = None
+) -> pd.DataFrame:
+    """The requested indicators, one row per day up to `as_of`. Columns are named by their
+    parameters (`sma50`, `bb20_2_upper`, `rsi14`, `macd12_26_9_hist`, `vol30`, `sma20w`)."""
+    req.validate()
+    d = truncate(daily, as_of)
+    close = d["close"]
+    out = pd.DataFrame({"close": close})
+    for n in req.sma:
+        out[f"sma{n}"] = sma(close, n)
+    for n in req.ema:
+        out[f"ema{n}"] = ema(close, n)
+    if req.bollinger:
+        n, k = req.bollinger
+        tag = f"bb{n}_{k:g}"
+        bb = bollinger(close, n, k)
+        out[[f"{tag}_mid", f"{tag}_upper", f"{tag}_lower"]] = bb.to_numpy()
+    if req.rsi is not None:
+        out[f"rsi{req.rsi}"] = rsi(close, req.rsi)
+    if req.macd:
+        tag = "macd{}_{}_{}".format(*req.macd)
+        m = macd(close, *req.macd)
+        out[[tag, f"{tag}_signal", f"{tag}_hist"]] = m.to_numpy()
+    for n in req.vol:
+        out[f"vol{n}"] = realized_vol(close, n)
+    if req.band:
+        out = out.join(weekly_band(d))
+    return out

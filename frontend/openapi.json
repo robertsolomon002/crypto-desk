@@ -1,6 +1,670 @@
 {
   "components": {
     "schemas": {
+      "AnalyticsData": {
+        "properties": {
+          "cached": {
+            "title": "Cached",
+            "type": "boolean"
+          },
+          "coin": {
+            "title": "Coin",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          },
+          "result": {
+            "title": "Result"
+          }
+        },
+        "required": [
+          "name",
+          "coin",
+          "params",
+          "cached",
+          "result"
+        ],
+        "title": "AnalyticsData",
+        "type": "object"
+      },
+      "Candle": {
+        "properties": {
+          "close": {
+            "title": "Close",
+            "type": "number"
+          },
+          "high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High"
+          },
+          "low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low"
+          },
+          "open": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open"
+          },
+          "time": {
+            "format": "date-time",
+            "title": "Time",
+            "type": "string"
+          },
+          "volume": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume"
+          }
+        },
+        "required": [
+          "time",
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume"
+        ],
+        "title": "Candle",
+        "type": "object"
+      },
+      "CoinOut": {
+        "properties": {
+          "first_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Date"
+          },
+          "is_watchlist": {
+            "title": "Is Watchlist",
+            "type": "boolean"
+          },
+          "last_close": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Close"
+          },
+          "last_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Date"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "name",
+          "is_watchlist",
+          "first_date",
+          "last_date",
+          "last_close"
+        ],
+        "title": "CoinOut",
+        "type": "object"
+      },
+      "ColumnInfo": {
+        "properties": {
+          "filterable": {
+            "title": "Filterable",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "filterable"
+        ],
+        "title": "ColumnInfo",
+        "type": "object"
+      },
+      "DominanceData": {
+        "properties": {
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rows"
+        ],
+        "title": "DominanceData",
+        "type": "object"
+      },
+      "Envelope_AnalyticsData_": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AnalyticsData"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[AnalyticsData]",
+        "type": "object"
+      },
+      "Envelope_DominanceData_": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DominanceData"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[DominanceData]",
+        "type": "object"
+      },
+      "Envelope_MacroData_": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MacroData"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[MacroData]",
+        "type": "object"
+      },
+      "Envelope_TablePage_": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TablePage"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[TablePage]",
+        "type": "object"
+      },
+      "Envelope_list_Candle__": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Candle"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[list[Candle]]",
+        "type": "object"
+      },
+      "Envelope_list_CoinOut__": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/CoinOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[list[CoinOut]]",
+        "type": "object"
+      },
+      "Envelope_list_Event__": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[list[Event]]",
+        "type": "object"
+      },
+      "Envelope_list_Headline__": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Headline"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[list[Headline]]",
+        "type": "object"
+      },
+      "Envelope_list_SeriesPoint__": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesPoint"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[list[SeriesPoint]]",
+        "type": "object"
+      },
+      "Envelope_list_TableInfo__": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/TableInfo"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[list[TableInfo]]",
+        "type": "object"
+      },
+      "Event": {
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "time_utc": {
+            "anyOf": [
+              {
+                "format": "time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Utc"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "time_utc",
+          "kind",
+          "title",
+          "source_url"
+        ],
+        "title": "Event",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Headline": {
+        "properties": {
+          "coins": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Coins",
+            "type": "array"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "title",
+          "url",
+          "published_at",
+          "coins"
+        ],
+        "title": "Headline",
+        "type": "object"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -24,6 +688,480 @@
         ],
         "title": "HealthResponse",
         "type": "object"
+      },
+      "Invite": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "email_address": {
+            "title": "Email Address",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email_address",
+          "status",
+          "created_at"
+        ],
+        "title": "Invite",
+        "type": "object"
+      },
+      "InviteCreate": {
+        "properties": {
+          "email": {
+            "maxLength": 254,
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "title": "Email",
+            "type": "string"
+          },
+          "redirect_url": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "pattern": "^https?://",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redirect Url"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "InviteCreate",
+        "type": "object"
+      },
+      "MacroData": {
+        "properties": {
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/MacroSeries"
+            },
+            "title": "Series",
+            "type": "array"
+          }
+        },
+        "required": [
+          "series",
+          "rows"
+        ],
+        "title": "MacroData",
+        "type": "object"
+      },
+      "MacroSeries": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "release_lag_days": {
+            "title": "Release Lag Days",
+            "type": "integer"
+          },
+          "units": {
+            "title": "Units",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "units",
+          "release_lag_days"
+        ],
+        "title": "MacroSeries",
+        "type": "object"
+      },
+      "Me": {
+        "properties": {
+          "clerk_id": {
+            "title": "Clerk Id",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clerk_id",
+          "role"
+        ],
+        "title": "Me",
+        "type": "object"
+      },
+      "RoleUpdate": {
+        "properties": {
+          "role": {
+            "enum": [
+              "admin",
+              "member"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "title": "RoleUpdate",
+        "type": "object"
+      },
+      "SeriesPoint": {
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "date",
+          "value"
+        ],
+        "title": "SeriesPoint",
+        "type": "object"
+      },
+      "Source": {
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "last_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Date"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "Source",
+        "type": "object"
+      },
+      "TableInfo": {
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnInfo"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "last_updated": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Updated"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "rows": {
+            "title": "Rows",
+            "type": "integer"
+          },
+          "visibility": {
+            "enum": [
+              "member",
+              "own",
+              "admin"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "visibility",
+          "rows",
+          "last_updated",
+          "columns"
+        ],
+        "title": "TableInfo",
+        "type": "object"
+      },
+      "TablePage": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "table",
+          "columns",
+          "total",
+          "page",
+          "page_size",
+          "rows"
+        ],
+        "title": "TablePage",
+        "type": "object"
+      },
+      "Timeframe": {
+        "enum": [
+          "1d",
+          "1w",
+          "4h"
+        ],
+        "title": "Timeframe",
+        "type": "string"
+      },
+      "UserOut": {
+        "properties": {
+          "clerk_id": {
+            "title": "Clerk Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "clerk_id",
+          "role",
+          "created_at"
+        ],
+        "title": "UserOut",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "WatchlistAdd": {
+        "properties": {
+          "aliases": {
+            "items": {
+              "maxLength": 32,
+              "minLength": 2,
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Aliases",
+            "type": "array"
+          },
+          "name": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "symbol": {
+            "pattern": "^[A-Z0-9]{2,10}$",
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "name"
+        ],
+        "title": "WatchlistAdd",
+        "type": "object"
+      },
+      "WatchlistCoin": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "added_at": {
+            "format": "date-time",
+            "title": "Added At",
+            "type": "string"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source_market": {
+            "title": "Source Market",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "name",
+          "source_market",
+          "aliases",
+          "active",
+          "added_at"
+        ],
+        "title": "WatchlistCoin",
+        "type": "object"
       }
     }
   },
@@ -33,6 +1171,1061 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/admin/invites": {
+      "get": {
+        "operationId": "listInvites",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "accepted",
+                    "revoked",
+                    "expired"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Invite"
+                  },
+                  "title": "Response Listinvites",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Invites",
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "description": "Email an invitation (the app is invite-only in Clerk, D29).",
+        "operationId": "createInvite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Invite"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Invite",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/invites/{invite_id}": {
+      "delete": {
+        "operationId": "revokeInvite",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invite_id",
+            "required": true,
+            "schema": {
+              "pattern": "^inv_[A-Za-z0-9]{1,64}$",
+              "title": "Invite Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Invite"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Invite",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "operationId": "listUsers",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserOut"
+                  },
+                  "title": "Response Listusers",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Users",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/users/{user_id}": {
+      "patch": {
+        "operationId": "updateUserRole",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Role",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/watchlist": {
+      "get": {
+        "operationId": "listWatchlist",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WatchlistCoin"
+                  },
+                  "title": "Response Listwatchlist",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Watchlist",
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "description": "Add (or re-activate) a coin. The next daily job backfills its candles from Coinbase.",
+        "operationId": "addWatchlistCoin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatchlistAdd"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistCoin"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Watchlist",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/watchlist/{symbol}": {
+      "delete": {
+        "description": "Deactivate a watchlist coin. Its candle history stays (re-adding resumes it).",
+        "operationId": "removeWatchlistCoin",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Watchlist",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/calendar": {
+      "get": {
+        "description": "Scheduled events from `as_of - days_behind` to `as_of + days_ahead` (default today).",
+        "operationId": "listCalendar",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days_ahead",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "maximum": 400,
+              "minimum": 0,
+              "title": "Days Ahead",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days_behind",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 400,
+              "minimum": 0,
+              "title": "Days Behind",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "fomc",
+                      "cpi"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_Event__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Calendar",
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
+    "/api/coins": {
+      "get": {
+        "description": "Active coins (core first, then the watchlist) with their candle coverage.",
+        "operationId": "listCoins",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_CoinOut__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Coins",
+        "tags": [
+          "coins"
+        ]
+      }
+    },
+    "/api/cycles/{coin}/anchors": {
+      "get": {
+        "description": "Cycle bottoms, halvings and tops; an anchor is known only once its window ends (D35).",
+        "operationId": "getCycleAnchors",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "coin",
+            "required": true,
+            "schema": {
+              "title": "Coin",
+              "type": "string"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anchors",
+        "tags": [
+          "cycles"
+        ]
+      }
+    },
+    "/api/cycles/{coin}/day-n": {
+      "get": {
+        "description": "Every past cycle at the current cycle's day N.",
+        "operationId": "getCycleDayN",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "coin",
+            "required": true,
+            "schema": {
+              "title": "Coin",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "default": "halving",
+              "enum": [
+                "halving",
+                "bottom",
+                "top"
+              ],
+              "title": "Mode",
+              "type": "string"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Day N",
+        "tags": [
+          "cycles"
+        ]
+      }
+    },
+    "/api/cycles/{coin}/paths": {
+      "get": {
+        "description": "Each cycle as day offsets from its anchor, normalized to the anchor price.",
+        "operationId": "getCyclePaths",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "coin",
+            "required": true,
+            "schema": {
+              "title": "Coin",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "default": "halving",
+              "enum": [
+                "halving",
+                "bottom",
+                "top"
+              ],
+              "title": "Mode",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_days",
+            "required": false,
+            "schema": {
+              "default": 1500,
+              "maximum": 2000,
+              "minimum": 30,
+              "title": "Max Days",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Paths",
+        "tags": [
+          "cycles"
+        ]
+      }
+    },
+    "/api/cycles/{coin}/roi": {
+      "get": {
+        "description": "Return since each cycle bottom at fixed days and at the current day N.",
+        "operationId": "getRoiSinceBottom",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "coin",
+            "required": true,
+            "schema": {
+              "title": "Coin",
+              "type": "string"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Roi",
+        "tags": [
+          "cycles"
+        ]
+      }
+    },
+    "/api/cycles/{coin}/yoy": {
+      "get": {
+        "description": "Each calendar year normalized to its first close.",
+        "operationId": "getYoy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "coin",
+            "required": true,
+            "schema": {
+              "title": "Coin",
+              "type": "string"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Yoy",
+        "tags": [
+          "cycles"
+        ]
+      }
+    },
+    "/api/data/tables": {
+      "get": {
+        "description": "Every table this user may browse, with row counts and freshness.",
+        "operationId": "listTables",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_TableInfo__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Tables",
+        "tags": [
+          "data"
+        ]
+      }
+    },
+    "/api/data/tables/{name}": {
+      "get": {
+        "description": "One page of a table. Default order: primary key, newest first.",
+        "operationId": "queryTable",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "description": "column:op:value, repeatable; ops: eq, ne, gt, gte, lt, lte, contains",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "column:op:value, repeatable; ops: eq, ne, gt, gte, lt, lte, contains",
+              "title": "Filter"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Order"
+            }
+          },
+          {
+            "in": "query",
+            "name": "desc",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Desc",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_TablePage_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Query Table",
+        "tags": [
+          "data"
+        ]
+      }
+    },
+    "/api/data/tables/{name}/export.csv": {
+      "get": {
+        "description": "The filtered table as CSV (at most 200,000 rows).",
+        "operationId": "exportTable",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "description": "column:op:value, repeatable; ops: eq, ne, gt, gte, lt, lte, contains",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "column:op:value, repeatable; ops: eq, ne, gt, gte, lt, lte, contains",
+              "title": "Filter"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Order"
+            }
+          },
+          {
+            "in": "query",
+            "name": "desc",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Desc",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Table",
+        "tags": [
+          "data"
+        ]
+      }
+    },
     "/api/health": {
       "get": {
         "operationId": "getHealth",
@@ -51,6 +2244,1404 @@
         "summary": "Health",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/indicators/{coin}": {
+      "get": {
+        "description": "Selectable indicators with parameters. Every value at day t uses closes up to t only.",
+        "operationId": "getIndicators",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "coin",
+            "required": true,
+            "schema": {
+              "title": "Coin",
+              "type": "string"
+            }
+          },
+          {
+            "description": "e.g. 20,50,200",
+            "in": "query",
+            "name": "sma",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^\\d{1,3}(,\\d{1,3}){0,5}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "e.g. 20,50,200",
+              "title": "Sma"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ema",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^\\d{1,3}(,\\d{1,3}){0,5}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ema"
+            }
+          },
+          {
+            "description": "n:k",
+            "in": "query",
+            "name": "bb",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^\\d{1,3}:\\d+(\\.\\d+)?$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "n:k",
+              "title": "Bb"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rsi",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 2,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rsi"
+            }
+          },
+          {
+            "description": "fast:slow:signal",
+            "in": "query",
+            "name": "macd",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^\\d{1,3}:\\d{1,3}:\\d{1,3}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "fast:slow:signal",
+              "title": "Macd"
+            }
+          },
+          {
+            "in": "query",
+            "name": "vol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^\\d{1,3}(,\\d{1,3}){0,5}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Vol"
+            }
+          },
+          {
+            "in": "query",
+            "name": "band",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Band",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Indicators",
+        "tags": [
+          "indicators"
+        ]
+      }
+    },
+    "/api/levels/{coin}": {
+      "get": {
+        "description": "Key levels (previous week high/low, 20W SMA, 50D/200D SMA, ATH, swings) and distances.",
+        "operationId": "getLevels",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "coin",
+            "required": true,
+            "schema": {
+              "title": "Coin",
+              "type": "string"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Levels",
+        "tags": [
+          "indicators"
+        ]
+      }
+    },
+    "/api/macro": {
+      "get": {
+        "description": "FRED series as published by `as_of` (each row needs date + release lag <= as_of).",
+        "operationId": "getMacro",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_MacroData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Macro",
+        "tags": [
+          "macro"
+        ]
+      }
+    },
+    "/api/macro/dominance": {
+      "get": {
+        "description": "BTC and ETH dominance in percent: daily snapshots from Stage 1.2 on (no free history).",
+        "operationId": "getDominance",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_DominanceData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Dominance",
+        "tags": [
+          "macro"
+        ]
+      }
+    },
+    "/api/macro/fng": {
+      "get": {
+        "description": "Daily Crypto Fear & Greed index (0 to 100).",
+        "operationId": "getFearGreed",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_SeriesPoint__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Fng",
+        "tags": [
+          "macro"
+        ]
+      }
+    },
+    "/api/me": {
+      "get": {
+        "operationId": "getMe",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Me",
+        "tags": [
+          "coins"
+        ]
+      }
+    },
+    "/api/news": {
+      "get": {
+        "description": "Newest headlines published by the end of `as_of` (UTC), optionally tagged with a coin.",
+        "operationId": "listNews",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "coin",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Coin"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_Headline__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List News",
+        "tags": [
+          "news"
+        ]
+      }
+    },
+    "/api/ohlcv/{coin}": {
+      "get": {
+        "operationId": "getOhlcv",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "coin",
+            "required": true,
+            "schema": {
+              "title": "Coin",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tf",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Timeframe",
+              "default": "1d"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "description": "Inclusive; capped by as_of",
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Inclusive; capped by as_of",
+              "title": "End"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_Candle__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ohlcv",
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/api/onchain/{coin}": {
+      "get": {
+        "description": "MVRV, realized cap and price (derived), NUPL, supply, active addresses, hash rate.",
+        "operationId": "getOnchain",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "coin",
+            "required": true,
+            "schema": {
+              "title": "Coin",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Onchain",
+        "tags": [
+          "onchain"
+        ]
+      }
+    },
+    "/api/pivots/{coin}": {
+      "get": {
+        "description": "Zigzag swing pivots with a volatility-scaled threshold (D35).",
+        "operationId": "getPivots",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "coin",
+            "required": true,
+            "schema": {
+              "title": "Coin",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1d",
+              "enum": [
+                "1d",
+                "1w"
+              ],
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Pivots",
+        "tags": [
+          "indicators"
+        ]
+      }
+    },
+    "/api/regime/{coin}": {
+      "get": {
+        "description": "Regime label (frozen D34 rules) with its inputs and history.",
+        "operationId": "getRegime",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "coin",
+            "required": true,
+            "schema": {
+              "title": "Coin",
+              "type": "string"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Regime",
+        "tags": [
+          "indicators"
+        ]
+      }
+    },
+    "/api/stats/{coin}/correlation": {
+      "get": {
+        "description": "Rolling correlation of daily log returns with the other active coins.",
+        "operationId": "getCorrelation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "coin",
+            "required": true,
+            "schema": {
+              "title": "Coin",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "window",
+            "required": false,
+            "schema": {
+              "default": 90,
+              "maximum": 365,
+              "minimum": 10,
+              "title": "Window",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Correlation",
+        "tags": [
+          "stats"
+        ]
+      }
+    },
+    "/api/stats/{coin}/distribution": {
+      "get": {
+        "description": "Return histogram with the latest period's percentile.",
+        "operationId": "getReturnDistribution",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "coin",
+            "required": true,
+            "schema": {
+              "title": "Coin",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "horizon",
+            "required": false,
+            "schema": {
+              "default": "1w",
+              "enum": [
+                "1d",
+                "1w",
+                "30d"
+              ],
+              "title": "Horizon",
+              "type": "string"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Distribution",
+        "tags": [
+          "stats"
+        ]
+      }
+    },
+    "/api/stats/{coin}/drawdown-episodes": {
+      "get": {
+        "description": "Deepest peak-to-trough episodes.",
+        "operationId": "getDrawdownEpisodes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "coin",
+            "required": true,
+            "schema": {
+              "title": "Coin",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "top_n",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Top N",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Drawdown Episodes",
+        "tags": [
+          "stats"
+        ]
+      }
+    },
+    "/api/stats/{coin}/drawdowns": {
+      "get": {
+        "description": "Drawdown from the running ATH close, per day.",
+        "operationId": "getDrawdowns",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "coin",
+            "required": true,
+            "schema": {
+              "title": "Coin",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Drawdowns",
+        "tags": [
+          "stats"
+        ]
+      }
+    },
+    "/api/stats/{coin}/seasonality/{period}": {
+      "get": {
+        "description": "Monthly (year x month), ISO-week or day-of-week returns.",
+        "operationId": "getSeasonality",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "coin",
+            "required": true,
+            "schema": {
+              "title": "Coin",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "period",
+            "required": true,
+            "schema": {
+              "enum": [
+                "monthly",
+                "weekly",
+                "dow"
+              ],
+              "title": "Period",
+              "type": "string"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Seasonality",
+        "tags": [
+          "stats"
+        ]
+      }
+    },
+    "/api/stats/{coin}/volatility": {
+      "get": {
+        "description": "Annualized 30 and 90 day realized volatility.",
+        "operationId": "getVolatility",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "coin",
+            "required": true,
+            "schema": {
+              "title": "Coin",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Volatility",
+        "tags": [
+          "stats"
         ]
       }
     }

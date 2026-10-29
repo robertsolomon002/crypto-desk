@@ -2,6 +2,8 @@
 # core: always on. watchlist: managed by Rob in Settings (max 10; eligibility: a Coinbase USD
 # market and at least 1 year of history). This file only seeds the `coins` table (Stage 1.1).
 # source_market is the ccxt Coinbase symbol; exact symbols and history depth are verified in Stage 0.3.
+# From Stage 2.1 the database is the source of truth for the watchlist: Rob adds and removes coins in
+# Settings (`/api/admin/watchlist`). Seeding only upserts the coins listed here, so it never undoes that.
 max_watchlist: 10
 
 core:

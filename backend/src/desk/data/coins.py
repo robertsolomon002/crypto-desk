@@ -11,9 +11,17 @@ from desk.config import get_settings
 from desk.models import Coin
 
 
-def load_coins_yaml(path: Path | None = None) -> list[dict]:
+def _config(path: Path | None = None) -> dict:
     path = path or get_settings().config_dir / "coins.yaml"
-    cfg = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
+def max_watchlist(path: Path | None = None) -> int:
+    return int(_config(path).get("max_watchlist", 10))
+
+
+def load_coins_yaml(path: Path | None = None) -> list[dict]:
+    cfg = _config(path)
     core = [{**c, "is_watchlist": False} for c in cfg.get("core") or []]
     watch = [{**c, "is_watchlist": True} for c in cfg.get("watchlist") or []]
     if len(watch) > cfg.get("max_watchlist", 10):

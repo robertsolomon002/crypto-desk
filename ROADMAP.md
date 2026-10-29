@@ -2,7 +2,7 @@
 
 **Prepared for:** Rob (built by Claude Code, one substage per session)
 **Date:** 2026-10-26. v3 replaces v1 and v2. The project changed from a weekly forecasting study into a multi-tab web app, so everything earlier is superseded.
-**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Stage 1.1 done (schema, migration `0001`, daily market data; D31). Stage 1.2 done (context, on-chain, macro, news and calendar data; D32). Stage 1.3 done (analytics engine, look-ahead test, cycle anchors verified, cache; D33 to D35). Stage 1.4 done (daily job, alerts, `daily.yml`; D36; first GitHub run 2026-10-29 succeeded and all alert channels delivered). Stage 1 complete. Next: Stage 2.1 (Read API and auth). Telegram and Discord are set up; the Cloudflare key is still pending with Rob (needed by 2.2).
+**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Stage 1.1 done (schema, migration `0001`, daily market data; D31). Stage 1.2 done (context, on-chain, macro, news and calendar data; D32). Stage 1.3 done (analytics engine, look-ahead test, cycle anchors verified, cache; D33 to D35). Stage 1.4 done (daily job, alerts, `daily.yml`; D36; first GitHub run 2026-10-29 succeeded and all alert channels delivered). Stage 1 complete. Stage 2.1 done (read API, Clerk auth with roles in the DB, Data tab routes, key redaction, rate limit, ETags; D37). Next: Stage 2.2 (Deploy). Telegram and Discord are set up; the Cloudflare key is still pending with Rob (needed by 2.2), and Rob adds `ADMIN_CLERK_IDS` to `.env` (and later to the deploy secrets).
 **Repo:** `robertsolomon002/crypto-desk` (public code; all data and MCO-derived content stay private in the database). Local folder `C:\Users\rober\code\crypto-desk`.
 
 **What it is:** a private, invite-only web app in the spirit of a paid crypto "terminal", built on free data. It has these tabs:
@@ -159,7 +159,7 @@ START ─┬─> technical_analyst (market tools) ─┐
 
 ### 3.6 Security and privacy
 
-- **Auth:** Clerk (free tier). Access mode "Invite-only" (verified on the free plan, D29). Google or email login. The backend verifies Clerk JWTs on every request, and roles are stored in Clerk metadata or the DB.
+- **Auth:** Clerk (free tier). Access mode "Invite-only" (verified on the free plan, D29). Google or email login. The backend verifies Clerk JWTs on every request. Roles are stored in the DB `users` table (public metadata is not a default token claim; `ADMIN_CLERK_IDS` always maps to admin, D37).
 - **User keys:**
   - kept in `localStorage`;
   - sent in a request header only to our backend;
@@ -181,7 +181,8 @@ crypto-desk/
       data/        market.py  coinmetrics.py  fred.py  sentiment.py  dominance.py  news.py  calendar.py
       analytics/   indicators.py  regime.py  levels.py  pivots.py  cycles.py  seasonality.py  stats.py
                    onchain.py  registry.py (one entry per function)  inputs.py  cache.py  verify.py
-      api/         main.py  auth.py  deps.py  routes/ (coins, ohlcv, indicators, cycles, stats, onchain, macro,
+      api/         main.py  auth.py  deps.py  common.py  schemas.py  middleware.py  tables.py
+                   routes/ (coins, ohlcv, indicators, cycles, stats, onchain, macro,
                    news, calendar, data, agent, mco, signals, admin)
       mcp_server/  server.py  tools.py          # desk-mcp, wraps analytics/ and data readers
       agents/      llm.py (per-request model factory)  chat.py  desk_graph.py  brief_writer.py  schemas.py  cost.py
@@ -704,7 +705,7 @@ Each version ships to friends before the next one starts. No fixed dates: priori
 
 - [x] 0.1 Accounts and keys [Rob] · [x] 0.2 Scaffold monorepo · [x] 0.3 Verification spike
 - [x] 1.1 Schema and market data · [x] 1.2 Context, on-chain, macro · [x] 1.3 Analytics engine · [x] 1.4 Daily jobs
-- [ ] 2.1 Read API and auth · [ ] 2.2 Deploy
+- [x] 2.1 Read API and auth · [ ] 2.2 Deploy
 - [ ] 3.1 Shell and Overview · [ ] 3.2 Charts · [ ] 3.3 Cycles and Stats · [ ] 3.4 Data, Settings, invite friends [Rob]
 - [ ] 4.1 On-chain & Macro tab · [ ] 4.2 desk-mcp and Claude desktop [Rob]
 - [ ] 5.1 Agent backend · [ ] 5.2 Agent UI · [ ] 5.3 Multi-agent desk

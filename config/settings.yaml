@@ -10,6 +10,9 @@ budget: # Decision 9. The cap itself is enforced in backend/src/desk/agents/cost
   server_llm_cap_usd_per_month: 8.0
   degrade_order: [chat_model, mco_low_priority, brief_writer_haiku]
 
+api: # Stage 2.1 (D37). In memory, per Cloud Run instance
+  rate_limit_per_minute: 120
+
 agent: # Section 3.2
   max_tool_calls: 10
   timeout_seconds: 90

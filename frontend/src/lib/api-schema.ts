@@ -4,6 +4,319 @@
  */
 
 export interface paths {
+    "/api/admin/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Invites */
+        get: operations["listInvites"];
+        put?: never;
+        /**
+         * Create Invite
+         * @description Email an invitation (the app is invite-only in Clerk, D29).
+         */
+        post: operations["createInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/invites/{invite_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Invite */
+        delete: operations["revokeInvite"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Users */
+        get: operations["listUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Role */
+        patch: operations["updateUserRole"];
+        trace?: never;
+    };
+    "/api/admin/watchlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Watchlist */
+        get: operations["listWatchlist"];
+        put?: never;
+        /**
+         * Add Watchlist
+         * @description Add (or re-activate) a coin. The next daily job backfills its candles from Coinbase.
+         */
+        post: operations["addWatchlistCoin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/watchlist/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Watchlist
+         * @description Deactivate a watchlist coin. Its candle history stays (re-adding resumes it).
+         */
+        delete: operations["removeWatchlistCoin"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Calendar
+         * @description Scheduled events from `as_of - days_behind` to `as_of + days_ahead` (default today).
+         */
+        get: operations["listCalendar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/coins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Coins
+         * @description Active coins (core first, then the watchlist) with their candle coverage.
+         */
+        get: operations["listCoins"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cycles/{coin}/anchors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Anchors
+         * @description Cycle bottoms, halvings and tops; an anchor is known only once its window ends (D35).
+         */
+        get: operations["getCycleAnchors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cycles/{coin}/day-n": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Day N
+         * @description Every past cycle at the current cycle's day N.
+         */
+        get: operations["getCycleDayN"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cycles/{coin}/paths": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Paths
+         * @description Each cycle as day offsets from its anchor, normalized to the anchor price.
+         */
+        get: operations["getCyclePaths"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cycles/{coin}/roi": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Roi
+         * @description Return since each cycle bottom at fixed days and at the current day N.
+         */
+        get: operations["getRoiSinceBottom"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cycles/{coin}/yoy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Yoy
+         * @description Each calendar year normalized to its first close.
+         */
+        get: operations["getYoy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/data/tables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Tables
+         * @description Every table this user may browse, with row counts and freshness.
+         */
+        get: operations["listTables"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/data/tables/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Query Table
+         * @description One page of a table. Default order: primary key, newest first.
+         */
+        get: operations["queryTable"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/data/tables/{name}/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Table
+         * @description The filtered table as CSV (at most 200,000 rows).
+         */
+        get: operations["exportTable"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -21,10 +334,561 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/indicators/{coin}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Indicators
+         * @description Selectable indicators with parameters. Every value at day t uses closes up to t only.
+         */
+        get: operations["getIndicators"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/levels/{coin}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Levels
+         * @description Key levels (previous week high/low, 20W SMA, 50D/200D SMA, ATH, swings) and distances.
+         */
+        get: operations["getLevels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Macro
+         * @description FRED series as published by `as_of` (each row needs date + release lag <= as_of).
+         */
+        get: operations["getMacro"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/dominance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Dominance
+         * @description BTC and ETH dominance in percent: daily snapshots from Stage 1.2 on (no free history).
+         */
+        get: operations["getDominance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/fng": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Fng
+         * @description Daily Crypto Fear & Greed index (0 to 100).
+         */
+        get: operations["getFearGreed"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Me */
+        get: operations["getMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/news": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List News
+         * @description Newest headlines published by the end of `as_of` (UTC), optionally tagged with a coin.
+         */
+        get: operations["listNews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ohlcv/{coin}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Ohlcv */
+        get: operations["getOhlcv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/onchain/{coin}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Onchain
+         * @description MVRV, realized cap and price (derived), NUPL, supply, active addresses, hash rate.
+         */
+        get: operations["getOnchain"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pivots/{coin}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Pivots
+         * @description Zigzag swing pivots with a volatility-scaled threshold (D35).
+         */
+        get: operations["getPivots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/regime/{coin}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Regime
+         * @description Regime label (frozen D34 rules) with its inputs and history.
+         */
+        get: operations["getRegime"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/stats/{coin}/correlation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Correlation
+         * @description Rolling correlation of daily log returns with the other active coins.
+         */
+        get: operations["getCorrelation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/stats/{coin}/distribution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Distribution
+         * @description Return histogram with the latest period's percentile.
+         */
+        get: operations["getReturnDistribution"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/stats/{coin}/drawdown-episodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Drawdown Episodes
+         * @description Deepest peak-to-trough episodes.
+         */
+        get: operations["getDrawdownEpisodes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/stats/{coin}/drawdowns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Drawdowns
+         * @description Drawdown from the running ATH close, per day.
+         */
+        get: operations["getDrawdowns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/stats/{coin}/seasonality/{period}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Seasonality
+         * @description Monthly (year x month), ISO-week or day-of-week returns.
+         */
+        get: operations["getSeasonality"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/stats/{coin}/volatility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Volatility
+         * @description Annualized 30 and 90 day realized volatility.
+         */
+        get: operations["getVolatility"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AnalyticsData */
+        AnalyticsData: {
+            /** Cached */
+            cached: boolean;
+            /** Coin */
+            coin: string;
+            /** Name */
+            name: string;
+            /** Params */
+            params: {
+                [key: string]: unknown;
+            };
+            /** Result */
+            result: unknown;
+        };
+        /** Candle */
+        Candle: {
+            /** Close */
+            close: number;
+            /** High */
+            high: number | null;
+            /** Low */
+            low: number | null;
+            /** Open */
+            open: number | null;
+            /**
+             * Time
+             * Format: date-time
+             */
+            time: string;
+            /** Volume */
+            volume: number | null;
+        };
+        /** CoinOut */
+        CoinOut: {
+            /** First Date */
+            first_date: string | null;
+            /** Is Watchlist */
+            is_watchlist: boolean;
+            /** Last Close */
+            last_close: number | null;
+            /** Last Date */
+            last_date: string | null;
+            /** Name */
+            name: string;
+            /** Symbol */
+            symbol: string;
+        };
+        /** ColumnInfo */
+        ColumnInfo: {
+            /** Filterable */
+            filterable: boolean;
+            /** Name */
+            name: string;
+            /** Type */
+            type: string;
+        };
+        /** DominanceData */
+        DominanceData: {
+            /** Rows */
+            rows: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** Envelope[AnalyticsData] */
+        Envelope_AnalyticsData_: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            data: components["schemas"]["AnalyticsData"];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
+        /** Envelope[DominanceData] */
+        Envelope_DominanceData_: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            data: components["schemas"]["DominanceData"];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
+        /** Envelope[MacroData] */
+        Envelope_MacroData_: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            data: components["schemas"]["MacroData"];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
+        /** Envelope[TablePage] */
+        Envelope_TablePage_: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            data: components["schemas"]["TablePage"];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
+        /** Envelope[list[Candle]] */
+        Envelope_list_Candle__: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            /** Data */
+            data: components["schemas"]["Candle"][];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
+        /** Envelope[list[CoinOut]] */
+        Envelope_list_CoinOut__: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            /** Data */
+            data: components["schemas"]["CoinOut"][];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
+        /** Envelope[list[Event]] */
+        Envelope_list_Event__: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            /** Data */
+            data: components["schemas"]["Event"][];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
+        /** Envelope[list[Headline]] */
+        Envelope_list_Headline__: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            /** Data */
+            data: components["schemas"]["Headline"][];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
+        /** Envelope[list[SeriesPoint]] */
+        Envelope_list_SeriesPoint__: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            /** Data */
+            data: components["schemas"]["SeriesPoint"][];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
+        /** Envelope[list[TableInfo]] */
+        Envelope_list_TableInfo__: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            /** Data */
+            data: components["schemas"]["TableInfo"][];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
+        /** Event */
+        Event: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Kind */
+            kind: string;
+            /** Source Url */
+            source_url: string | null;
+            /** Time Utc */
+            time_utc: string | null;
+            /** Title */
+            title: string;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
+        /** Headline */
+        Headline: {
+            /** Coins */
+            coins: string[];
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /** Source */
+            source: string;
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
+        };
         /** HealthResponse */
         HealthResponse: {
             /** Status */
@@ -37,6 +901,174 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** Invite */
+        Invite: {
+            /** Created At */
+            created_at: string | null;
+            /** Email Address */
+            email_address: string;
+            /** Id */
+            id: string;
+            /** Status */
+            status: string;
+        };
+        /** InviteCreate */
+        InviteCreate: {
+            /** Email */
+            email: string;
+            /** Redirect Url */
+            redirect_url?: string | null;
+        };
+        /** MacroData */
+        MacroData: {
+            /** Rows */
+            rows: {
+                [key: string]: unknown;
+            }[];
+            /** Series */
+            series: components["schemas"]["MacroSeries"][];
+        };
+        /** MacroSeries */
+        MacroSeries: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Release Lag Days */
+            release_lag_days: number;
+            /** Units */
+            units: string;
+        };
+        /** Me */
+        Me: {
+            /** Clerk Id */
+            clerk_id: string;
+            /** Role */
+            role: string;
+        };
+        /** RoleUpdate */
+        RoleUpdate: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "admin" | "member";
+        };
+        /** SeriesPoint */
+        SeriesPoint: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Value */
+            value: number | null;
+        };
+        /** Source */
+        Source: {
+            /** Detail */
+            detail?: string | null;
+            /** Last Date */
+            last_date?: string | null;
+            /** Name */
+            name: string;
+            /** Url */
+            url?: string | null;
+        };
+        /** TableInfo */
+        TableInfo: {
+            /** Columns */
+            columns: components["schemas"]["ColumnInfo"][];
+            /** Description */
+            description: string;
+            /** Last Updated */
+            last_updated: string | null;
+            /** Name */
+            name: string;
+            /** Rows */
+            rows: number;
+            /**
+             * Visibility
+             * @enum {string}
+             */
+            visibility: "member" | "own" | "admin";
+        };
+        /** TablePage */
+        TablePage: {
+            /** Columns */
+            columns: string[];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Rows */
+            rows: {
+                [key: string]: unknown;
+            }[];
+            /** Table */
+            table: string;
+            /** Total */
+            total: number;
+        };
+        /**
+         * Timeframe
+         * @enum {string}
+         */
+        Timeframe: "1d" | "1w" | "4h";
+        /** UserOut */
+        UserOut: {
+            /** Clerk Id */
+            clerk_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            /** Role */
+            role: string;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+        };
+        /** WatchlistAdd */
+        WatchlistAdd: {
+            /** Aliases */
+            aliases?: string[];
+            /** Name */
+            name: string;
+            /** Symbol */
+            symbol: string;
+        };
+        /** WatchlistCoin */
+        WatchlistCoin: {
+            /** Active */
+            active: boolean;
+            /**
+             * Added At
+             * Format: date-time
+             */
+            added_at: string;
+            /** Aliases */
+            aliases: string[];
+            /** Name */
+            name: string;
+            /** Source Market */
+            source_market: string;
+            /** Symbol */
+            symbol: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -46,6 +1078,596 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    listInvites: {
+        parameters: {
+            query?: {
+                status?: ("pending" | "accepted" | "revoked" | "expired") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Invite"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Invite"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revokeInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invite_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Invite"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateUserRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listWatchlist: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchlistCoin"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    addWatchlistCoin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WatchlistAdd"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchlistCoin"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    removeWatchlistCoin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listCalendar: {
+        parameters: {
+            query?: {
+                days_ahead?: number;
+                days_behind?: number;
+                kind?: ("fomc" | "cpi")[] | null;
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_Event__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listCoins: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_CoinOut__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getCycleAnchors: {
+        parameters: {
+            query?: {
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                coin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getCycleDayN: {
+        parameters: {
+            query?: {
+                mode?: "halving" | "bottom" | "top";
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                coin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getCyclePaths: {
+        parameters: {
+            query?: {
+                mode?: "halving" | "bottom" | "top";
+                max_days?: number;
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                coin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getRoiSinceBottom: {
+        parameters: {
+            query?: {
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                coin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getYoy: {
+        parameters: {
+            query?: {
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                coin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listTables: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_TableInfo__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    queryTable: {
+        parameters: {
+            query?: {
+                /** @description column:op:value, repeatable; ops: eq, ne, gt, gte, lt, lte, contains */
+                filter?: string[] | null;
+                order?: string | null;
+                desc?: boolean;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_TablePage_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    exportTable: {
+        parameters: {
+            query?: {
+                /** @description column:op:value, repeatable; ops: eq, ne, gt, gte, lt, lte, contains */
+                filter?: string[] | null;
+                order?: string | null;
+                desc?: boolean;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     getHealth: {
         parameters: {
             query?: never;
@@ -62,6 +1684,601 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    getIndicators: {
+        parameters: {
+            query?: {
+                /** @description e.g. 20,50,200 */
+                sma?: string | null;
+                ema?: string | null;
+                /** @description n:k */
+                bb?: string | null;
+                rsi?: number | null;
+                /** @description fast:slow:signal */
+                macd?: string | null;
+                vol?: string | null;
+                band?: boolean;
+                start?: string | null;
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                coin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getLevels: {
+        parameters: {
+            query?: {
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                coin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getMacro: {
+        parameters: {
+            query?: {
+                start?: string | null;
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_MacroData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getDominance: {
+        parameters: {
+            query?: {
+                start?: string | null;
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_DominanceData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getFearGreed: {
+        parameters: {
+            query?: {
+                start?: string | null;
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_SeriesPoint__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listNews: {
+        parameters: {
+            query?: {
+                coin?: string | null;
+                limit?: number;
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_Headline__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getOhlcv: {
+        parameters: {
+            query?: {
+                tf?: components["schemas"]["Timeframe"];
+                start?: string | null;
+                /** @description Inclusive; capped by as_of */
+                end?: string | null;
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                coin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_Candle__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getOnchain: {
+        parameters: {
+            query?: {
+                start?: string | null;
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                coin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getPivots: {
+        parameters: {
+            query?: {
+                timeframe?: "1d" | "1w";
+                start?: string | null;
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                coin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getRegime: {
+        parameters: {
+            query?: {
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                coin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getCorrelation: {
+        parameters: {
+            query?: {
+                window?: number;
+                start?: string | null;
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                coin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getReturnDistribution: {
+        parameters: {
+            query?: {
+                horizon?: "1d" | "1w" | "30d";
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                coin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getDrawdownEpisodes: {
+        parameters: {
+            query?: {
+                top_n?: number;
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                coin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getDrawdowns: {
+        parameters: {
+            query?: {
+                start?: string | null;
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                coin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getSeasonality: {
+        parameters: {
+            query?: {
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                coin: string;
+                period: "monthly" | "weekly" | "dow";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getVolatility: {
+        parameters: {
+            query?: {
+                start?: string | null;
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                coin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

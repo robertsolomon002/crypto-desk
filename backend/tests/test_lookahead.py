@@ -93,3 +93,20 @@ def test_no_look_ahead(name: str, coin: str) -> None:
 def test_every_function_is_covered() -> None:
     covered = {name for name, _ in CASES}
     assert covered == set(registry.REGISTRY)
+
+
+def test_selectable_indicators_have_no_look_ahead() -> None:
+    """`indicators.custom` (the API's selectable indicators, Stage 2.1) is not a registry entry
+    because its parameters are tuples; the same two checks, with every option on."""
+    from desk.analytics.indicators import IndicatorRequest, custom
+
+    req = IndicatorRequest(sma=(7, 50), ema=(21,), bollinger=(20, 2.5), rsi=9,
+                           macd=(5, 35, 5), vol=(14,), band=True)  # fmt: skip
+    for coin in COINS:
+        daily = full_inputs().daily[coin]
+        whole = custom(daily, req)
+        for as_of in as_of_dates(coin, "indicators_custom"):
+            where = f"indicators_custom/{coin}/{as_of}"
+            cut = custom(daily, req, as_of)
+            assert_same(cut, custom(truncate(daily, as_of), req, as_of), where)
+            assert_same(truncate(whole, as_of), cut, where + " (prefix)")
