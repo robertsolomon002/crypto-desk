@@ -234,3 +234,52 @@ Clerk renamed the sign-up mode setting to **Access mode** (User & authentication
 - **Headlines (untrusted):** titles are parsed with `html.parser` and reduced to plain text (script and style bodies dropped, entities decoded, control characters removed, 300-character cap); only http(s) links are kept, without fragments or `utm_*`/`mc_*`/`fbclid`/`gclid`/`ref`/`taid` parameters. Coins are tagged by whole-word, case-insensitive matches of the symbol and `coins.aliases` in the title and summary (summaries are not stored). Duplicates are dropped by canonical URL and by case-folded title, also against stored rows. Future publish times are clamped to the fetch time.
 - **Calendar:** `config/calendar.yaml` is the source of truth; `sync` inserts, updates and deletes rows to match it. The as-of reader returns events in a window around `as_of`, since the schedules are public in advance.
 - **CLI:** `desk data update` with no flags refreshes every source; each runs independently, failures are reported and the exit code is 1 if any failed. Missing FRED or CoinGecko keys skip that source with a warning. FRED errors are re-raised without the request URL because the API key is in the query string.
+
+## D33. Analytics conventions
+
+*2026-10-29, Stage 1.3.*
+
+- **Pure functions** in `desk.analytics` take the frames the data layer returns (`market.load_daily`, `coinmetrics.load_onchain`) and never touch the database. `analytics.registry` adapts them to `(inputs, coin, as_of, **params) -> JSON`, and the CLI, the cache, the look-ahead test, the API and desk-mcp all go through it.
+- **`as_of` (a UTC date or None):** every function first truncates its inputs to dates `<= as_of`, so the candle for `as_of` is included (it closed at the end of that day). All computations are causal: trailing windows only, no backward fill, no statistics over the full sample. Weekly views use complete Monday-to-Monday weeks only (`resample_weekly`), so a week in progress never leaks.
+- **Close-only rows** (the Coin Metrics backfill, D31) use the close as high and low wherever those are needed.
+- **Look-ahead test** (`tests/test_lookahead.py`): for every registry function, every coin and 50 seeded random `as_of` values, `f(full, as_of)` must equal `f(full truncated at as_of, as_of)`. For time-series outputs, `f(full, None)` cut at `as_of` must also equal `f(full, as_of)`, which catches centered windows, backfill and full-sample normalization.
+
+## D34. Regime rules (frozen)
+
+*2026-10-29, Stage 1.3. Written before the code and never tuned on outcomes. Changing them needs a new decision and, once signals exist, a new signal version.*
+
+The label is evaluated daily on closes. Rules are checked in this order, and the first match wins:
+
+1. `insufficient_data`: fewer than 365 daily closes up to that day.
+2. `high-vol`: 30-day realized volatility (std of daily log returns × √365) is above the 90th percentile of its own values over the trailing 365 days (including that day).
+3. `uptrend`: close > SMA200 **and** SMA50 > SMA200 **and** SMA50 > SMA50 of 20 days earlier.
+4. `downtrend`: close < SMA200 **and** SMA50 < SMA200 **and** SMA50 < SMA50 of 20 days earlier.
+5. `range`: everything else.
+
+The function returns the label series, the current label, and the values that produced it (close, SMA50, SMA200, SMA50 20 days earlier, volatility, volatility threshold), so the UI and the agent can show why.
+
+## D35. Cycle anchors, zigzag defaults and the analytics cache
+
+*2026-10-29, Stage 1.3.*
+
+- **`config/cycles.yaml` restructured:** each cycle now runs bottom → halving → top and is named after the year of its top (`2013`, `2017`, `2021`, `2025`). The old file paired each top with the bear-market bottom that *followed* it, which breaks bottom alignment. Rob confirmed the current BTC top on 2026-10-29 (window 2025-09-01 to 2025-12-31). ETH uses BTC's halving dates; its 2017 cycle has no bottom because Coinbase ETH data starts 2016-05-18.
+- **Anchors** are the lowest (highest) daily close inside each window. An anchor exists only once its window has ended by `as_of`, so hindsight windows never leak into earlier views. Found in Stage 1.3:
+
+| Coin | Cycle | Bottom | Halving (first close on or after) | Top |
+|---|---|---|---|---|
+| BTC | 2013 | 2011-11-18 $2.11 | 2012-11-28 $12.33 | 2013-12-04 $1,134.93 |
+| BTC | 2017 | 2015-01-14 $175.64 | 2016-07-09 $657.61 | 2017-12-16 $19,650.01 |
+| BTC | 2021 | 2018-12-15 $3,183.00 | 2020-05-11 $8,572.40 | 2021-11-08 $67,554.84 |
+| BTC | 2025 | 2022-11-21 $15,760.14 | 2024-04-20 $64,968.87 | 2025-10-06 $124,720.09 |
+| ETH | 2017 | – | 2016-07-09 | 2018-01-13 $1,386.02 |
+| ETH | 2021 | 2018-12-14 $83.00 | 2020-05-11 | 2021-11-08 $4,811.90 |
+| ETH | 2025 | 2022-06-18 $993.64 | 2024-04-20 | 2025-08-22 $4,831.24 |
+
+- **Independent check** (`desk analytics verify-anchors`, run 2026-10-29): anchors from Coinbase are compared with Coin Metrics `PriceUSD`, and those from the Coin Metrics backfill with Bitstamp. An anchor passes if the independent extreme in the same window is within 5% of our price and within 2 days of our date, or is a *near-tie* (the independent close on our date is within 1% of its own extreme). **12 of 13 pass.**
+  - Same day, within 0.5%: 2013 top, 2017 bottom (Bitstamp, +2.5%), 2017 top, 2021 bottom and top, 2025 top, and every ETH anchor (the ETH 2021 bottom is 1 day apart).
+  - **2025 bottom, a near-tie:** Coin Metrics' lowest close is 2022-11-09 ($15,758.29), against ours on 2022-11-21 ($15,760.14). It is a double bottom (the FTX crash and its retest) $2 apart, and Coin Metrics' close on 2022-11-21 is $15,778.02.
+  - **2013 bottom fails against Bitstamp:** Bitstamp's lowest close in Oct–Dec 2011 is 2011-10-20 ($2.24), and its close on 2011-11-18 is $2.50, against Coin Metrics' $2.11. Bitstamp had just launched and was thin in 2011, and there is no other free daily source for that period. We keep the Coin Metrics anchor; Rob spot-checks it on a public long-history chart.
+- **Zigzag defaults:** the reversal threshold is `clip(k·σ, floor, cap)`, with σ the rolling std of log returns. Daily: k=4, σ over 30 days, floor 5%, cap 35%. Weekly: k=2, σ over 26 weeks, floor 10%, cap 50%. Before σ exists the cap is used. Pivots alternate high and low; the last is the open leg (`confirmed=false`), and each confirmed pivot records the bar that confirmed it. On real data this gives about 20 daily swings a year for BTC.
+- **Key levels** use the intraday high for the ATH ($126,296 on 2025-10-06), while cycle anchors use closes.
+- **`analytics_cache`:** keyed by (function, sha256 of name + coin + params, `as_of`), where `as_of` defaults to the coin's last candle date. Each row stores a fingerprint, `max(date):count:sum(close)` of the input candles (plus the same over `cm:<coin>:*` series for on-chain), and a mismatch recomputes and overwrites the row, so new days and late corrections invalidate it. `desk analytics refresh-cache` precomputes the heavy functions (cycles in all three modes, ROI, YoY, seasonality, distribution, drawdown episodes) for the active coins and prunes rows not recomputed for 30 days: 32 entries in about 8 s on Neon.
+- **A bug found by the hand-computed tests:** building a frame from a Series with a shifted index *aligns* the values instead of moving them, so the 20-week band had been applied to the week it summarizes. That is a leak the look-ahead test cannot see, because the full and truncated runs are equally wrong. It is fixed with plain arrays. A mutation check confirmed that the look-ahead test does catch centered windows and anchors resolved from full data.

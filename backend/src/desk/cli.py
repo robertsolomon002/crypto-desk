@@ -256,6 +256,133 @@ def data_status(
 def _analytics() -> None: ...
 
 
+def _print_result(obj, tail: int, indent: str = "") -> None:
+    """Human-readable output for `desk analytics show`: frames as tables, the rest as fields."""
+    import dataclasses
+
+    import pandas as pd
+
+    if isinstance(obj, pd.DataFrame | pd.Series):
+        shown = obj.tail(tail) if tail else obj
+        with pd.option_context("display.width", 200, "display.max_columns", 30):
+            text = shown.to_string()
+        typer.echo("\n".join(indent + line for line in text.splitlines()))
+        if tail and len(obj) > tail:
+            typer.echo(f"{indent}({len(obj)} rows, last {tail} shown; --tail 0 for all)")
+    elif isinstance(obj, list) and obj and dataclasses.is_dataclass(obj[0]):
+        _print_result(pd.DataFrame([dataclasses.asdict(x) for x in obj]), tail, indent)
+    elif dataclasses.is_dataclass(obj):
+        for f in dataclasses.fields(obj):
+            value = getattr(obj, f.name)
+            if isinstance(value, pd.DataFrame | pd.Series | list) and not (
+                isinstance(value, list) and len(value) < 8
+            ):
+                typer.echo(f"{indent}{f.name}:")
+                _print_result(value, tail, indent + "  ")
+            else:
+                typer.echo(f"{indent}{f.name}: {value}")
+    else:
+        typer.echo(f"{indent}{obj}")
+
+
+@analytics_app.command("list")
+def analytics_list() -> None:
+    """Every analytics function with its parameters."""
+    from desk.analytics.registry import SPECS
+
+    for spec in SPECS:
+        params = ", ".join(f"{k}={v}" for k, v in spec.params.items())
+        typer.echo(f"{spec.name:22} {spec.description}" + (f" [{params}]" if params else ""))
+
+
+@analytics_app.command("show")
+def analytics_show(
+    function: Annotated[str, typer.Argument(help="Name from `desk analytics list`.")],
+    coin: Annotated[str, typer.Argument(help="Coin symbol, e.g. BTC.")],
+    as_of: Annotated[
+        str | None, typer.Option("--as-of", help="UTC date YYYY-MM-DD (default: latest).")
+    ] = None,
+    param: Annotated[
+        list[str] | None, typer.Option("--param", help="Parameter as key=value; repeatable.")
+    ] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON instead of tables.")] = False,
+    tail: Annotated[int, typer.Option(help="Rows shown per table (0 = all).")] = 15,
+    cached: Annotated[
+        bool, typer.Option("--cached", help="Read through analytics_cache (prints JSON).")
+    ] = False,
+) -> None:
+    """Run one analytics function on the database's data, for manual checks."""
+    import datetime as dt
+    import json
+
+    from desk.analytics import cache, registry
+    from desk.analytics.inputs import load_inputs
+    from desk.data.coins import active_coins
+    from desk.db import get_engine, session_factory
+
+    day = dt.date.fromisoformat(as_of) if as_of else None
+    params = dict(p.split("=", 1) for p in param or [])
+    spec = registry.get(function)
+    sessions = session_factory(get_engine())
+    if cached:
+        with sessions.begin() as session:
+            result, hit = cache.get_or_compute(session, function, coin, day, **params)
+        typer.echo(f"({'cache hit' if hit else 'computed and cached'})", err=True)
+        typer.echo(json.dumps(result, indent=1))
+        return
+    with sessions() as session:
+        coins = [c.symbol for c in active_coins(session)] if spec.needs == "all_coins" else [coin]
+        inputs = load_inputs(session, coins, day)
+    if as_json:
+        typer.echo(json.dumps(registry.run_json(function, inputs, coin, day, **params), indent=1))
+    else:
+        _print_result(registry.run(function, inputs, coin, day, **params), tail)
+
+
+@analytics_app.command("verify-anchors")
+def analytics_verify_anchors() -> None:
+    """Compare cycle anchors with Coin Metrics (or Bitstamp for the 2013 cycle). Network."""
+    from desk.analytics.cycles import load_config
+    from desk.analytics.verify import MAX_DAYS, MAX_PRICE_DIFF, verify_anchors
+    from desk.data import market
+    from desk.db import get_engine, session_factory
+
+    config = load_config().coins
+    with session_factory(get_engine())() as session:
+        daily = {c: market.load_daily(session, c) for c in config}
+    checks = verify_anchors(daily, config)
+    for c in checks:
+        ref = f"{c.ref_date} {c.ref_price:,.2f}" if c.ref_price is not None else "no data"
+        diff = (
+            f"{(c.date - c.ref_date).days:+d}d {c.price / c.ref_price - 1:+.2%}"
+            if c.ref_price is not None and c.ref_date is not None
+            else "-"
+        )
+        on_date = f"{c.ref_on_date:,.2f}" if c.ref_on_date is not None else "-"
+        tie = " near-tie" if c.near_tie and c.ref_date != c.date else ""
+        typer.echo(
+            f"{'ok  ' if c.ok else 'FAIL'} {c.coin} {c.cycle} {c.kind:6} {c.date} "
+            f"{c.price:>12,.2f} ({c.source}) vs {c.ref_source} {ref} [{diff}]; "
+            f"{c.ref_source} on {c.date}: {on_date}{tie}"
+        )
+    failed = [c for c in checks if not c.ok]
+    typer.echo(f"{len(checks) - len(failed)}/{len(checks)} within {MAX_PRICE_DIFF:.0%} and "
+               f"{MAX_DAYS} days (or a near-tie)")  # fmt: skip
+    if failed:
+        raise typer.Exit(1)
+
+
+@analytics_app.command("refresh-cache")
+def analytics_refresh_cache() -> None:
+    """Precompute the heavy analytics for every active coin into analytics_cache."""
+    from desk.analytics import cache
+    from desk.db import get_engine, session_factory
+
+    with session_factory(get_engine()).begin() as session:
+        counts = cache.refresh(session)
+    typer.echo(", ".join(f"{k} {v}" for k, v in counts.items()))
+
+
 @jobs_app.callback()
 def _jobs() -> None: ...
 

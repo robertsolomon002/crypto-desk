@@ -2,7 +2,7 @@
 
 **Prepared for:** Rob (built by Claude Code, one substage per session)
 **Date:** 2026-10-26. v3 replaces v1 and v2. The project changed from a weekly forecasting study into a multi-tab web app, so everything earlier is superseded.
-**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Stage 1.1 done (schema, migration `0001`, daily market data; D31). Stage 1.2 done (context, on-chain, macro, news and calendar data; D32). Next: Stage 1.3 (plan mode). Telegram, Discord and Cloudflare keys still pending with Rob (needed by 1.4 and 2.2).
+**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Stage 1.1 done (schema, migration `0001`, daily market data; D31). Stage 1.2 done (context, on-chain, macro, news and calendar data; D32). Stage 1.3 done (analytics engine, look-ahead test, cycle anchors verified, cache; D33 to D35). Next: Stage 1.4. Telegram, Discord and Cloudflare keys still pending with Rob (needed by 1.4 and 2.2).
 **Repo:** `robertsolomon002/crypto-desk` (public code; all data and MCO-derived content stay private in the database). Local folder `C:\Users\rober\code\crypto-desk`.
 
 **What it is:** a private, invite-only web app in the spirit of a paid crypto "terminal", built on free data. It has these tabs:
@@ -96,7 +96,7 @@ Every number the app shows, and every number the agent uses, can be inspected in
   - regime label (`uptrend`, `downtrend`, `range`, `high-vol`, with frozen rules in `docs/DECISIONS.md`);
   - key levels (previous week high/low, 20W SMA, 50D/200D SMA, ATH, recent swing high/low);
   - zigzag swing pivots (threshold by volatility);
-  - **cycle alignment:** anchors in `config/cycles.yaml` (halvings 2012-11-28, 2016-07-09, 2020-05-11, 2024-04-20; cycle bottoms and tops, verified against the data as the actual lows and highs in each window), returning day-offset series normalized to the anchor price;
+  - **cycle alignment:** anchors in `config/cycles.yaml` (each cycle runs bottom → halving → top; halvings 2012-11-28, 2016-07-09, 2020-05-11, 2024-04-20; bottoms and tops are the lowest and highest closes in each window, available only once the window has ended, and checked against an independent source, D35), returning day-offset series normalized to the anchor price;
   - year-over-year normalization;
   - seasonality matrices;
   - return distributions;
@@ -180,6 +180,7 @@ crypto-desk/
       config.py  db.py  models.py              # SQLAlchemy 2.0 models
       data/        market.py  coinmetrics.py  fred.py  sentiment.py  dominance.py  news.py  calendar.py
       analytics/   indicators.py  regime.py  levels.py  pivots.py  cycles.py  seasonality.py  stats.py
+                   onchain.py  registry.py (one entry per function)  inputs.py  cache.py  verify.py
       api/         main.py  auth.py  deps.py  routes/ (coins, ohlcv, indicators, cycles, stats, onchain, macro,
                    news, calendar, data, agent, mco, signals, admin)
       mcp_server/  server.py  tools.py          # desk-mcp, wraps analytics/ and data readers
@@ -702,7 +703,7 @@ Each version ships to friends before the next one starts. No fixed dates: priori
 ## 14. Progress tracker
 
 - [x] 0.1 Accounts and keys [Rob] · [x] 0.2 Scaffold monorepo · [x] 0.3 Verification spike
-- [x] 1.1 Schema and market data · [x] 1.2 Context, on-chain, macro · [ ] 1.3 Analytics engine · [ ] 1.4 Daily jobs
+- [x] 1.1 Schema and market data · [x] 1.2 Context, on-chain, macro · [x] 1.3 Analytics engine · [ ] 1.4 Daily jobs
 - [ ] 2.1 Read API and auth · [ ] 2.2 Deploy
 - [ ] 3.1 Shell and Overview · [ ] 3.2 Charts · [ ] 3.3 Cycles and Stats · [ ] 3.4 Data, Settings, invite friends [Rob]
 - [ ] 4.1 On-chain & Macro tab · [ ] 4.2 desk-mcp and Claude desktop [Rob]
@@ -719,6 +720,7 @@ Each version ships to friends before the next one starts. No fixed dates: priori
   - Gemini free-tier RPM/RPD are only visible in AI Studio; check them there before Stage 6.1, and retry `gemini-3.8-flash` (503 during the probe);
   - YouTube Data API key for MCO discovery from CI (Stage 6.1, D26).
 - [Rob] Double-check `config/calendar.yaml` (FOMC and CPI dates for 2026-10 to 2027-12) against the Fed and BLS pages; BLS blocks scripts, so the 2027 CPI dates were not machine-verified. Add 2028 dates by late 2027.
+- [Rob] Spot-check the BTC 2013-cycle bottom (2011-11-18, $2.11 from Coin Metrics) on a public long-history chart: Bitstamp, the only other free source, disagrees (D35). Also spot-check 5 values (Section 9), e.g. the anchors in D35.
 - Whether Rob wants other YouTube analysts added in the same pipeline (each needs the same private, attributed treatment).
 - Whether friends should get their own watchlists (v1 has one shared watchlist managed by Rob).
 - Optional later: Telegram or Discord bot commands (for example `/price SOL`, `/cycle`) that answer from the API.
