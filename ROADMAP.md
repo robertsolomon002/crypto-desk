@@ -2,7 +2,7 @@
 
 **Prepared for:** Rob (built by Claude Code, one substage per session)
 **Date:** 2026-10-26. v3 replaces v1 and v2. The project changed from a weekly forecasting study into a multi-tab web app, so everything earlier is superseded.
-**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Stage 1.1 done (schema, migration `0001`, daily market data; D31). Stage 1.2 done (context, on-chain, macro, news and calendar data; D32). Stage 1.3 done (analytics engine, look-ahead test, cycle anchors verified, cache; D33 to D35). Stage 1.4 done (daily job, alerts, `daily.yml`; D36; first GitHub run 2026-10-29 succeeded and all alert channels delivered). Stage 1 complete. Stage 2.1 done (read API, Clerk auth with roles in the DB, Data tab routes, key redaction, rate limit, ETags; D37). Next: Stage 2.2 (Deploy). Telegram and Discord are set up; the Cloudflare key is still pending with Rob (needed by 2.2), and Rob adds `ADMIN_CLERK_IDS` to `.env` (and later to the deploy secrets).
+**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Stage 1.1 done (schema, migration `0001`, daily market data; D31). Stage 1.2 done (context, on-chain, macro, news and calendar data; D32). Stage 1.3 done (analytics engine, look-ahead test, cycle anchors verified, cache; D33 to D35). Stage 1.4 done (daily job, alerts, `daily.yml`; D36; first GitHub run 2026-10-29 succeeded and all alert channels delivered). Stage 1 complete. Stage 2.1 done (read API, Clerk auth with roles in the DB, Data tab routes, key redaction, rate limit, ETags; D37). Next: Stage 2.2 (Deploy). Telegram and Discord are set up; the Cloudflare key is still pending with Rob (needed by 2.2), and `ADMIN_CLERK_IDS` waits for Rob's first login in Stage 3.1 (no Clerk user exists yet).
 **Repo:** `robertsolomon002/crypto-desk` (public code; all data and MCO-derived content stay private in the database). Local folder `C:\Users\rober\code\crypto-desk`.
 
 **What it is:** a private, invite-only web app in the spirit of a paid crypto "terminal", built on free data. It has these tabs:
@@ -447,7 +447,7 @@ Data stays far below Neon's free storage limit (verify the limit). Daily candles
 - **3.1 App shell, auth, theme and Overview** (plan mode).
   Prompt: "Read ROADMAP.md Sections 1 to 10, especially the design direction in Section 8.
   1. Build the app shell:
-     - Clerk sign-in;
+     - Clerk sign-in. [Rob] signs in once (check whether invite-only means he must invite himself first), then adds his `user_…` id to `ADMIN_CLERK_IDS` in `.env` and the deploy secrets (D37);
      - a top bar with a coin selector (core plus watchlist), tabs in Section 1 order (tabs for later versions hidden behind feature flags);
      - light and dark themes from one token set;
      - a responsive layout (desktop-first; on phone, tabs move to a bottom bar or menu);
