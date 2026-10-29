@@ -1,15 +1,23 @@
 # FRED macro series for the On-chain & Macro tab (Section 1). Verified in Stage 0.3.
 # Stored in `series` as key "fred:<id>".
+# release_lag_days: an observation dated D is treated as known from D + lag (as-of reads, D32).
+# Measured in Stage 1.2 as the max of (first release date - observation date) over 2025-01 to
+# 2026-10, from FRED `output_type=4` (initial release): DTWEXBGS 3-8, DGS10 1-6, DFF 1-6,
+# M2SL 51-58 days. M2SL is rounded up to 60 for longer months.
 series:
   - id: DTWEXBGS
     label: Broad U.S. dollar index
     units: index
+    release_lag_days: 8
   - id: DGS10
     label: 10-year Treasury yield
     units: percent
+    release_lag_days: 6
   - id: DFF
     label: Effective federal funds rate
     units: percent
+    release_lag_days: 6
   - id: M2SL
     label: M2 money supply
     units: billions USD
+    release_lag_days: 60

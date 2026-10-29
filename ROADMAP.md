@@ -2,7 +2,7 @@
 
 **Prepared for:** Rob (built by Claude Code, one substage per session)
 **Date:** 2026-10-26. v3 replaces v1 and v2. The project changed from a weekly forecasting study into a multi-tab web app, so everything earlier is superseded.
-**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Stage 1.1 done (schema, migration `0001`, daily market data; D31). Next: Stage 1.2. Telegram, Discord and Cloudflare keys still pending with Rob (needed by 1.4 and 2.2).
+**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Stage 1.1 done (schema, migration `0001`, daily market data; D31). Stage 1.2 done (context, on-chain, macro, news and calendar data; D32). Next: Stage 1.3 (plan mode). Telegram, Discord and Cloudflare keys still pending with Rob (needed by 1.4 and 2.2).
 **Repo:** `robertsolomon002/crypto-desk` (public code; all data and MCO-derived content stay private in the database). Local folder `C:\Users\rober\code\crypto-desk`.
 
 **What it is:** a private, invite-only web app in the spirit of a paid crypto "terminal", built on free data. It has these tabs:
@@ -89,7 +89,7 @@ Every number the app shows, and every number the agent uses, can be inspected in
 ### 3.1 Data and analytics (backend package `desk`)
 
 - **Prices:** daily OHLCV from Coinbase through `ccxt` (canonical). Coinbase daily history starts 2015-07-20 (BTC), 2016-05-18 (ETH) and 2021-06-17 (SOL). BTC before that (the 2013 cycle) comes from Coin Metrics community `PriceUSD` (from 2010-07-18, close only); Bitstamp is the fallback exchange (D20). Weekly bars are resampled from daily, with weeks running Monday 00:00 UTC to the next Monday 00:00 UTC. Only closed candles are stored. **Binance is geo-blocked for US cloud IPs and in Ontario: never use it.**
-- **Context:** Fear & Greed (alternative.me, full history); BTC dominance (CoinGecko Demo key; no history on Demo, so a daily snapshot from now on, D23); FRED series (free key); RSS headlines (CoinDesk, Cointelegraph, Decrypt, The Block); a macro calendar YAML (FOMC and CPI dates, from official schedules).
+- **Context:** Fear & Greed (alternative.me, full history); BTC dominance (CoinGecko Demo key; no history on Demo, so a daily snapshot from now on, D23); FRED series (free key; as-of reads apply a per-series release lag because FRED dates observations by period, D32); RSS headlines (CoinDesk, Cointelegraph, Decrypt, The Block); a macro calendar YAML (FOMC and CPI dates, from official schedules).
 - **On-chain:** Coin Metrics community API for BTC and ETH: `PriceUSD`, `CapMrktCurUSD`, `CapMVRVCur`, `SplyCur`, `AdrActCnt`, `HashRate` (verified free). `CapRealUSD` is not free, so realized cap is derived as market cap / MVRV, realized price as realized cap / supply, and NUPL as (market cap − realized cap) / market cap (D21).
 - **Analytics** (pure functions, each with an `as_of` parameter):
   - indicators (SMA/EMA, Bollinger, RSI, MACD, realized volatility);
@@ -702,7 +702,7 @@ Each version ships to friends before the next one starts. No fixed dates: priori
 ## 14. Progress tracker
 
 - [x] 0.1 Accounts and keys [Rob] · [x] 0.2 Scaffold monorepo · [x] 0.3 Verification spike
-- [x] 1.1 Schema and market data · [ ] 1.2 Context, on-chain, macro · [ ] 1.3 Analytics engine · [ ] 1.4 Daily jobs
+- [x] 1.1 Schema and market data · [x] 1.2 Context, on-chain, macro · [ ] 1.3 Analytics engine · [ ] 1.4 Daily jobs
 - [ ] 2.1 Read API and auth · [ ] 2.2 Deploy
 - [ ] 3.1 Shell and Overview · [ ] 3.2 Charts · [ ] 3.3 Cycles and Stats · [ ] 3.4 Data, Settings, invite friends [Rob]
 - [ ] 4.1 On-chain & Macro tab · [ ] 4.2 desk-mcp and Claude desktop [Rob]
@@ -718,6 +718,7 @@ Each version ships to friends before the next one starts. No fixed dates: priori
   - live Telegram and Discord test messages (once Rob adds those secrets, before Stage 1.4);
   - Gemini free-tier RPM/RPD are only visible in AI Studio; check them there before Stage 6.1, and retry `gemini-3.8-flash` (503 during the probe);
   - YouTube Data API key for MCO discovery from CI (Stage 6.1, D26).
+- [Rob] Double-check `config/calendar.yaml` (FOMC and CPI dates for 2026-10 to 2027-12) against the Fed and BLS pages; BLS blocks scripts, so the 2027 CPI dates were not machine-verified. Add 2028 dates by late 2027.
 - Whether Rob wants other YouTube analysts added in the same pipeline (each needs the same private, attributed treatment).
 - Whether friends should get their own watchlists (v1 has one shared watchlist managed by Rob).
 - Optional later: Telegram or Discord bot commands (for example `/price SOL`, `/cycle`) that answer from the API.

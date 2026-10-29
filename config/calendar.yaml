@@ -1,10 +1,38 @@
-# Macro calendar (Section 3.1). Filled in Stage 1.2 from the official schedules, with source URLs:
-#   FOMC: federalreserve.gov FOMC calendar. CPI: bls.gov CPI release schedule.
-# Dates are UTC dates; `time_utc` is the release/decision time in UTC.
-# Example entry:
-#   - date: 2026-12-09
-#     time_utc: "19:00"
-#     kind: fomc            # fomc | cpi
-#     title: FOMC rate decision
-#     source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
-events: []
+# Macro calendar (Section 3.1), loaded into `calendar_events` by `desk data update --calendar`.
+# This file is the source of truth: events missing here are removed from the table on sync.
+#
+# Sources (fetched 2026-10-29; Rob double-checks against the pages):
+#   FOMC: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm ("Last Update: October 28,
+#     2026"). `date` is the second meeting day, when the statement is released at 2:00 pm ET.
+#     2027 dates are tentative until confirmed at the preceding meeting. "(with SEP)" marks the
+#     meetings with a Summary of Economic Projections.
+#   CPI: https://www.bls.gov/schedule/news_release/cpi.htm, released at 8:30 am ET. BLS blocks
+#     scripts (HTTP 403); 2026 dates were cross-checked with FRED's release calendar (release 10).
+# `time_utc` is converted from ET with the America/New_York time zone (EDT until 2026-11-01 and
+# from 2027-03-14; EST in between and from 2027-11-07).
+events:
+  - {date: 2026-10-14, time_utc: "12:30", kind: cpi, title: "US CPI (September 2026)", source: https://www.bls.gov/schedule/news_release/cpi.htm}
+  - {date: 2026-10-28, time_utc: "18:00", kind: fomc, title: "FOMC rate decision", source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm}
+  - {date: 2026-11-10, time_utc: "13:30", kind: cpi, title: "US CPI (October 2026)", source: https://www.bls.gov/schedule/news_release/cpi.htm}
+  - {date: 2026-12-09, time_utc: "19:00", kind: fomc, title: "FOMC rate decision (with SEP)", source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm}
+  - {date: 2026-12-10, time_utc: "13:30", kind: cpi, title: "US CPI (November 2026)", source: https://www.bls.gov/schedule/news_release/cpi.htm}
+  - {date: 2027-01-13, time_utc: "13:30", kind: cpi, title: "US CPI (December 2026)", source: https://www.bls.gov/schedule/news_release/cpi.htm}
+  - {date: 2027-01-27, time_utc: "19:00", kind: fomc, title: "FOMC rate decision", source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm}
+  - {date: 2027-02-11, time_utc: "13:30", kind: cpi, title: "US CPI (January 2027)", source: https://www.bls.gov/schedule/news_release/cpi.htm}
+  - {date: 2027-03-10, time_utc: "13:30", kind: cpi, title: "US CPI (February 2027)", source: https://www.bls.gov/schedule/news_release/cpi.htm}
+  - {date: 2027-03-17, time_utc: "18:00", kind: fomc, title: "FOMC rate decision (with SEP)", source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm}
+  - {date: 2027-04-13, time_utc: "12:30", kind: cpi, title: "US CPI (March 2027)", source: https://www.bls.gov/schedule/news_release/cpi.htm}
+  - {date: 2027-04-28, time_utc: "18:00", kind: fomc, title: "FOMC rate decision", source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm}
+  - {date: 2027-05-12, time_utc: "12:30", kind: cpi, title: "US CPI (April 2027)", source: https://www.bls.gov/schedule/news_release/cpi.htm}
+  - {date: 2027-06-09, time_utc: "18:00", kind: fomc, title: "FOMC rate decision (with SEP)", source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm}
+  - {date: 2027-06-10, time_utc: "12:30", kind: cpi, title: "US CPI (May 2027)", source: https://www.bls.gov/schedule/news_release/cpi.htm}
+  - {date: 2027-07-14, time_utc: "12:30", kind: cpi, title: "US CPI (June 2027)", source: https://www.bls.gov/schedule/news_release/cpi.htm}
+  - {date: 2027-07-28, time_utc: "18:00", kind: fomc, title: "FOMC rate decision", source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm}
+  - {date: 2027-08-11, time_utc: "12:30", kind: cpi, title: "US CPI (July 2027)", source: https://www.bls.gov/schedule/news_release/cpi.htm}
+  - {date: 2027-09-14, time_utc: "12:30", kind: cpi, title: "US CPI (August 2027)", source: https://www.bls.gov/schedule/news_release/cpi.htm}
+  - {date: 2027-09-15, time_utc: "18:00", kind: fomc, title: "FOMC rate decision (with SEP)", source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm}
+  - {date: 2027-10-14, time_utc: "12:30", kind: cpi, title: "US CPI (September 2027)", source: https://www.bls.gov/schedule/news_release/cpi.htm}
+  - {date: 2027-10-27, time_utc: "18:00", kind: fomc, title: "FOMC rate decision", source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm}
+  - {date: 2027-11-10, time_utc: "13:30", kind: cpi, title: "US CPI (October 2027)", source: https://www.bls.gov/schedule/news_release/cpi.htm}
+  - {date: 2027-12-08, time_utc: "19:00", kind: fomc, title: "FOMC rate decision (with SEP)", source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm}
+  - {date: 2027-12-10, time_utc: "13:30", kind: cpi, title: "US CPI (November 2027)", source: https://www.bls.gov/schedule/news_release/cpi.htm}

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic feed shaped like the configured RSS 2.0 feeds (CDATA titles, HTML summaries). -->
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>Example Crypto News</title>
+    <link>https://news.example.com</link>
+    <item>
+      <title><![CDATA[<b>Bitcoin</b> tops $100K &amp; ether follows]]></title>
+      <link>https://news.example.com/markets/btc-100k?utm_source=rss&amp;utm_medium=feed&amp;id=7#top</link>
+      <description><![CDATA[<p>Markets rallied.<script>alert(1)</script></p>]]></description>
+      <pubDate>Tue, 27 Oct 2026 14:30:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>Solana validators ship upgrade</title>
+      <link>https://news.example.com/tech/sol-upgrade</link>
+      <description>Network news. The post appeared first on Example.</description>
+      <pubDate>Tue, 27 Oct 2026 09:00:00 -0400</pubDate>
+    </item>
+    <item>
+      <title>Solar power and soldiers: a macro story</title>
+      <link>https://news.example.com/macro/solar</link>
+      <description>No coins here, consolidated solutions.</description>
+      <pubDate>Mon, 26 Oct 2026 08:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>Click me</title>
+      <link>javascript:alert(document.cookie)</link>
+      <pubDate>Mon, 26 Oct 2026 08:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>No date on this one</title>
+      <link>https://news.example.com/undated</link>
+    </item>
+    <item>
+      <title>BITCOIN TOPS $100K &amp; ETHER FOLLOWS</title>
+      <link>https://news.example.com/markets/btc-100k-copy</link>
+      <pubDate>Tue, 27 Oct 2026 15:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>Posted from the future: $ETH ETF flows</title>
+      <link>https://news.example.com/future</link>
+      <pubDate>Fri, 30 Oct 2026 12:00:00 +0000</pubDate>
+    </item>
+  </channel>
+</rss>

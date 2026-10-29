@@ -67,52 +67,153 @@ def api_openapi(
 def _data() -> None: ...
 
 
+def _counts(added: dict[str, int]) -> str:
+    return ", ".join(f"{k} +{n}" for k, n in added.items()) or "nothing to fetch"
+
+
 @data_app.command("update")
 def data_update(
     market: Annotated[
         bool, typer.Option("--market", help="Daily OHLCV (Coinbase + BTC backfill).")
     ] = False,
-    coin: Annotated[str | None, typer.Option(help="Only this coin, e.g. BTC.")] = None,
+    onchain: Annotated[
+        bool, typer.Option("--onchain", help="Coin Metrics on-chain metrics (BTC, ETH).")
+    ] = False,
+    sentiment: Annotated[bool, typer.Option("--sentiment", help="Fear & Greed.")] = False,
+    macro: Annotated[
+        bool, typer.Option("--macro", help="FRED series (needs FRED_API_KEY).")
+    ] = False,
+    dominance: Annotated[
+        bool, typer.Option("--dominance", help="Dominance snapshot (needs COINGECKO_DEMO_KEY).")
+    ] = False,
+    news: Annotated[bool, typer.Option("--news", help="RSS headlines.")] = False,
+    calendar: Annotated[bool, typer.Option("--calendar", help="Sync calendar.yaml.")] = False,
+    coin: Annotated[
+        str | None, typer.Option(help="Only this coin (market and on-chain), e.g. BTC.")
+    ] = None,
 ) -> None:
-    """Fetch new data into the database (idempotent; safe to re-run)."""
-    from desk.data import coinmetrics
+    """Fetch new data into the database (idempotent; safe to re-run).
+
+    With no source flags, every source is refreshed. Sources run independently: a failure is
+    reported and the others still run; the exit code is 1 if any source failed. A source whose
+    API key is missing is skipped with a warning.
+    """
+    from collections.abc import Callable
+
+    from desk.config import get_settings
+    from desk.data import calendar as cal
+    from desk.data import coinmetrics, fred, http
+    from desk.data import dominance as dom
     from desk.data import market as mkt
+    from desk.data import news as rss
+    from desk.data import sentiment as fng
     from desk.data.coins import active_coins, seed_coins
     from desk.db import get_engine, session_factory
 
-    if not market:
-        typer.echo("Nothing selected. Use --market (more sources arrive in Stage 1.2).")
-        raise typer.Exit(1)
+    chosen = {
+        "market": market, "onchain": onchain, "sentiment": sentiment, "macro": macro,
+        "dominance": dominance, "news": news, "calendar": calendar,
+    }  # fmt: skip
+    if not any(chosen.values()):
+        chosen = dict.fromkeys(chosen, True)
+    settings = get_settings()
     sessions = session_factory(get_engine())
+    now = mkt.utc_now()
     with sessions.begin() as session:
         seed_coins(session)
-    exchange = mkt.make_exchange()
-    with coinmetrics.make_client() as cm:
+    with sessions() as session:
+        coins = active_coins(session, coin)
+    if coin and not coins:
+        typer.echo(f"No active coin matches {coin!r}.")
+        raise typer.Exit(1)
+
+    def run_market() -> None:
+        exchange = mkt.make_exchange()
+        with coinmetrics.make_client() as cm:
+            for c in coins:
+                with sessions.begin() as session:
+                    added = mkt.update_coin(session, c, exchange, cm)
+                typer.echo(f"  {c.symbol}: {_counts(added)}")
+
+    def run_onchain() -> None:
+        with coinmetrics.make_client() as cm:
+            for c in coins:
+                if c.symbol not in coinmetrics.ASSETS:
+                    continue
+                with sessions.begin() as session:
+                    added = coinmetrics.update_onchain(session, cm, c.symbol, now)
+                typer.echo(f"  {c.symbol}: {_counts(added)}")
+
+    def run_sentiment() -> None:
+        with http.make_client() as client, sessions.begin() as session:
+            typer.echo(f"  fng +{fng.update(session, client, now)}")
+
+    def run_macro() -> None:
+        if settings.fred_api_key is None:
+            typer.echo("  skipped: FRED_API_KEY is not set")
+            return
+        with fred.make_client() as client, sessions.begin() as session:
+            added = fred.update(session, client, settings.fred_api_key.get_secret_value(), now)
+        typer.echo(f"  {_counts(added)}")
+
+    def run_dominance() -> None:
+        if settings.coingecko_demo_key is None:
+            typer.echo("  skipped: COINGECKO_DEMO_KEY is not set")
+            return
+        key = settings.coingecko_demo_key.get_secret_value()
+        with dom.make_client(key) as client, sessions.begin() as session:
+            typer.echo(f"  {_counts(dom.update(session, client))}")
+
+    def run_news() -> None:
         with sessions() as session:
-            coins = active_coins(session, coin)
-        if not coins:
-            typer.echo(f"No active coin matches {coin!r}.")
-            raise typer.Exit(1)
-        for c in coins:
-            with sessions.begin() as session:
-                added = mkt.update_coin(session, c, exchange, cm)
-            summary = ", ".join(f"{src} +{n}" for src, n in added.items())
-            typer.echo(f"{c.symbol}: {summary}")
+            aliases = {c.symbol: c.aliases for c in active_coins(session)}
+        with http.make_client() as client, sessions.begin() as session:
+            added, failed = rss.update(session, client, aliases, now)
+        typer.echo(f"  headlines +{added}")
+        if failed:
+            raise RuntimeError(f"no items from: {', '.join(failed)}")
+
+    def run_calendar() -> None:
+        with sessions.begin() as session:
+            n, deleted = cal.sync(session)
+        typer.echo(f"  {n} events in calendar.yaml, {deleted} stale rows removed")
+
+    runners: dict[str, Callable[[], None]] = {
+        "market": run_market, "onchain": run_onchain, "sentiment": run_sentiment,
+        "macro": run_macro, "dominance": run_dominance, "news": run_news,
+        "calendar": run_calendar,
+    }  # fmt: skip
+    failures = []
+    for name, run in runners.items():
+        if not chosen[name]:
+            continue
+        typer.echo(f"{name}:")
+        try:
+            run()
+        except Exception as exc:  # one source failing must not stop the others
+            failures.append(name)
+            typer.echo(f"  FAILED: {type(exc).__name__}: {exc}", err=True)
+    if failures:
+        typer.echo(f"Failed sources: {', '.join(failures)}", err=True)
+        raise typer.Exit(1)
 
 
 @data_app.command("status")
 def data_status(
     issues: Annotated[int, typer.Option(help="How many validation issues to list per coin.")] = 5,
 ) -> None:
-    """Per coin: date range, rows per source, freshness and validation issues."""
+    """Per coin: date range, rows per source, freshness and validation issues; then every
+    series, the news table and the next calendar event."""
     from collections import Counter
 
     from sqlalchemy import func, select
 
+    from desk.data import calendar as cal
     from desk.data import market as mkt
+    from desk.data import series
     from desk.data.coins import active_coins
     from desk.db import get_engine, session_factory
-    from desk.models import CandleDaily
+    from desk.models import CandleDaily, News
 
     today = mkt.utc_now().date()
     with session_factory(get_engine())() as session:
@@ -140,6 +241,15 @@ def data_status(
             )
             for i in found[:issues]:
                 typer.echo(f"    {i.date} {i.kind}: {i.detail}")
+
+        typer.echo("series:")
+        for key, n, first, last in series.summary(session):
+            typer.echo(f"  {key}: {first} -> {last} (age {(today - last).days}d) | {n} rows")
+        n_news, newest = session.execute(select(func.count(), func.max(News.published_at))).one()
+        typer.echo(f"news: {n_news} headlines, newest {newest or '-'}")
+        upcoming = cal.load_events(session, today, days_ahead=30)
+        nxt = f"{upcoming[0]['date']} {upcoming[0]['title']}" if upcoming else "none in 30 days"
+        typer.echo(f"calendar: next {nxt}")
 
 
 @analytics_app.callback()

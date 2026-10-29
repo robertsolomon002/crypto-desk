@@ -55,6 +55,15 @@ Local ✅, CI ✅.
 | | `/coins/bitcoin/market_chart` | 365 days ✅; `days=max` → **401, error 10012** (Demo history capped at 365 days) | | |
 | Hyperliquid (optional) | `POST api.hyperliquid.xyz/info` `fundingHistory` | Hourly funding for BTC, ETH, SOL | ✅ | ✅ |
 
+### Stage 1.2 findings (2026-10-29)
+
+- **Coin Metrics:** several metrics per request work (`metrics=A,B,C`); a metric with no value that day comes back as `null` (ETH `HashRate` from 2022-09-15). Full BTC and ETH history of the five stored metrics is about 50,000 rows, loaded in a few seconds.
+- **Fear & Greed:** `timestamp` is 00:00 UTC of the day; the newest row carries `time_until_update`. `metadata.error` is null on success. Full history: 3,189 days from 2018-02-01.
+- **FRED observations** (`/fred/series/observations`): missing values are `"."` (for example DGS10 on 2025-12-25). Measured first-release lag (observation date to `realtime_start` with `output_type=4`, 2025-01 to 2026-10): DTWEXBGS 3–8 days, DGS10 1–6, DFF 1–6, M2SL 51–58. ALFRED refuses ranges with more than 2,000 vintage dates (DGS10 and DFF have more than 5,000), and DTWEXBGS has no vintages before 2019. The API key is a query parameter, so errors must not echo the URL (D32).
+- **FRED release calendar:** `/fred/release/dates?release_id=10&include_release_dates_with_no_data=true` lists upcoming CPI release dates, but only for the current year (through 2026-12-10 when checked).
+- **CoinGecko `/global`:** `data.updated_at` (unix seconds) dates the snapshot; `market_cap_percentage` is in percent. It now also returns `fear_and_greed_index` (not used).
+- **Official calendars:** the Fed FOMC page is fetchable by script (2027 meetings listed, "Last Update: October 28, 2026"). **BLS returns HTTP 403 to scripts** ("Access Denied", bot blocking), so the 2027 CPI dates were read from the BLS page in a browser-style fetch and the 2026 dates cross-checked with FRED's release calendar. `config/calendar.yaml` is maintained by hand; Rob double-checks it.
+
 ### RSS feeds (`config/feeds.yaml`)
 
 All four configured URLs work locally and in CI: CoinDesk (25 items), Cointelegraph (30), Decrypt (34), The Block (20).
