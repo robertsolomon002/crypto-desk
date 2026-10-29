@@ -20,7 +20,8 @@ playwright-report/
 test-results/
 
 # Local data and caches
-data/
+/data/
+/backend/data/
 *.parquet
 *.duckdb
 *.log
