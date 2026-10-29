@@ -2,7 +2,7 @@
 
 **Prepared for:** Rob (built by Claude Code, one substage per session)
 **Date:** 2026-10-26. v3 replaces v1 and v2. The project changed from a weekly forecasting study into a multi-tab web app, so everything earlier is superseded.
-**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Stage 1.1 done (schema, migration `0001`, daily market data; D31). Stage 1.2 done (context, on-chain, macro, news and calendar data; D32). Stage 1.3 done (analytics engine, look-ahead test, cycle anchors verified, cache; D33 to D35). Stage 1.4 code done (daily job, alerts, `daily.yml`; D36); waiting for Rob's first manual run of the Daily workflow. Telegram and Discord are set up; the Cloudflare key is still pending with Rob (needed by 2.2).
+**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Stage 1.1 done (schema, migration `0001`, daily market data; D31). Stage 1.2 done (context, on-chain, macro, news and calendar data; D32). Stage 1.3 done (analytics engine, look-ahead test, cycle anchors verified, cache; D33 to D35). Stage 1.4 done (daily job, alerts, `daily.yml`; D36; first GitHub run 2026-10-29 succeeded and all alert channels delivered). Stage 1 complete. Next: Stage 2.1 (Read API and auth). Telegram and Discord are set up; the Cloudflare key is still pending with Rob (needed by 2.2).
 **Repo:** `robertsolomon002/crypto-desk` (public code; all data and MCO-derived content stay private in the database). Local folder `C:\Users\rober\code\crypto-desk`.
 
 **What it is:** a private, invite-only web app in the spirit of a paid crypto "terminal", built on free data. It has these tabs:
@@ -703,7 +703,7 @@ Each version ships to friends before the next one starts. No fixed dates: priori
 ## 14. Progress tracker
 
 - [x] 0.1 Accounts and keys [Rob] · [x] 0.2 Scaffold monorepo · [x] 0.3 Verification spike
-- [x] 1.1 Schema and market data · [x] 1.2 Context, on-chain, macro · [x] 1.3 Analytics engine · [ ] 1.4 Daily jobs
+- [x] 1.1 Schema and market data · [x] 1.2 Context, on-chain, macro · [x] 1.3 Analytics engine · [x] 1.4 Daily jobs
 - [ ] 2.1 Read API and auth · [ ] 2.2 Deploy
 - [ ] 3.1 Shell and Overview · [ ] 3.2 Charts · [ ] 3.3 Cycles and Stats · [ ] 3.4 Data, Settings, invite friends [Rob]
 - [ ] 4.1 On-chain & Macro tab · [ ] 4.2 desk-mcp and Claude desktop [Rob]
