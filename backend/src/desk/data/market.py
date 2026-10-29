@@ -122,7 +122,10 @@ def update_coin(
     cm_client: httpx.Client | None = None,
     now: dt.datetime | None = None,
 ) -> dict[str, int]:
-    """Fetch new closed candles for one coin (plus the one-time BTC backfill); new rows by source."""
+    """Fetch new closed candles for one coin, plus the one-time BTC backfill.
+
+    Returns the number of new rows per source.
+    """
     added: dict[str, int] = {}
     last = _bound(session, coin.symbol, "coinbase", func.max)
     since = last - dt.timedelta(days=OVERLAP_DAYS) if last else HISTORY_START
