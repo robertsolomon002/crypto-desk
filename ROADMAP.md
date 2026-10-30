@@ -2,7 +2,7 @@
 
 **Prepared for:** Rob (built by Claude Code, one substage per session)
 **Date:** 2026-10-26. v3 replaces v1 and v2. The project changed from a weekly forecasting study into a multi-tab web app, so everything earlier is superseded.
-**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Stage 1.1 done (schema, migration `0001`, daily market data; D31). Stage 1.2 done (context, on-chain, macro, news and calendar data; D32). Stage 1.3 done (analytics engine, look-ahead test, cycle anchors verified, cache; D33 to D35). Stage 1.4 done (daily job, alerts, `daily.yml`; D36; first GitHub run 2026-10-29 succeeded and all alert channels delivered). Stage 1 complete. Stage 2.1 done (read API, Clerk auth with roles in the DB, Data tab routes, key redaction, rate limit, ETags; D37). Next: Stage 2.2 (Deploy). Telegram and Discord are set up; the Cloudflare key is still pending with Rob (needed by 2.2), and `ADMIN_CLERK_IDS` waits for Rob's first login in Stage 3.1 (no Clerk user exists yet).
+**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Stage 1.1 done (schema, migration `0001`, daily market data; D31). Stage 1.2 done (context, on-chain, macro, news and calendar data; D32). Stage 1.3 done (analytics engine, look-ahead test, cycle anchors verified, cache; D33 to D35). Stage 1.4 done (daily job, alerts, `daily.yml`; D36; first GitHub run 2026-10-29 succeeded and all alert channels delivered). Stage 1 complete. Stage 2.1 done (read API, Clerk auth with roles in the DB, Data tab routes, key redaction, rate limit, ETags; D37). Stage 2.2 in progress: deploy pipeline written (Cloud Run behind Workload Identity Federation with smoke-tested no-traffic revisions, Cloudflare Pages at `crypto-desk-a9f.pages.dev` with previews, CORS, CSP, `docs/OPS.md`; D38); first live deploy pending. `ADMIN_CLERK_IDS` waits for Rob's first login in Stage 3.1 (no Clerk user exists yet; it is now a GitHub repo variable, OPS.md), and the $1 GCP budget alert is a [Rob] step.
 **Repo:** `robertsolomon002/crypto-desk` (public code; all data and MCO-derived content stay private in the database). Local folder `C:\Users\rober\code\crypto-desk`.
 
 **What it is:** a private, invite-only web app in the spirit of a paid crypto "terminal", built on free data. It has these tabs:
@@ -190,7 +190,8 @@ crypto-desk/
       signals/     run.py  baselines.py  score.py
       notify/      telegram.py  discord.py
       jobs/        daily.py  weekly.py  levelwatch.py  mco_daily.py
-      cli.py       # Typer: desk data|analytics|jobs|mcp|admin|api
+      deploy/      migrate.py (direct-host migrations)  cloudrun.py (service env)  smoke.py   # Stage 2.2
+      cli.py       # Typer: desk data|analytics|jobs|mcp|admin|api|notify|db|deploy
     tests/
   frontend/
     package.json  vite.config.ts  tsconfig.json  index.html
@@ -433,7 +434,7 @@ Data stays far below Neon's free storage limit (verify the limit). Daily candles
 
 - **2.2 Deploy backend and frontend.**
   Prompt: "Read ROADMAP.md Sections 1 to 10.
-  1. Write `deploy-backend.yml`: build the Docker image, push it to Artifact Registry, and deploy to Cloud Run (min instances 0, max 2, memory and CPU within the free tier, request timeout long enough for SSE, secrets from Secret Manager) using Workload Identity Federation (no JSON keys in GitHub). Mirror the backend secrets into Secret Manager.
+  1. Write `deploy-backend.yml`: build the Docker image, push it to Artifact Registry, and deploy to Cloud Run (min instances 0, max 2, memory and CPU within the free tier, request timeout long enough for SSE, secrets from Secret Manager) using Workload Identity Federation (no JSON keys in GitHub). Mirror the backend secrets into Secret Manager. *Updated 2026-10-30 (D38): only the secrets the Cloud Run service reads are mirrored (`DATABASE_URL`, `CLERK_SECRET_KEY`; the Anthropic and LangSmith keys join in 5.1), because Secret Manager's free tier is 6 active versions; the jobs keep using GitHub secrets. The frontend is at `crypto-desk-a9f.pages.dev` (the bare name was taken), and new revisions are smoke-tested with no traffic before they go live.*
   2. Write `deploy-frontend.yml` for Cloudflare Pages, with production and preview builds and the API base URL as an env var.
   3. Configure CORS for the Pages domains only, plus a strict Content-Security-Policy for the frontend.
   4. Run migrations on deploy (a separate step, never on app start).

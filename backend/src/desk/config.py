@@ -81,6 +81,9 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://localhost:4173"]
     )
+    # Extra origins as one regex, matched whole (Starlette's `fullmatch`): the Cloudflare Pages
+    # preview deployments, e.g. ^https://[a-z0-9-]+\.crypto-desk\.pages\.dev$ (Stage 2.2).
+    cors_origin_regex: str | None = None
 
     @property
     def clerk_issuer_url(self) -> str | None:

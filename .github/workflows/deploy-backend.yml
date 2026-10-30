@@ -1,0 +1,123 @@
+name: Deploy backend
+
+# Stage 2.2 (D38). After CI passes on a push to main (or by hand): build the API image, push it to
+# Artifact Registry, migrate Neon over the direct host (its own step, never on app start), deploy a
+# new Cloud Run revision with no traffic, smoke test it on its tag URL, then move all traffic to it.
+# A revision that fails the smoke test never serves users. GitHub signs in to Google through
+# Workload Identity Federation (no JSON keys); the provider admits only this repo's main branch.
+# The service reads DATABASE_URL and CLERK_SECRET_KEY from Secret Manager.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # Workload Identity Federation
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false # never stop a deploy halfway
+
+env:
+  PROJECT: crypto-desk-513023
+  REGION: us-central1
+  SERVICE: desk-api
+  IMAGE: us-central1-docker.pkg.dev/crypto-desk-513023/desk/api
+  RUNTIME_SA: desk-api@crypto-desk-513023.iam.gserviceaccount.com
+  API_URL: https://desk-api-850576035365.us-central1.run.app
+  PAGES_URL: https://crypto-desk-a9f.pages.dev
+  # Pages preview deployments (<hash>. and <branch>.crypto-desk-a9f.pages.dev) call the same API
+  CORS_ORIGIN_REGEX: ^https://[a-z0-9-]+\.crypto-desk-a9f\.pages\.dev$
+
+jobs:
+  deploy:
+    # Only green pushes to main; never a pull request's code with deploy rights
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash # -eo pipefail
+    env:
+      PYTHONUTF8: "1"
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SHA }}
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3 (no floating major tag)
+        with:
+          version: "0.11.7"
+          python-version: "3.12"
+          working-directory: backend
+          enable-cache: true
+      - run: uv sync --locked # first, so the failure alert can always run
+        working-directory: backend
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/850576035365/locations/global/workloadIdentityPools/github/providers/crypto-desk
+          service_account: desk-deployer@crypto-desk-513023.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@v3
+      - name: Build and push the image
+        run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+          docker build -f backend/Dockerfile -t "$IMAGE:$SHA" .
+          docker push "$IMAGE:$SHA"
+      - name: Migrate Neon (direct host)
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: uv run desk db upgrade
+      - name: Service environment (non-secret)
+        working-directory: backend
+        env:
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+          ADMIN_CLERK_IDS: ${{ vars.ADMIN_CLERK_IDS }} # repo variable, set in Stage 3.1
+        run: >-
+          uv run desk deploy env-file --out "$RUNNER_TEMP/env.yaml"
+          --cors-origins "[\"$PAGES_URL\"]" --cors-origin-regex "$CORS_ORIGIN_REGEX"
+          --clerk-publishable-key "$VITE_CLERK_PUBLISHABLE_KEY"
+          --admin-clerk-ids "${ADMIN_CLERK_IDS:-[]}"
+      - name: Deploy a revision without traffic
+        # Request-based billing (CPU only during requests), scale to zero, at most 2 instances:
+        # the free tier (DATA_SOURCES.md). 900 s timeout leaves room for agent SSE streams.
+        run: >-
+          gcloud run deploy "$SERVICE" --project "$PROJECT" --region "$REGION"
+          --image "$IMAGE:$SHA" --service-account "$RUNTIME_SA"
+          --env-vars-file "$RUNNER_TEMP/env.yaml"
+          --set-secrets DATABASE_URL=database-url:latest,CLERK_SECRET_KEY=clerk-secret-key:latest
+          --cpu 1 --memory 512Mi --cpu-throttling --cpu-boost
+          --min-instances 0 --max-instances 2 --concurrency 40 --timeout 900
+          --no-traffic --tag candidate --quiet
+      - name: Smoke test the new revision
+        working-directory: backend
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+        run: |
+          CANDIDATE_URL=$(gcloud run services describe "$SERVICE" --project "$PROJECT" \
+            --region "$REGION" --format=json | jq -r '.status.traffic[] | select(.tag=="candidate") | .url')
+          echo "candidate: $CANDIDATE_URL"
+          uv run desk deploy smoke --url "$CANDIDATE_URL" --origin "$PAGES_URL"
+      - name: Send all traffic to the new revision
+        run: |
+          gcloud run services update-traffic "$SERVICE" --project "$PROJECT" --region "$REGION" \
+            --to-latest --quiet
+          curl -fsS --retry 5 --retry-all-errors "$API_URL/api/health"
+      - name: Alert admins on failure
+        if: failure()
+        working-directory: backend
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DISCORD_OPS_WEBHOOK_URL: ${{ secrets.DISCORD_OPS_WEBHOOK_URL }}
+        run: >-
+          uv run desk notify send ops_failure --title "Backend deploy failed"
+          --body "Commit $SHA. Production still serves the previous revision unless the failure
+          came after the traffic switch." --url "$RUN_URL"

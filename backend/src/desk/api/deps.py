@@ -64,7 +64,7 @@ def get_verifier() -> ClerkVerifier:
         raise RuntimeError(
             "Clerk is not configured: set CLERK_ISSUER or VITE_CLERK_PUBLISHABLE_KEY"
         )
-    return ClerkVerifier(issuer, settings.cors_origins)
+    return ClerkVerifier(issuer, settings.cors_origins, settings.cors_origin_regex)
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,113 @@
+name: Deploy frontend
+
+# Stage 2.2 (D38). Cloudflare Pages by direct upload (wrangler), no Git integration:
+# - production: after CI passes on a push to main (or by hand), branch `main`;
+# - preview: every pull request from this repo, at <branch>.crypto-desk-a9f.pages.dev.
+# Both builds call the production API (VITE_API_BASE_URL). `vite build` writes dist/_headers
+# with the CSP (frontend/src/lib/security-headers.ts). The branch name is untrusted text, so it
+# only reaches the shell through an env var.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  pull_request:
+    paths: [frontend/**, .github/workflows/deploy-frontend.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-frontend-${{ github.event.pull_request.number || 'main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PAGES_PROJECT: crypto-desk
+  # The bare name was taken on pages.dev, so Cloudflare added a suffix
+  PAGES_URL: https://crypto-desk-a9f.pages.dev
+  PAGES_HOST_RE: crypto-desk-a9f\.pages\.dev
+  VITE_API_BASE_URL: https://desk-api-850576035365.us-central1.run.app
+  WRANGLER: wrangler@4.150.0
+
+jobs:
+  deploy:
+    # Green pushes to main, manual runs, and pull requests from this repo (forks get no secrets)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash # -eo pipefail, so a failed wrangler run is not hidden by tee
+        working-directory: frontend
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
+      BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || 'main' }}
+      VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SHA }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: The build carries the CSP for Clerk and the API
+        run: |
+          grep -q "Content-Security-Policy:" dist/_headers
+          grep -q "$VITE_API_BASE_URL" dist/_headers
+          grep -q "clerk.accounts.dev\|clerk\." dist/_headers
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx --yes "$WRANGLER" pages deploy dist --project-name "$PAGES_PROJECT" \
+            --branch "$BRANCH" --commit-hash "$SHA" --commit-dirty=false | tee "$RUNNER_TEMP/deploy.log"
+          URL=$(grep -oE "https://[a-z0-9-]+\.$PAGES_HOST_RE" "$RUNNER_TEMP/deploy.log" | tail -1)
+          echo "DEPLOY_URL=$URL" >> "$GITHUB_ENV"
+      - name: Smoke test (page, SPA fallback, CSP)
+        run: |
+          urls="$DEPLOY_URL"
+          if [ "$BRANCH" = main ]; then urls="$urls $PAGES_URL"; fi
+          for url in $urls; do
+            for path in / /charts; do
+              ok=0
+              for i in $(seq 1 12); do
+                if curl -fsS -D "$RUNNER_TEMP/h.txt" -o "$RUNNER_TEMP/b.html" "$url$path" \
+                  && grep -q '<div id="root">' "$RUNNER_TEMP/b.html" \
+                  && grep -qi "^content-security-policy: default-src 'self'" "$RUNNER_TEMP/h.txt"; then
+                  ok=1; break
+                fi
+                sleep 5
+              done
+              [ "$ok" = 1 ] || { echo "smoke failed: $url$path"; exit 1; }
+              echo "ok: $url$path"
+            done
+          done
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3 (no floating major tag)
+        if: failure() && env.BRANCH == 'main'
+        with:
+          version: "0.11.7"
+          python-version: "3.12"
+          working-directory: backend
+      - name: Alert admins on failure (production only)
+        if: failure() && env.BRANCH == 'main'
+        working-directory: backend
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DISCORD_OPS_WEBHOOK_URL: ${{ secrets.DISCORD_OPS_WEBHOOK_URL }}
+        run: >-
+          uv run desk notify send ops_failure --title "Frontend deploy failed"
+          --body "Commit $SHA." --url "$RUN_URL"

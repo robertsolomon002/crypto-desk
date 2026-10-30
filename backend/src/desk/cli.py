@@ -16,6 +16,8 @@ mcp_app = typer.Typer(help="The desk-mcp server.", no_args_is_help=True)
 admin_app = typer.Typer(help="Admin tasks.", no_args_is_help=True)
 api_app = typer.Typer(help="Run the API and export its OpenAPI schema.", no_args_is_help=True)
 notify_app = typer.Typer(help="Send alerts (Telegram, Discord).", no_args_is_help=True)
+db_app = typer.Typer(help="Database migrations.", no_args_is_help=True)
+deploy_app = typer.Typer(help="Deploy helpers for the workflows (Stage 2.2).", no_args_is_help=True)
 
 app.add_typer(data_app, name="data")
 app.add_typer(analytics_app, name="analytics")
@@ -24,6 +26,8 @@ app.add_typer(mcp_app, name="mcp")
 app.add_typer(admin_app, name="admin")
 app.add_typer(api_app, name="api")
 app.add_typer(notify_app, name="notify")
+app.add_typer(db_app, name="db")
+app.add_typer(deploy_app, name="deploy")
 
 
 @app.command()
@@ -386,3 +390,76 @@ def notify_test() -> None:
 
 @admin_app.callback()
 def _admin() -> None: ...
+
+
+@db_app.callback()
+def _db() -> None: ...
+
+
+@db_app.command("upgrade")
+def db_upgrade(
+    revision: Annotated[str, typer.Argument(help="Target revision.")] = "head",
+) -> None:
+    """Apply migrations over Neon's direct host (DATABASE_URL may be the pooled URL)."""
+    from desk.config import get_settings
+    from desk.deploy.migrate import upgrade
+
+    url = get_settings().database_url
+    if url is None:
+        typer.echo("DATABASE_URL is not set", err=True)
+        raise typer.Exit(1)
+    before, after = upgrade(url.get_secret_value(), revision)
+    typer.echo(f"migrations: {before or 'empty'} -> {after}")
+
+
+@deploy_app.callback()
+def _deploy() -> None: ...
+
+
+@deploy_app.command("env-file")
+def deploy_env_file(
+    out: Annotated[Path, typer.Option(help="Where to write the YAML.")],
+    cors_origins: Annotated[str, typer.Option(help="JSON list of https origins.")],
+    clerk_publishable_key: Annotated[str, typer.Option(help="pk_test_... or pk_live_...")],
+    cors_origin_regex: Annotated[str, typer.Option(help="Anchored regex; empty for none.")] = "",
+    admin_clerk_ids: Annotated[str, typer.Option(help="JSON list of Clerk user ids.")] = "[]",
+) -> None:
+    """Write the Cloud Run service's non-secret env vars for `gcloud run deploy --env-vars-file`."""
+    import json
+
+    from desk.deploy.cloudrun import EnvError, service_env, to_yaml
+
+    try:
+        env = service_env(
+            cors_origins=json.loads(cors_origins or "[]"),
+            cors_origin_regex=cors_origin_regex or None,
+            clerk_publishable_key=clerk_publishable_key.strip(),
+            admin_clerk_ids=json.loads(admin_clerk_ids or "[]"),
+        )
+    except (EnvError, json.JSONDecodeError) as e:
+        typer.echo(f"bad deploy setting: {e}", err=True)
+        raise typer.Exit(1) from None
+    out.write_text(to_yaml(env), encoding="utf-8")
+    typer.echo(f"wrote {out} ({', '.join(sorted(env))})")
+
+
+@deploy_app.command("smoke")
+def deploy_smoke(
+    url: Annotated[str, typer.Option(help="The API base URL (Cloud Run).")],
+    origin: Annotated[
+        str | None, typer.Option(help="A frontend origin that CORS must allow.")
+    ] = None,
+) -> None:
+    """Post-deploy smoke test: health, 401 without a token, CORS, one authenticated call
+    (CLERK_SECRET_KEY from the environment)."""
+    from desk.config import get_settings
+    from desk.deploy.smoke import SmokeError, run
+
+    secret = get_settings().clerk_secret_key
+    try:
+        report = run(url, origin=origin, clerk_secret_key=secret and secret.get_secret_value())
+    except SmokeError as e:
+        typer.echo(f"smoke test failed: {e}", err=True)
+        raise typer.Exit(1) from None
+    for line in report:
+        typer.echo(line)
