@@ -2,7 +2,7 @@
 
 **Prepared for:** Rob (built by Claude Code, one substage per session)
 **Date:** 2026-10-26. v3 replaces v1 and v2. The project changed from a weekly forecasting study into a multi-tab web app, so everything earlier is superseded.
-**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Stage 1.1 done (schema, migration `0001`, daily market data; D31). Stage 1.2 done (context, on-chain, macro, news and calendar data; D32). Stage 1.3 done (analytics engine, look-ahead test, cycle anchors verified, cache; D33 to D35). Stage 1.4 done (daily job, alerts, `daily.yml`; D36; first GitHub run 2026-10-29 succeeded and all alert channels delivered). Stage 1 complete. Stage 2.1 done (read API, Clerk auth with roles in the DB, Data tab routes, key redaction, rate limit, ETags; D37). Stage 2.2 done (Cloud Run behind Workload Identity Federation with smoke-tested no-traffic revisions, Cloudflare Pages at `crypto-desk-a9f.pages.dev` with previews, CORS, CSP, `docs/OPS.md`; D38; first deploys 2026-10-30 passed every smoke check). Stage 2 complete. Stage 3.1 done (app shell with Clerk sign-in, tabs behind `/api/me` feature flags, themes, phone bottom bar, cold-start banner, error boundaries; Overview from the new `/api/overview`; D39). Next: Stage 3.2 (plan mode). Rob's first login done and `ADMIN_CLERK_IDS` set (2026-10-30). The $1 GCP budget alert is still a pending [Rob] step.
+**Status:** Stage 0 done (accounts, scaffold, verification spike; findings in `docs/DATA_SOURCES.md`, D20 to D30). Stage 1.1 done (schema, migration `0001`, daily market data; D31). Stage 1.2 done (context, on-chain, macro, news and calendar data; D32). Stage 1.3 done (analytics engine, look-ahead test, cycle anchors verified, cache; D33 to D35). Stage 1.4 done (daily job, alerts, `daily.yml`; D36; first GitHub run 2026-10-29 succeeded and all alert channels delivered). Stage 1 complete. Stage 2.1 done (read API, Clerk auth with roles in the DB, Data tab routes, key redaction, rate limit, ETags; D37). Stage 2.2 done (Cloud Run behind Workload Identity Federation with smoke-tested no-traffic revisions, Cloudflare Pages at `crypto-desk-a9f.pages.dev` with previews, CORS, CSP, `docs/OPS.md`; D38; first deploys 2026-10-30 passed every smoke check). Stage 2 complete. Stage 3.1 done (app shell with Clerk sign-in, tabs behind `/api/me` feature flags, themes, phone bottom bar, cold-start banner, error boundaries; Overview from the new `/api/overview`; D39). Stage 3.2 done (Charts tab with indicators computed in the browser and checked against a backend-generated fixture, ratio mode, levels, pivots, per-user settings; D40). Next: Stage 3.3. Rob's first login done and `ADMIN_CLERK_IDS` set (2026-10-30). The $1 GCP budget alert is still a pending [Rob] step.
 **Repo:** `robertsolomon002/crypto-desk` (public code; all data and MCO-derived content stay private in the database). Local folder `C:\Users\rober\code\crypto-desk`.
 
 **What it is:** a private, invite-only web app in the spirit of a paid crypto "terminal", built on free data. It has these tabs:
@@ -474,6 +474,7 @@ Data stays far below Neon's free storage limit (verify the limit). Daily candles
      - a 'View data' link for the visible range.
   2. Make it performant for the full BTC history.
   3. Tests: indicator math matches the backend for a fixture; Playwright smoke."
+  *Updated 2026-10-30 (D40): indicators are computed in the browser so they work on 1W, 4H and ratio bars, checked against a fixture the backend generates. Ratio mode plots the close ratio as a line (no volume, levels or pivots); pivots are 1D and 1W only.*
 
 - **3.3 Cycles and Stats tabs.**
   Prompt: "Read ROADMAP.md Sections 1 to 10.
@@ -708,7 +709,7 @@ Each version ships to friends before the next one starts. No fixed dates: priori
 - [x] 0.1 Accounts and keys [Rob] · [x] 0.2 Scaffold monorepo · [x] 0.3 Verification spike
 - [x] 1.1 Schema and market data · [x] 1.2 Context, on-chain, macro · [x] 1.3 Analytics engine · [x] 1.4 Daily jobs
 - [x] 2.1 Read API and auth · [x] 2.2 Deploy
-- [x] 3.1 Shell and Overview · [ ] 3.2 Charts · [ ] 3.3 Cycles and Stats · [ ] 3.4 Data, Settings, invite friends [Rob]
+- [x] 3.1 Shell and Overview · [x] 3.2 Charts · [ ] 3.3 Cycles and Stats · [ ] 3.4 Data, Settings, invite friends [Rob]
 - [ ] 4.1 On-chain & Macro tab · [ ] 4.2 desk-mcp and Claude desktop [Rob]
 - [ ] 5.1 Agent backend · [ ] 5.2 Agent UI · [ ] 5.3 Multi-agent desk
 - [ ] 6.1 MCO ingest · [ ] 6.2 MCO tab and overlays · [ ] 6.3 Wave-label review

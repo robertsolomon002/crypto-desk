@@ -47,7 +47,7 @@ test('tabs navigate, keep the coin, and hide later versions', async ({ page, vie
 
   await tabs.getByRole('link', { name: 'Charts' }).click()
   await expect(page).toHaveURL(/\/charts\?coin=ETH$/)
-  await expect(page.getByText('Coming in Stage 3.2')).toBeVisible()
+  await expect(page.getByRole('toolbar', { name: 'Chart settings' })).toBeVisible()
 
   if (isPhone(viewport?.width)) {
     await tabs.getByRole('button', { name: 'More tabs' }).click()

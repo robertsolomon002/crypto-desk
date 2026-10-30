@@ -79,3 +79,34 @@ export function useNews(limit: number) {
     queryFn: () => unwrap(api.GET('/api/news', { params: { query: { limit } } })),
   })
 }
+
+export type Candle = Schemas['Candle']
+export type ChartTimeframe = '1d' | '1w' | '4h'
+
+export function useOhlcv(coin: string | null, tf: ChartTimeframe) {
+  return useQuery({
+    queryKey: ['ohlcv', coin, tf],
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/ohlcv/{coin}', { params: { path: { coin: coin as string }, query: { tf } } }),
+      ),
+    enabled: coin !== null,
+  })
+}
+
+export function useLevels(coin: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['levels', coin],
+    queryFn: () => unwrap(api.GET('/api/levels/{coin}', { params: { path: { coin } } })),
+    enabled,
+  })
+}
+
+export function usePivots(coin: string, timeframe: '1d' | '1w', enabled: boolean) {
+  return useQuery({
+    queryKey: ['pivots', coin, timeframe],
+    queryFn: () =>
+      unwrap(api.GET('/api/pivots/{coin}', { params: { path: { coin }, query: { timeframe } } })),
+    enabled,
+  })
+}

@@ -4,3 +4,4 @@ playwright-report
 test-results
 src/lib/api-schema.ts
 openapi.json
+src/lib/__fixtures__

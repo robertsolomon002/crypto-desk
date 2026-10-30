@@ -11,6 +11,19 @@ export function Footer() {
         Cointelegraph, Decrypt and The Block RSS feeds (headlines). Times are shown in your local
         zone; data dates are UTC.
       </p>
+      <p>
+        {/* The Lightweight Charts NOTICE text and link (Apache 2.0, DATA_SOURCES.md). */}
+        Charts by{' '}
+        <a
+          href="https://www.tradingview.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-foreground"
+        >
+          TradingView
+        </a>
+        : TradingView Lightweight Charts™ Copyright (c) 2025 TradingView, Inc.
+      </p>
     </footer>
   )
 }
