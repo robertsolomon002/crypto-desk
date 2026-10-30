@@ -12,7 +12,17 @@ from typing import Any
 
 import pandas as pd
 
-from desk.analytics import cycles, indicators, levels, onchain, pivots, regime, seasonality, stats
+from desk.analytics import (
+    cycles,
+    indicators,
+    levels,
+    onchain,
+    pivots,
+    regime,
+    seasonality,
+    stats,
+    summary,
+)
 from desk.analytics._frames import to_jsonable, truncate
 from desk.analytics.inputs import Inputs
 from desk.data.market import resample_weekly
@@ -66,6 +76,8 @@ SPECS = [
          lambda i, c, a: indicators.indicators(i.daily[c], a), series=lambda r: r),
     Spec("regime", "Regime label (frozen D34 rules) with its inputs and history",
          lambda i, c, a: regime.regime(i.daily[c], a), series=lambda r: r.labels),
+    Spec("summary", "Last close, 1d/7d/30d change, ATH distance and regime (Overview cards)",
+         lambda i, c, a: summary.coin_summary(i.daily[c], a)),
     Spec("levels", "Key levels with distance from the last close",
          lambda i, c, a: levels.key_levels(i.daily[c], a)),
     Spec("pivots", "Zigzag swing pivots (timeframe 1d or 1w)", _pivots,

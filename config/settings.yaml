@@ -2,6 +2,7 @@
 
 features: # Decision 1: switch features off per deployment
   mco: true # also MCO_ENABLED env var; off if the app ever goes public without permission
+  mco_tab: false # v1.2: the MCO tab itself (needs mco on too); `mco` alone governs the data
   agent: false # v1.1
   signals: false # v1.3
   onchain_macro: false # v1.1

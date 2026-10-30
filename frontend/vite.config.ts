@@ -25,6 +25,12 @@ function pagesHeaders(headers: Record<string, string>): Plugin {
 export default defineConfig(({ mode }) => {
   // loadEnv also picks up VITE_* variables from the process environment (CI, deploy workflow)
   const env = loadEnv(mode, ENV_DIR, 'VITE_')
+  // The Playwright-only fake sign-in (D39) must never ship: refuse it in any build that talks to
+  // a non-local API (deploys always set VITE_API_BASE_URL to Cloud Run).
+  const localApi = /^http:\/\/localhost(:\d+)?$/.test(env.VITE_API_BASE_URL ?? '')
+  if (env.VITE_E2E_FAKE_AUTH === '1' && env.VITE_API_BASE_URL && !localApi) {
+    throw new Error('VITE_E2E_FAKE_AUTH is for Playwright builds against a mocked local API only')
+  }
   const headers = securityHeaders({
     apiBaseUrl: env.VITE_API_BASE_URL,
     clerkPublishableKey: env.VITE_CLERK_PUBLISHABLE_KEY,
@@ -45,7 +51,7 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       setupFiles: ['./src/test/setup.ts'],
-      include: ['src/**/*.test.{ts,tsx}'],
+      include: ['src/**/*.test.{ts,tsx}', 'build-guards.test.ts'],
     },
   }
 })

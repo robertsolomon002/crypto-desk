@@ -3,6 +3,7 @@
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string
   readonly VITE_CLERK_PUBLISHABLE_KEY?: string
+  readonly VITE_E2E_FAKE_AUTH?: string // Playwright builds only (D39)
 }
 
 interface ImportMeta {

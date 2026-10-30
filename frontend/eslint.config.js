@@ -26,4 +26,9 @@ export default defineConfig([
     files: ['src/components/ui/**/*.tsx'],
     rules: { 'react-refresh/only-export-components': 'off' },
   },
+  {
+    // test helpers export render utilities next to small probe components
+    files: ['src/test/**/*.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
 ])

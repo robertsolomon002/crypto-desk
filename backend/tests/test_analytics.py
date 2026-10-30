@@ -7,7 +7,17 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from desk.analytics import cycles, indicators, levels, onchain, pivots, regime, seasonality, stats
+from desk.analytics import (
+    cycles,
+    indicators,
+    levels,
+    onchain,
+    pivots,
+    regime,
+    seasonality,
+    stats,
+    summary,
+)
 from desk.analytics._frames import to_jsonable, truncate
 from tests.analytics_fakes import frame
 
@@ -283,3 +293,23 @@ def test_nupl_identity() -> None:
     assert out["nupl"].tolist() == pytest.approx([0.5, 1 - 1 / 0.75])
     mc, rc = out["market_cap"], out["realized_cap"]
     assert ((mc - rc) / mc).tolist() == pytest.approx(out["nupl"].tolist())
+
+
+def test_coin_summary() -> None:
+    closes = [100.0 + i for i in range(40)]  # 100 .. 139 from 2024-01-01
+    closes[9] = 200.0  # the ATH, 30 days before the last close (close-only: high = close)
+    s = summary.coin_summary(frame(closes))
+    assert (s.date, s.close) == (dt.date(2024, 2, 9), 139.0)
+    assert s.change_1d == pytest.approx(139 / 138 - 1)
+    assert s.change_7d == pytest.approx(139 / 132 - 1)
+    assert s.change_30d == pytest.approx(139 / 200 - 1)  # 30 days back is the spike
+    assert (s.ath, s.ath_date) == (200.0, dt.date(2024, 1, 10))
+    assert s.ath_distance == pytest.approx(139 / 200 - 1)
+    assert s.regime == "insufficient_data"
+    gap = frame(closes).drop(pd.Timestamp("2024-02-08", tz="UTC"))
+    # a missing day: compare with the last close on or before one day ago
+    assert summary.coin_summary(gap).change_1d == pytest.approx(139 / 137 - 1)
+    short = summary.coin_summary(frame(closes[:5]))
+    assert short.change_7d is None and short.change_30d is None
+    empty = summary.coin_summary(frame(closes), dt.date(2023, 1, 1))
+    assert empty.close is None and empty.regime == "insufficient_data"

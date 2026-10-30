@@ -5,6 +5,7 @@ it is added here, so it cannot skip the role checks.
 """
 
 import datetime as dt
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -22,6 +23,7 @@ INVITE = {"id": "inv_1", "email_address": "friend@example.com", "status": "pendi
 SAMPLES: dict[tuple[str, str], tuple[str, dict | None]] = {
     ("GET", "/api/me"): ("/api/me", None),
     ("GET", "/api/coins"): ("/api/coins", None),
+    ("GET", "/api/overview"): ("/api/overview", None),
     ("GET", "/api/ohlcv/{coin}"): ("/api/ohlcv/BTC", None),
     ("GET", "/api/indicators/{coin}"): ("/api/indicators/BTC?sma=20", None),
     ("GET", "/api/levels/{coin}"): ("/api/levels/BTC", None),
@@ -211,3 +213,52 @@ def test_etag_and_gzip(api) -> None:
     assert again.status_code == 304
     assert again.content == b""
     assert api.get("/api/ohlcv/BTC", headers={**h, "If-None-Match": 'W/"x"'}).status_code == 200
+
+
+def test_overview_cards_and_freshness(api, api_sessions) -> None:
+    from desk.analytics import registry
+    from desk.analytics.inputs import load_inputs
+    from desk.models import JobRun
+
+    h = auth(MEMBER)
+    with api_sessions() as s:
+        s.add(JobRun(job="daily", status="failed", error="secret stack trace",
+                     started_at=dt.datetime(2026, 10, 28, 0, 20, tzinfo=dt.UTC)))  # fmt: skip
+        s.commit()
+        ref = registry.run_json("summary", load_inputs(s, ["BTC"]), "BTC")
+    body = api.get("/api/overview", headers=h).json()
+    assert body["as_of"] == LAST_DAY.isoformat()
+    cards = body["data"]["coins"]
+    assert [c["symbol"] for c in cards] == ["BTC", "ETH", "SOL"]
+    btc = cards[0]
+    for key in ("close", "change_1d", "change_7d", "change_30d", "ath", "ath_distance"):
+        assert btc[key] == pytest.approx(ref[key]), key
+    assert btc["regime"] == ref["regime"] and btc["signal"] is None and btc["mco_bias"] is None
+    assert btc["ath_distance"] <= 0
+    fresh = {f["source"]: f for f in body["data"]["freshness"]}
+    assert fresh["Prices"]["last_date"] == LAST_DAY.isoformat()
+    assert fresh["Headlines"]["last_date"] == "2026-10-28"
+    assert fresh["FRED macro"]["max_age_days"] == 62
+    job = body["data"]["daily_job"]
+    assert job["status"] == "failed" and "error" not in job  # error text stays admin-only
+
+    cut = api.get("/api/overview?as_of=2026-10-01", headers=h).json()
+    assert cut["as_of"] == "2026-10-01" and cut["data"]["daily_job"] is None
+    cut_fresh = {f["source"]: f for f in cut["data"]["freshness"]}
+    assert cut_fresh["Headlines"]["last_date"] is None and cut_fresh["Headlines"]["stale"]
+    assert cut_fresh["Prices"]["stale"] is False
+    assert cut["data"]["coins"][0]["date"] == "2026-10-01"
+
+
+def test_me_reports_features(api, monkeypatch) -> None:
+    from desk.api.routes import coins
+
+    flags = {"features": {"mco": True, "mco_tab": True, "agent": False, "signals": False,
+                          "onchain_macro": True}}  # fmt: skip
+    monkeypatch.setattr(coins, "load_app_settings", lambda: flags)
+    me = api.get("/api/me", headers=auth(MEMBER)).json()
+    assert me["role"] == "member"
+    assert me["features"] == {"onchain_macro": True, "mco": True, "agent": False,
+                              "signals": False}  # fmt: skip
+    monkeypatch.setattr(coins, "get_settings", lambda: SimpleNamespace(mco_enabled=False))
+    assert api.get("/api/me", headers=auth(MEMBER)).json()["features"]["mco"] is False

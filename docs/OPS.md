@@ -82,11 +82,11 @@ gcloud run services describe desk-api --region us-central1 --project crypto-desk
 |---|---|
 | `DATABASE_URL`, `CLERK_SECRET_KEY` (what the service reads) | Google Secret Manager: `database-url`, `clerk-secret-key` |
 | The same values plus every job secret | GitHub Actions secrets (the deploy, daily and future jobs read these) |
-| `ADMIN_CLERK_IDS` | GitHub repo **variable** (not a secret), JSON list; empty until Stage 3.1 |
+| `ADMIN_CLERK_IDS` | GitHub repo **variable** (not a secret), JSON list, plus `.env` for local runs |
 | CORS origins, Pages URL, Cloud Run sizing | `env:` blocks and flags in the two deploy workflows |
 | CSP | `frontend/src/lib/security-headers.ts` |
 
-**Set the admin ids (Stage 3.1):** `gh variable set ADMIN_CLERK_IDS --body '["user_..."]'`, then run "Deploy backend" by hand.
+**Set the admin ids (Stage 3.1):** in Invite-only mode, create the user in the Clerk Dashboard (Users → Create user) or invite the email first, sign in once, and copy the `user_…` id from the Dashboard. Then run `gh variable set ADMIN_CLERK_IDS --body '["user_..."]'`, add the same list to `.env`, and run "Deploy backend" by hand.
 
 **Rotate a service secret** (for example after a Neon password reset):
 

@@ -508,6 +508,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Overview
+         * @description Coin cards (core first, then the watchlist), source freshness and the daily job status.
+         */
+        get: operations["getOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pivots/{coin}": {
         parameters: {
             query?: never;
@@ -705,6 +725,37 @@ export interface components {
             /** Volume */
             volume: number | null;
         };
+        /** CoinCard */
+        CoinCard: {
+            /** Ath */
+            ath: number | null;
+            /** Ath Date */
+            ath_date: string | null;
+            /** Ath Distance */
+            ath_distance: number | null;
+            /** Change 1D */
+            change_1d: number | null;
+            /** Change 30D */
+            change_30d: number | null;
+            /** Change 7D */
+            change_7d: number | null;
+            /** Close */
+            close: number | null;
+            /** Date */
+            date: string | null;
+            /** Is Watchlist */
+            is_watchlist: boolean;
+            /** Mco Bias */
+            mco_bias?: null;
+            /** Name */
+            name: string;
+            /** Regime */
+            regime: string;
+            /** Signal */
+            signal?: null;
+            /** Symbol */
+            symbol: string;
+        };
         /** CoinOut */
         CoinOut: {
             /** First Date */
@@ -766,6 +817,17 @@ export interface components {
              */
             as_of: string | null;
             data: components["schemas"]["MacroData"];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
+        /** Envelope[OverviewData] */
+        Envelope_OverviewData_: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            data: components["schemas"]["OverviewData"];
             /** Sources */
             sources: components["schemas"]["Source"][];
         };
@@ -868,6 +930,33 @@ export interface components {
             /** Title */
             title: string;
         };
+        /**
+         * Features
+         * @description Which later-version tabs this deployment shows (`config/settings.yaml`, Decision 1).
+         */
+        Features: {
+            /** Agent */
+            agent: boolean;
+            /** Mco */
+            mco: boolean;
+            /** Onchain Macro */
+            onchain_macro: boolean;
+            /** Signals */
+            signals: boolean;
+        };
+        /** Freshness */
+        Freshness: {
+            /** Last Date */
+            last_date: string | null;
+            /** Max Age Days */
+            max_age_days: number;
+            /** Source */
+            source: string;
+            /** Stale */
+            stale: boolean;
+            /** Table */
+            table: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -919,6 +1008,18 @@ export interface components {
             /** Redirect Url */
             redirect_url?: string | null;
         };
+        /** JobStatus */
+        JobStatus: {
+            /** Ended At */
+            ended_at: string | null;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Status */
+            status: string;
+        };
         /** MacroData */
         MacroData: {
             /** Rows */
@@ -943,8 +1044,17 @@ export interface components {
         Me: {
             /** Clerk Id */
             clerk_id: string;
+            features: components["schemas"]["Features"];
             /** Role */
             role: string;
+        };
+        /** OverviewData */
+        OverviewData: {
+            /** Coins */
+            coins: components["schemas"]["CoinCard"][];
+            daily_job: components["schemas"]["JobStatus"] | null;
+            /** Freshness */
+            freshness: components["schemas"]["Freshness"][];
         };
         /** RoleUpdate */
         RoleUpdate: {
@@ -1989,6 +2099,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getOverview: {
+        parameters: {
+            query?: {
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_OverviewData_"];
                 };
             };
             /** @description Validation Error */

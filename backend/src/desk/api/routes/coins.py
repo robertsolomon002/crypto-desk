@@ -8,15 +8,33 @@ from sqlalchemy import func, select
 
 from desk.api.deps import SessionDep, UserDep, require_role
 from desk.api.schemas import Envelope, Source
+from desk.config import get_settings, load_app_settings
 from desk.data.coins import active_coins
 from desk.models import CandleDaily
 
 router = APIRouter(tags=["coins"], dependencies=[Depends(require_role("member"))])
 
 
+class Features(BaseModel):
+    """Which later-version tabs this deployment shows (`config/settings.yaml`, Decision 1)."""
+
+    onchain_macro: bool
+    mco: bool  # the tab: `features.mco_tab`, and MCO switched on (`MCO_ENABLED`, Decision 6)
+    agent: bool
+    signals: bool
+
+
 class Me(BaseModel):
     clerk_id: str
     role: str
+    features: Features
+
+
+def features() -> Features:
+    flags = load_app_settings().get("features", {})
+    mco = bool(flags.get("mco_tab")) and bool(flags.get("mco")) and get_settings().mco_enabled
+    return Features(onchain_macro=bool(flags.get("onchain_macro")), mco=mco,
+                    agent=bool(flags.get("agent")), signals=bool(flags.get("signals")))  # fmt: skip
 
 
 class CoinOut(BaseModel):
@@ -30,7 +48,7 @@ class CoinOut(BaseModel):
 
 @router.get("/me", response_model=Me, operation_id="getMe")
 def me(user: UserDep) -> Me:
-    return Me(clerk_id=user.clerk_id, role=user.role)
+    return Me(clerk_id=user.clerk_id, role=user.role, features=features())
 
 
 @router.get("/coins", response_model=Envelope[list[CoinOut]], operation_id="listCoins")

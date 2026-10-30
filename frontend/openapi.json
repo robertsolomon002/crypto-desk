@@ -101,6 +101,140 @@
         "title": "Candle",
         "type": "object"
       },
+      "CoinCard": {
+        "properties": {
+          "ath": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ath"
+          },
+          "ath_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ath Date"
+          },
+          "ath_distance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ath Distance"
+          },
+          "change_1d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change 1D"
+          },
+          "change_30d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change 30D"
+          },
+          "change_7d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change 7D"
+          },
+          "close": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Close"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "is_watchlist": {
+            "title": "Is Watchlist",
+            "type": "boolean"
+          },
+          "mco_bias": {
+            "title": "Mco Bias",
+            "type": "null"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "regime": {
+            "title": "Regime",
+            "type": "string"
+          },
+          "signal": {
+            "title": "Signal",
+            "type": "null"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "name",
+          "is_watchlist",
+          "date",
+          "close",
+          "change_1d",
+          "change_7d",
+          "change_30d",
+          "ath",
+          "ath_date",
+          "ath_distance",
+          "regime"
+        ],
+        "title": "CoinCard",
+        "type": "object"
+      },
       "CoinOut": {
         "properties": {
           "first_date": {
@@ -302,6 +436,40 @@
           "data"
         ],
         "title": "Envelope[MacroData]",
+        "type": "object"
+      },
+      "Envelope_OverviewData_": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "$ref": "#/components/schemas/OverviewData"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[OverviewData]",
         "type": "object"
       },
       "Envelope_TablePage_": {
@@ -615,6 +783,76 @@
         "title": "Event",
         "type": "object"
       },
+      "Features": {
+        "description": "Which later-version tabs this deployment shows (`config/settings.yaml`, Decision 1).",
+        "properties": {
+          "agent": {
+            "title": "Agent",
+            "type": "boolean"
+          },
+          "mco": {
+            "title": "Mco",
+            "type": "boolean"
+          },
+          "onchain_macro": {
+            "title": "Onchain Macro",
+            "type": "boolean"
+          },
+          "signals": {
+            "title": "Signals",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "onchain_macro",
+          "mco",
+          "agent",
+          "signals"
+        ],
+        "title": "Features",
+        "type": "object"
+      },
+      "Freshness": {
+        "properties": {
+          "last_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Date"
+          },
+          "max_age_days": {
+            "title": "Max Age Days",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "table",
+          "last_date",
+          "max_age_days",
+          "stale"
+        ],
+        "title": "Freshness",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -753,6 +991,38 @@
         "title": "InviteCreate",
         "type": "object"
       },
+      "JobStatus": {
+        "properties": {
+          "ended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "started_at",
+          "ended_at"
+        ],
+        "title": "JobStatus",
+        "type": "object"
+      },
       "MacroData": {
         "properties": {
           "rows": {
@@ -812,6 +1082,9 @@
             "title": "Clerk Id",
             "type": "string"
           },
+          "features": {
+            "$ref": "#/components/schemas/Features"
+          },
           "role": {
             "title": "Role",
             "type": "string"
@@ -819,9 +1092,45 @@
         },
         "required": [
           "clerk_id",
-          "role"
+          "role",
+          "features"
         ],
         "title": "Me",
+        "type": "object"
+      },
+      "OverviewData": {
+        "properties": {
+          "coins": {
+            "items": {
+              "$ref": "#/components/schemas/CoinCard"
+            },
+            "title": "Coins",
+            "type": "array"
+          },
+          "daily_job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "freshness": {
+            "items": {
+              "$ref": "#/components/schemas/Freshness"
+            },
+            "title": "Freshness",
+            "type": "array"
+          }
+        },
+        "required": [
+          "coins",
+          "freshness",
+          "daily_job"
+        ],
+        "title": "OverviewData",
         "type": "object"
       },
       "RoleUpdate": {
@@ -3011,6 +3320,59 @@
         "summary": "Get Onchain",
         "tags": [
           "onchain"
+        ]
+      }
+    },
+    "/api/overview": {
+      "get": {
+        "description": "Coin cards (core first, then the watchlist), source freshness and the daily job status.",
+        "operationId": "getOverview",
+        "parameters": [
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_OverviewData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Overview",
+        "tags": [
+          "overview"
         ]
       }
     },

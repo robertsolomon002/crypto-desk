@@ -117,7 +117,7 @@ def test_health_needs_no_auth(api) -> None:
 def test_first_request_creates_a_member_once(api, api_sessions) -> None:
     for _ in range(3):
         r = api.get("/api/me", headers=auth("user_new"))
-        assert r.json() == {"clerk_id": "user_new", "role": "member"}
+        assert (r.json()["clerk_id"], r.json()["role"]) == ("user_new", "member")
     deps._user_cache.clear()
     api.get("/api/me", headers=auth("user_new"))
     with api_sessions() as s:
