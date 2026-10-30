@@ -52,6 +52,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ env.SHA }}
+          fetch-depth: 0 # to diff against the live revision's commit
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3 (no floating major tag)
         with:
           version: "0.11.7"
@@ -65,17 +66,31 @@ jobs:
           workload_identity_provider: projects/850576035365/locations/global/workloadIdentityPools/github/providers/crypto-desk
           service_account: desk-deployer@crypto-desk-513023.iam.gserviceaccount.com
       - uses: google-github-actions/setup-gcloud@v3
+      - name: Skip if the API is unchanged since the live revision
+        # The image is ~415 MB and Artifact Registry's free storage is 0.5 GiB (D38), so a push
+        # that only touches the frontend or docs builds nothing. Manual runs always deploy.
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          LIVE=$(gcloud run services describe "$SERVICE" --project "$PROJECT" --region "$REGION"             --format 'value(spec.template.spec.containers[0].image)')
+          LIVE_SHA=${LIVE##*:}
+          if [[ "$LIVE" == "$IMAGE:"* ]] && git cat-file -e "$LIVE_SHA^{commit}" 2>/dev/null             && git diff --quiet "$LIVE_SHA" "$SHA" -- backend config prompts; then
+            echo "API unchanged since $LIVE_SHA; nothing to deploy"
+            echo "SKIP=true" >> "$GITHUB_ENV"
+          fi
       - name: Build and push the image
+        if: env.SKIP != 'true'
         run: |
           gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
           docker build -f backend/Dockerfile -t "$IMAGE:$SHA" .
           docker push "$IMAGE:$SHA"
       - name: Migrate Neon (direct host)
+        if: env.SKIP != 'true'
         working-directory: backend
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: uv run desk db upgrade
       - name: Service environment (non-secret)
+        if: env.SKIP != 'true'
         working-directory: backend
         env:
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
@@ -86,6 +101,7 @@ jobs:
           --clerk-publishable-key "$VITE_CLERK_PUBLISHABLE_KEY"
           --admin-clerk-ids "${ADMIN_CLERK_IDS:-[]}"
       - name: Deploy a revision without traffic
+        if: env.SKIP != 'true'
         # Request-based billing (CPU only during requests), scale to zero, at most 2 instances:
         # the free tier (DATA_SOURCES.md). 900 s timeout leaves room for agent SSE streams.
         run: >-
@@ -97,6 +113,7 @@ jobs:
           --min-instances 0 --max-instances 2 --concurrency 40 --timeout 900
           --no-traffic --tag candidate --quiet
       - name: Smoke test the new revision
+        if: env.SKIP != 'true'
         working-directory: backend
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
@@ -106,6 +123,7 @@ jobs:
           echo "candidate: $CANDIDATE_URL"
           uv run desk deploy smoke --url "$CANDIDATE_URL" --origin "$PAGES_URL"
       - name: Send all traffic to the new revision
+        if: env.SKIP != 'true'
         run: |
           gcloud run services update-traffic "$SERVICE" --project "$PROJECT" --region "$REGION" \
             --to-latest --quiet

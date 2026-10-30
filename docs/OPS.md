@@ -22,6 +22,7 @@ The API's first request after idle is a cold start of a few seconds (Decision 5)
 Both deploy workflows start when **CI passes on a push to `main`**. Nothing deploys from a red commit or from a pull request's code with production rights.
 
 - **Backend** (`.github/workflows/deploy-backend.yml`):
+  0. skip everything if nothing under `backend/`, `config/` or `prompts/` changed since the live revision's commit (manual runs always deploy);
   1. build the image `us-central1-docker.pkg.dev/crypto-desk-513023/desk/api:<sha>` and push it;
   2. `desk db upgrade` (migrations over Neon's direct host);
   3. deploy a Cloud Run revision with **no traffic**, tagged `candidate`;
@@ -46,14 +47,16 @@ uv run desk db upgrade   # uses DATABASE_URL from .env; switches the pooled host
 
 ## Roll back
 
-**Backend** (Cloud Run keeps every revision; Artifact Registry keeps the 3 newest images, so you can go back up to 3 deploys):
+**Backend, usual way:** `git revert <bad commit>` and push. CI and the deploy run as normal (about 5 minutes), and the reverted code gets a fresh image.
+
+**Backend, fast way (minutes after a bad deploy):** point traffic back at the previous revision. Cloud Run keeps every revision, but Artifact Registry keeps only the newest image (the image is 415 MB, free storage is 0.5 GiB, D38) and deletes replaced ones within about a day. So this works only shortly after the bad deploy:
 
 ```powershell
 gcloud run revisions list --service desk-api --region us-central1 --project crypto-desk-513023
 gcloud run services update-traffic desk-api --region us-central1 --project crypto-desk-513023 --to-revisions desk-api-00005-abc=100
 ```
 
-The next successful deploy moves traffic to the newest revision again. To stop that, revert the bad commit on `main`.
+The next successful deploy moves traffic to the newest revision again, so revert the bad commit too.
 
 **Frontend:** Cloudflare dashboard → Workers & Pages → `crypto-desk` → Deployments → ⋯ on an older production deployment → "Rollback to this deployment". It takes effect instantly. Preview deployments can't be rollback targets.
 
@@ -97,7 +100,7 @@ gcloud run services describe desk-api --region us-central1 --project crypto-desk
 ## Free-tier guard rails (Section 7)
 
 - Cloud Run: max 2 instances, 1 vCPU / 512 MiB, request-based billing (CPU only while serving), min 0 instances.
-- Artifact Registry: keeps the 3 newest images and deletes older ones after a day (0.5 GiB free).
+- Artifact Registry: keeps only the newest image (415 MB; 0.5 GiB free). Replaced images are deleted once they are an hour old, by a cleanup job that runs about daily. Pushes that don't touch the API build no image.
 - Secret Manager: 2 active versions (6 free). Destroy old versions when rotating.
 - Cloudflare Pages: direct uploads; production plus a preview per PR.
 - **[Rob] GCP budget alert at $1:** Billing → Budgets & alerts → Create budget, project `crypto-desk-513023`, amount $1, alerts at 50%, 90% and 100%. It only emails; it does not cap spending.
@@ -110,8 +113,8 @@ Everything is in project `crypto-desk-513023`, region `us-central1`. Repeat thes
 P=crypto-desk-513023; N=850576035365; R=us-central1
 gcloud services enable iam.googleapis.com iamcredentials.googleapis.com sts.googleapis.com cloudresourcemanager.googleapis.com --project $P
 
-# Image registry, keeping the 3 newest images (policy file in D38's wording: delete any version older
-# than 1d, keep mostRecentVersions 3)
+# Image registry, keeping only the newest image (policy: Delete tagState any olderThan 1h;
+# Keep mostRecentVersions keepCount 1)
 gcloud artifacts repositories create desk --repository-format=docker --location=$R --project=$P
 gcloud artifacts repositories set-cleanup-policies desk --project=$P --location=$R --policy=policy.json --no-dry-run
 
