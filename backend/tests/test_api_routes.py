@@ -13,7 +13,7 @@ import respx
 
 from desk.api.main import app
 from desk.api.routes import admin
-from tests.api_fakes import ADMIN, LAST_DAY, MEMBER, auth
+from tests.api_fakes import ADMIN, CANARY, LAST_DAY, MEMBER, auth
 
 CLERK = "https://api.clerk.com/v1"
 INVITE = {"id": "inv_1", "email_address": "friend@example.com", "status": "pending",
@@ -56,9 +56,15 @@ SAMPLES: dict[tuple[str, str], tuple[str, dict | None]] = {
     ("POST", "/api/admin/invites"): ("/api/admin/invites", {"email": "friend@example.com"}),
     ("DELETE", "/api/admin/invites/{invite_id}"): ("/api/admin/invites/inv_1", None),
     ("GET", "/api/admin/users"): ("/api/admin/users", None),
+    ("GET", "/api/admin/usage"): ("/api/admin/usage", None),
+    ("GET", "/api/admin/watchlist/check/{symbol}"): ("/api/admin/watchlist/check/LINK", None),
+    ("GET", "/api/agent/models"): ("/api/agent/models", None),
+    ("POST", "/api/agent/test-key"): ("/api/agent/test-key", {"provider": "openrouter"}),
     ("PATCH", "/api/admin/users/{user_id}"): ("/api/admin/users/1", {"role": "admin"}),
 }  # fmt: skip
 PUBLIC = {("GET", "/api/health")}
+# The key test needs a key; the providers are faked in the `api` fixture.
+HEADERS = {("POST", "/api/agent/test-key"): {"X-LLM-Key": CANARY}}
 
 
 def api_routes() -> list[tuple[str, str]]:
@@ -98,13 +104,15 @@ def test_anonymous_gets_401(api, route) -> None:
 def test_roles_on_every_route(api, clerk) -> None:
     """Members: 403 on admin routes, success elsewhere. Admins: success everywhere."""
     for (method, path), (url, body) in SAMPLES.items():
-        r = api.request(method, url, json=body, headers=auth(MEMBER))
+        extra = HEADERS.get((method, path), {})
+        r = api.request(method, url, json=body, headers={**auth(MEMBER), **extra})
         if path.startswith("/api/admin"):
             assert r.status_code == 403, (method, path)
         else:
             assert r.is_success, (method, path, r.status_code, r.text[:300])
     for (method, path), (url, body) in SAMPLES.items():  # dict order: POST before DELETE
-        r = api.request(method, url, json=body, headers=auth(ADMIN))
+        extra = HEADERS.get((method, path), {})
+        r = api.request(method, url, json=body, headers={**auth(ADMIN), **extra})
         assert r.is_success, (method, path, r.status_code, r.text[:300])
 
 

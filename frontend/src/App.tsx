@@ -16,6 +16,10 @@ import { NotFoundPage, PlaceholderPage } from '@/routes/placeholder'
 const ChartsPage = lazy(() => import('@/routes/charts').then((m) => ({ default: m.ChartsPage })))
 const CyclesPage = lazy(() => import('@/routes/cycles').then((m) => ({ default: m.CyclesPage })))
 const StatsPage = lazy(() => import('@/routes/stats').then((m) => ({ default: m.StatsPage })))
+const DataPage = lazy(() => import('@/routes/data').then((m) => ({ default: m.DataPage })))
+const SettingsPage = lazy(() =>
+  import('@/routes/settings').then((m) => ({ default: m.SettingsPage })),
+)
 
 function TabPage({ label, children }: { label: string; children: ReactElement }) {
   return (
@@ -40,6 +44,16 @@ const BUILT: Record<string, ReactElement> = {
   '/stats': (
     <TabPage label="The Stats tab">
       <StatsPage />
+    </TabPage>
+  ),
+  '/data': (
+    <TabPage label="The Data tab">
+      <DataPage />
+    </TabPage>
+  ),
+  '/settings': (
+    <TabPage label="Settings">
+      <SettingsPage />
     </TabPage>
   ),
 }

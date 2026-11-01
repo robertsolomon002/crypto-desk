@@ -224,3 +224,211 @@ export function useCorrelation(coin: string, window: number) {
       ),
   })
 }
+
+// --- Data tab (Stage 3.4) ------------------------------------------------------------------------
+
+export type TableInfo = Schemas['TableInfo']
+export type TablePage = Schemas['TablePage']
+
+export function useTables() {
+  return useQuery({
+    queryKey: ['data', 'tables'],
+    queryFn: () => unwrap(api.GET('/api/data/tables')),
+  })
+}
+
+export interface TableQuery {
+  filters: string[]
+  order: string | null
+  desc: boolean
+  page: number
+  pageSize: number
+}
+
+export function useTablePage(name: string | null, q: TableQuery, enabled = true) {
+  return useQuery({
+    queryKey: ['data', 'table', name, q],
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/data/tables/{name}', {
+          params: {
+            path: { name: name as string },
+            query: {
+              filter: q.filters,
+              order: q.order ?? undefined,
+              desc: q.desc,
+              page: q.page,
+              page_size: q.pageSize,
+            },
+          },
+        }),
+      ),
+    enabled: enabled && name !== null,
+    placeholderData: (previous) => previous, // keep the old page on screen while paging
+  })
+}
+
+/** The filtered table as a CSV blob (the endpoint needs the session token, so no plain link). */
+export async function exportTable(name: string, q: Pick<TableQuery, 'filters' | 'order' | 'desc'>) {
+  const { data, response } = await api.GET('/api/data/tables/{name}/export.csv', {
+    params: {
+      path: { name },
+      query: { filter: q.filters, order: q.order ?? undefined, desc: q.desc },
+    },
+    parseAs: 'blob',
+  })
+  if (!response.ok || !data)
+    throw new ApiError(response.status, `Export failed (${response.status})`)
+  return data as Blob
+}
+
+/**
+ * A computed analytics result by registry name (`table=analytics&fn=...`, D41), through the same
+ * route its chart uses. Unknown names are a 404 like an unknown table.
+ */
+export async function fetchAnalytics(
+  fn: string,
+  coin: string,
+  p: Record<string, string | undefined>,
+): Promise<AnalyticsEnvelope> {
+  const path = { coin }
+  const mode = (p.mode ?? 'halving') as AnchorModeParam
+  switch (fn) {
+    case 'cycles_anchors':
+      return unwrap(api.GET('/api/cycles/{coin}/anchors', { params: { path } }))
+    case 'cycles_paths':
+      return unwrap(
+        api.GET('/api/cycles/{coin}/paths', { params: { path, query: { mode, max_days: 1500 } } }),
+      )
+    case 'cycles_day_n':
+      return unwrap(api.GET('/api/cycles/{coin}/day-n', { params: { path, query: { mode } } }))
+    case 'roi_since_bottom':
+      return unwrap(api.GET('/api/cycles/{coin}/roi', { params: { path } }))
+    case 'yoy':
+      return unwrap(api.GET('/api/cycles/{coin}/yoy', { params: { path } }))
+    case 'seasonality_monthly':
+    case 'seasonality_weekly':
+    case 'seasonality_dow': {
+      const period = fn.slice('seasonality_'.length) as 'monthly' | 'weekly' | 'dow'
+      return unwrap(
+        api.GET('/api/stats/{coin}/seasonality/{period}', { params: { path: { coin, period } } }),
+      )
+    }
+    case 'return_distribution': {
+      const horizon = (['1d', '1w', '30d'].includes(p.horizon ?? '') ? p.horizon : '1w') as
+        '1d' | '1w' | '30d'
+      return unwrap(
+        api.GET('/api/stats/{coin}/distribution', { params: { path, query: { horizon } } }),
+      )
+    }
+    case 'drawdowns':
+      return unwrap(api.GET('/api/stats/{coin}/drawdowns', { params: { path } }))
+    case 'drawdown_episodes':
+      return unwrap(
+        api.GET('/api/stats/{coin}/drawdown-episodes', { params: { path, query: { top_n: 10 } } }),
+      )
+    case 'rolling_volatility':
+      return unwrap(api.GET('/api/stats/{coin}/volatility', { params: { path } }))
+    case 'rolling_correlation': {
+      const window = Number(p.window) || 90
+      return unwrap(
+        api.GET('/api/stats/{coin}/correlation', { params: { path, query: { window } } }),
+      )
+    }
+    default:
+      throw new ApiError(404, `Unknown analytics result ${fn}`)
+  }
+}
+
+export function useAnalyticsResult(
+  fn: string | null,
+  coin: string,
+  p: Record<string, string | undefined>,
+) {
+  return useQuery({
+    queryKey: ['data', 'analytics', fn, coin, p],
+    queryFn: () => fetchAnalytics(fn as string, coin, p),
+    enabled: fn !== null,
+  })
+}
+
+// --- Settings (Stage 3.4) ------------------------------------------------------------------------
+
+export type ProviderModels = Schemas['ProviderModels']
+export type KeyTestResult = Schemas['KeyTestResult']
+
+export function useModels() {
+  return useQuery({
+    queryKey: ['agent', 'models'],
+    queryFn: () => unwrap(api.GET('/api/agent/models')),
+    staleTime: Infinity,
+  })
+}
+
+/** The 1-token key test. The key goes only into this request's `X-LLM-Key` header. */
+export function testKey(
+  provider: 'openrouter' | 'anthropic' | 'openai',
+  key: string,
+  model: string | null,
+) {
+  return unwrap(
+    api.POST('/api/agent/test-key', {
+      body: { provider, model: model || null },
+      headers: { 'X-LLM-Key': key },
+    }),
+  )
+}
+
+export type WatchlistCoin = Schemas['WatchlistCoin']
+export type Eligibility = Schemas['Eligibility']
+export type Invite = Schemas['Invite']
+export type UserOut = Schemas['UserOut']
+export type Usage = Schemas['Usage']
+
+export function useWatchlist(enabled: boolean) {
+  return useQuery({
+    queryKey: ['admin', 'watchlist'],
+    queryFn: () => unwrap(api.GET('/api/admin/watchlist')),
+    enabled,
+  })
+}
+
+export function useInvites(enabled: boolean) {
+  return useQuery({
+    queryKey: ['admin', 'invites'],
+    queryFn: () => unwrap(api.GET('/api/admin/invites')),
+    enabled,
+  })
+}
+
+export function useUsers(enabled: boolean) {
+  return useQuery({
+    queryKey: ['admin', 'users'],
+    queryFn: () => unwrap(api.GET('/api/admin/users')),
+    enabled,
+  })
+}
+
+export function useUsage(enabled: boolean) {
+  return useQuery({
+    queryKey: ['admin', 'usage'],
+    queryFn: () => unwrap(api.GET('/api/admin/usage')),
+    enabled,
+  })
+}
+
+/** The API's error text (`detail`) for a failed admin action, shown to the admin as text. */
+export async function apiAction<T>(
+  call: Promise<{ data?: T; error?: unknown; response: Response }>,
+): Promise<T> {
+  const { data, error, response } = await call
+  if (response.ok) return data as T
+  const detail = (error as { detail?: unknown } | undefined)?.detail
+  const message =
+    typeof detail === 'string'
+      ? detail
+      : Array.isArray(detail)
+        ? 'Check the fields and try again.'
+        : `Request failed (${response.status})`
+  throw new ApiError(response.status, message)
+}

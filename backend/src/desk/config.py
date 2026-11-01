@@ -111,3 +111,9 @@ def load_app_settings(path: Path | None = None) -> dict:
     """`config/settings.yaml` (app-wide, non-secret settings)."""
     path = path or get_settings().config_dir / "settings.yaml"
     return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
+def load_models_config(path: Path | None = None) -> dict:
+    """`config/models.yaml` (model ids, prices, friends' defaults and picker choices)."""
+    path = path or get_settings().config_dir / "models.yaml"
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}

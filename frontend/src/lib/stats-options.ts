@@ -2,7 +2,7 @@ import type { EChartOption } from '@/components/charts/EChart'
 
 import type { ChartColors } from './chart-colors'
 import { axisStyle, baseOption, divergingColors, escapeHtml, mix, signColor } from './echarts-theme'
-import { formatDate, formatPct } from './format'
+import { formatDate, formatDateTime, formatPct } from './format'
 import {
   binIndex,
   heatmapCells,
@@ -193,7 +193,8 @@ export interface Line {
 
 const formatNumber = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 2 })
 // ECharts reads a date string without a zone as local time, so days go in as UTC timestamps.
-const utcMs = (date: string) => Date.parse(`${date.slice(0, 10)}T00:00:00Z`)
+const utcMs = (date: string) =>
+  date.length > 10 ? Date.parse(date) : Date.parse(`${date}T00:00:00Z`) // timestamps carry a zone
 
 /** Daily lines on a UTC time axis; values are fractions shown as % unless `percent` is off. */
 export function timeSeriesOption({
@@ -235,8 +236,9 @@ export function timeSeriesOption({
               `<span><span style="color:${p.color}">●</span> ${escapeHtml(p.seriesName)}</span>` +
               `<span style="font-variant-numeric:tabular-nums">${fmt(p.value[1] as number)}</span></div>`,
           )
-        const day = new Date(t).toISOString().slice(0, 10)
-        return `<div style="margin-bottom:4px">${formatDate(day)}</div>${rows.join('')}`
+        const iso = new Date(t).toISOString()
+        const when = iso.endsWith('T00:00:00.000Z') ? formatDate(iso) : formatDateTime(iso)
+        return `<div style="margin-bottom:4px">${when}</div>${rows.join('')}`
       },
     },
     // Axis labels in UTC too, so a day never shows as the evening before.
@@ -245,6 +247,7 @@ export function timeSeriesOption({
     yAxis: {
       type: 'value',
       min,
+      scale: true, // fit the data rather than starting at 0 (prices); min/max win when set
       max,
       ...axis,
       axisLabel: {

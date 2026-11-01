@@ -46,7 +46,14 @@ def probe_routes():
 
 
 def test_canary_never_leaks(api, api_sessions, probe_routes, caplog) -> None:
+    import httpx
     from fastapi.testclient import TestClient
+
+    from desk.api.routes import agent
+    from tests.api_fakes import provider_transport
+
+    transport = provider_transport(401)
+    app.dependency_overrides[agent.provider_client] = lambda: httpx.Client(transport=transport)
 
     client = TestClient(app, raise_server_exceptions=False)
     for name in LOGGERS:  # caplog restores each level after the test
@@ -61,6 +68,11 @@ def test_canary_never_leaks(api, api_sessions, probe_routes, caplog) -> None:
         client.get("/api/_test/echo-headers", headers=key),
         client.get("/api/_test/crash", headers=key),  # 500
         client.get("/api/_test/log-raw", headers=key),
+        # The Settings key test sends the key on to the (faked) provider, whose error body
+        # echoes the request headers, as OpenAI's 401 does with part of the key.
+        client.post(
+            "/api/agent/test-key", json={"provider": "openai"}, headers={**auth(MEMBER), **key}
+        ),  # fmt: skip
         client.options(
             "/api/me",
             headers={
@@ -70,11 +82,14 @@ def test_canary_never_leaks(api, api_sessions, probe_routes, caplog) -> None:
             },
         ),  # fmt: skip
     ]
-    assert [r.status_code for r in responses] == [200, 401, 404, 422, 403, 200, 500, 200, 200]
+    assert [r.status_code for r in responses] == [200, 401, 404, 422, 403, 200, 500, 200, 200,
+                                                  200]  # fmt: skip
     echoed = responses[5].json()
     assert "x-llm-key" not in echoed["headers"]
     assert echoed["key"] == "**********"  # SecretStr
 
+    assert transport.seen[0].headers["authorization"] == f"Bearer {CANARY}"  # it did go out
+    assert responses[8].json()["ok"] is False
     for r in responses:
         assert CANARY not in r.text
         assert CANARY not in str(r.headers)

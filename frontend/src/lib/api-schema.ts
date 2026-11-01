@@ -42,6 +42,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Usage
+         * @description Server-key LLM spend this month against the Decision 9 cap, messages per user, and the
+         *     latest job runs. Friends' own-key use costs Rob nothing and has no recorded cost.
+         */
+        get: operations["getUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/users": {
         parameters: {
             query?: never;
@@ -88,9 +109,29 @@ export interface paths {
         put?: never;
         /**
          * Add Watchlist
-         * @description Add (or re-activate) a coin. The next daily job backfills its candles from Coinbase.
+         * @description Add (or re-activate) an eligible coin. The next daily job backfills its candles.
          */
         post: operations["addWatchlistCoin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/watchlist/check/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check Watchlist
+         * @description Whether a coin can join the watchlist (Coinbase USD market, at least a year of history).
+         */
+        get: operations["checkWatchlistCoin"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -112,6 +153,47 @@ export interface paths {
          * @description Deactivate a watchlist coin. Its candle history stays (re-adding resumes it).
          */
         delete: operations["removeWatchlistCoin"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Models
+         * @description Providers a friend can bring a key for, with a default and suggested models
+         *     (`config/models.yaml`). OpenRouter is the recommended path (Decision 2).
+         */
+        get: operations["listModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/test-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Key
+         * @description One minimal call with the key from `X-LLM-Key` (1 output token; OpenAI: list models).
+         */
+        post: operations["testKey"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -787,6 +869,19 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        /** Eligibility */
+        Eligibility: {
+            /** Eligible */
+            eligible: boolean;
+            /** Market */
+            market: string;
+            /** Name */
+            name: string | null;
+            /** Reasons */
+            reasons: string[];
+            /** Symbol */
+            symbol: string;
+        };
         /** Envelope[AnalyticsData] */
         Envelope_AnalyticsData_: {
             /**
@@ -887,6 +982,18 @@ export interface components {
             as_of: string | null;
             /** Data */
             data: components["schemas"]["Headline"][];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
+        /** Envelope[list[ProviderModels]] */
+        Envelope_list_ProviderModels__: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            /** Data */
+            data: components["schemas"]["ProviderModels"][];
             /** Sources */
             sources: components["schemas"]["Source"][];
         };
@@ -1008,6 +1115,22 @@ export interface components {
             /** Redirect Url */
             redirect_url?: string | null;
         };
+        /** JobLine */
+        JobLine: {
+            /** Ended At */
+            ended_at: string | null;
+            /** Error */
+            error: string | null;
+            /** Job */
+            job: string;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Status */
+            status: string;
+        };
         /** JobStatus */
         JobStatus: {
             /** Ended At */
@@ -1019,6 +1142,30 @@ export interface components {
             started_at: string;
             /** Status */
             status: string;
+        };
+        /** KeyTest */
+        KeyTest: {
+            /** Model */
+            model?: string | null;
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "openrouter" | "anthropic" | "openai";
+        };
+        /** KeyTestResult */
+        KeyTestResult: {
+            /** Message */
+            message: string;
+            /** Model */
+            model: string | null;
+            /** Ok */
+            ok: boolean;
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "openrouter" | "anthropic" | "openai";
         };
         /** MacroData */
         MacroData: {
@@ -1056,6 +1203,22 @@ export interface components {
             /** Freshness */
             freshness: components["schemas"]["Freshness"][];
         };
+        /** ProviderModels */
+        ProviderModels: {
+            /** Choices */
+            choices: string[];
+            /** Default */
+            default: string | null;
+            /**
+             * Id
+             * @enum {string}
+             */
+            id: "openrouter" | "anthropic" | "openai";
+            /** Label */
+            label: string;
+            /** Recommended */
+            recommended: boolean;
+        };
         /** RoleUpdate */
         RoleUpdate: {
             /**
@@ -1084,6 +1247,17 @@ export interface components {
             name: string;
             /** Url */
             url?: string | null;
+        };
+        /** SpendLine */
+        SpendLine: {
+            /** Cost */
+            cost: number;
+            /** Key */
+            key: string;
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
         };
         /** TableInfo */
         TableInfo: {
@@ -1125,6 +1299,23 @@ export interface components {
          * @enum {string}
          */
         Timeframe: "1d" | "1w" | "4h";
+        /** Usage */
+        Usage: {
+            /** By Model */
+            by_model: components["schemas"]["SpendLine"][];
+            /** By Source */
+            by_source: components["schemas"]["SpendLine"][];
+            /** Cap Usd */
+            cap_usd: number;
+            /** Jobs */
+            jobs: components["schemas"]["JobLine"][];
+            /** Month */
+            month: string;
+            /** Spend Usd */
+            spend_usd: number;
+            /** Users */
+            users: components["schemas"]["UserUsage"][];
+        };
         /** UserOut */
         UserOut: {
             /** Clerk Id */
@@ -1138,6 +1329,17 @@ export interface components {
             id: number;
             /** Role */
             role: string;
+        };
+        /** UserUsage */
+        UserUsage: {
+            /** Clerk Id */
+            clerk_id: string;
+            /** Messages */
+            messages: number;
+            /** Role */
+            role: string;
+            /** User Id */
+            user_id: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -1283,6 +1485,35 @@ export interface operations {
             };
         };
     };
+    getUsage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Usage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listUsers: {
         parameters: {
             query?: never;
@@ -1409,6 +1640,37 @@ export interface operations {
             };
         };
     };
+    checkWatchlistCoin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Eligibility"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     removeWatchlistCoin: {
         parameters: {
             query?: never;
@@ -1426,6 +1688,68 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_ProviderModels__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    testKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KeyTest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KeyTestResult"];
+                };
             };
             /** @description Validation Error */
             422: {

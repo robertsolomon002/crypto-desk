@@ -138,3 +138,76 @@ def test_role_changes(api) -> None:
     assert api.patch("/api/admin/users/999", json={"role": "admin"}, headers=H).status_code == 404
     bad = api.patch(f"/api/admin/users/{member_id}", json={"role": "owner"}, headers=H)
     assert bad.status_code == 422
+
+
+# --- Watchlist eligibility (Stage 3.4) --------------------------------------------------------
+
+
+@pytest.fixture
+def exchange(api):
+    from tests.api_fakes import FakeExchange
+
+    fake = FakeExchange(
+        markets={"LINK/USD": (True, True, "Chainlink"), "OLD/USD": (False, True, "Old"),
+                 "NEW/USD": (True, True, "Newcoin")},
+        young={"NEW/USD"},
+    )  # fmt: skip
+    app.dependency_overrides[admin.exchange_dep] = lambda: fake
+    return fake
+
+
+def test_watchlist_check_explains_eligibility(api, exchange) -> None:
+    def check(symbol: str) -> dict:
+        return api.get(f"/api/admin/watchlist/check/{symbol}", headers=H).json()
+
+    link = check("LINK")
+    assert link == {"symbol": "LINK", "market": "LINK/USD", "name": "Chainlink",
+                    "eligible": True, "reasons": []}  # fmt: skip
+    assert check("NOPE")["reasons"] == ["Coinbase has no NOPE/USD market"]
+    assert "not an active spot market" in check("OLD")["reasons"][0]
+    assert "less than a year" in check("NEW")["reasons"][0]
+    # The history probe starts 366 days back.
+    import datetime as dt
+
+    since = dt.datetime.fromtimestamp(exchange.calls[-1][1] / 1000, dt.UTC)
+    assert 365 < (dt.datetime.now(dt.UTC) - since).days <= 366
+    assert api.get("/api/admin/watchlist/check/a-b", headers=H).status_code == 422
+
+
+def test_watchlist_add_refuses_ineligible_coins(api, exchange) -> None:
+    r = api.post("/api/admin/watchlist", json={"symbol": "NEW", "name": "Newcoin"}, headers=H)
+    assert r.status_code == 422 and "less than a year" in r.json()["detail"]
+    r = api.post("/api/admin/watchlist", json={"symbol": "LINK", "name": "Chainlink"}, headers=H)
+    assert r.status_code == 201
+
+
+# --- Usage ------------------------------------------------------------------------------------
+
+
+def test_usage_sums_this_months_server_spend(api, api_sessions) -> None:
+    import datetime as dt
+    from decimal import Decimal
+
+    from desk.models import JobRun, LlmSpend
+
+    today = dt.datetime.now(dt.UTC).date()
+    last_month = today.replace(day=1) - dt.timedelta(days=1)
+    with api_sessions() as s:
+        s.add_all([
+            LlmSpend(date=today, source="desk", model="claude-haiku-5-5", tokens_in=1000,
+                     tokens_out=100, cost=Decimal("0.25")),
+            LlmSpend(date=today, source="brief", model="claude-sonnet-5-5", tokens_in=500,
+                     tokens_out=200, cost=Decimal("0.50")),
+            LlmSpend(date=last_month, source="desk", model="claude-haiku-5-5", tokens_in=1,
+                     tokens_out=1, cost=Decimal("9")),
+            JobRun(job="daily", status="failed", error="x" * 900),
+        ])  # fmt: skip
+        s.commit()
+    out = api.get("/api/admin/usage", headers=H).json()
+    assert out["month"] == today.strftime("%Y-%m")
+    assert out["spend_usd"] == pytest.approx(0.75) and out["cap_usd"] == 8.0
+    assert [line["key"] for line in out["by_source"]] == ["brief", "desk"]
+    assert out["by_model"][1] == {"key": "claude-haiku-5-5", "cost": 0.25, "tokens_in": 1000,
+                                  "tokens_out": 100}  # fmt: skip
+    assert out["users"][0]["role"] == "admin" and out["users"][0]["messages"] == 0
+    assert out["jobs"][0]["status"] == "failed" and len(out["jobs"][0]["error"]) == 500

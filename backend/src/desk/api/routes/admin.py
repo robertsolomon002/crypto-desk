@@ -1,4 +1,5 @@
-"""`/api/admin` routes (admin only): watchlist, invites (proxied to Clerk), users and roles.
+"""`/api/admin` routes (admin only): watchlist, invites (proxied to Clerk), users and roles,
+server-key usage.
 
 Clerk Backend API (D37): `GET /v1/invitations`, `POST /v1/invitations` (`email_address`,
 `redirect_url`, `notify`), `POST /v1/invitations/{id}/revoke`, with the secret key as a Bearer
@@ -10,15 +11,18 @@ import re
 from collections.abc import Iterator
 from typing import Annotated, Any, Literal
 
+import ccxt
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Path, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 from desk.api.deps import SessionDep, forget_user, require_role
-from desk.config import get_settings
+from desk.config import get_settings, load_app_settings
 from desk.data.coins import load_coins_yaml, max_watchlist
-from desk.models import Coin, User
+from desk.data.market import make_exchange, utc_now
+from desk.models import Coin, JobRun, LlmSpend, Message, User
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_role("admin"))])
 
@@ -46,6 +50,53 @@ class WatchlistAdd(BaseModel):
     )
 
 
+class Eligibility(BaseModel):
+    symbol: str
+    market: str
+    name: str | None  # Coinbase's name for the base currency, to prefill the form
+    eligible: bool
+    reasons: list[str]  # why not, in plain words
+
+
+# Watchlist rule (Stage 3.4): a live Coinbase spot market against USD and at least a year of
+# daily history. Checked live on 2026-11-01 (D42): ccxt's `fetch_ohlcv(since=..., limit=5)` on
+# Coinbase returns only the candles of that window, so a coin listed less than a year ago gets
+# nothing for a window that starts 366 days back (OPN/USD did; LINK/USD didn't).
+HISTORY_DAYS = 366
+
+
+def exchange_dep() -> ccxt.Exchange:
+    return make_exchange()
+
+
+ExchangeDep = Annotated[ccxt.Exchange, Depends(exchange_dep)]
+
+
+def check_eligibility(exchange: ccxt.Exchange, symbol: str) -> Eligibility:
+    market = f"{symbol}/USD"
+    try:
+        info = exchange.load_markets().get(market)
+    except ccxt.BaseError:
+        raise HTTPException(502, "Coinbase is unreachable") from None
+    if info is None:
+        return Eligibility(symbol=symbol, market=market, name=None, eligible=False,
+                           reasons=[f"Coinbase has no {market} market"])  # fmt: skip
+    name = (info.get("info") or {}).get("base_name") or None
+    reasons = []
+    if not info.get("active") or not info.get("spot"):
+        reasons.append(f"{market} is not an active spot market on Coinbase")
+    else:
+        since = int((utc_now() - dt.timedelta(days=HISTORY_DAYS)).timestamp() * 1000)
+        try:
+            candles = exchange.fetch_ohlcv(market, "1d", since=since, limit=5)
+        except ccxt.BaseError:
+            raise HTTPException(502, "Coinbase is unreachable") from None
+        if not candles:
+            reasons.append(f"{market} has less than a year of daily history on Coinbase")
+    return Eligibility(symbol=symbol, market=market, name=name, eligible=not reasons,
+                       reasons=reasons)  # fmt: skip
+
+
 def _watch(c: Coin) -> WatchlistCoin:
     return WatchlistCoin(symbol=c.symbol, name=c.name, source_market=c.source_market,
                          aliases=list(c.aliases), active=c.active, added_at=c.added_at)  # fmt: skip
@@ -57,14 +108,27 @@ def list_watchlist(session: SessionDep) -> list[WatchlistCoin]:
     return [_watch(c) for c in session.scalars(q)]
 
 
+@router.get(
+    "/watchlist/check/{symbol}", response_model=Eligibility, operation_id="checkWatchlistCoin"
+)
+def check_watchlist(
+    symbol: Annotated[str, Path(pattern=SYMBOL.pattern)], exchange: ExchangeDep
+) -> Eligibility:
+    """Whether a coin can join the watchlist (Coinbase USD market, at least a year of history)."""
+    return check_eligibility(exchange, symbol)
+
+
 @router.post(
     "/watchlist", response_model=WatchlistCoin, status_code=201, operation_id="addWatchlistCoin"
 )
-def add_watchlist(body: WatchlistAdd, session: SessionDep) -> WatchlistCoin:
-    """Add (or re-activate) a coin. The next daily job backfills its candles from Coinbase."""
+def add_watchlist(body: WatchlistAdd, session: SessionDep, exchange: ExchangeDep) -> WatchlistCoin:
+    """Add (or re-activate) an eligible coin. The next daily job backfills its candles."""
     core = {c["symbol"] for c in load_coins_yaml() if not c["is_watchlist"]}
     if body.symbol in core:
         raise HTTPException(409, f"{body.symbol} is a core coin")
+    check = check_eligibility(exchange, body.symbol)
+    if not check.eligible:
+        raise HTTPException(422, "; ".join(check.reasons))
     active = session.scalar(
         select(func.count()).select_from(Coin).where(Coin.is_watchlist, Coin.active)
     )
@@ -218,3 +282,93 @@ def update_role(user_id: int, body: RoleUpdate, session: SessionDep) -> UserOut:
     session.commit()
     forget_user(user.clerk_id)
     return _user(user)
+
+
+# --- Usage ------------------------------------------------------------------------------------
+
+
+class SpendLine(BaseModel):
+    key: str  # source (chat | desk | brief | mco) or model id
+    cost: float
+    tokens_in: int
+    tokens_out: int
+
+
+class UserUsage(BaseModel):
+    user_id: int
+    clerk_id: str
+    role: str
+    messages: int  # this month (the agent writes them from Stage 5.1)
+
+
+class JobLine(BaseModel):
+    job: str
+    status: str
+    started_at: dt.datetime
+    ended_at: dt.datetime | None
+    error: str | None
+
+
+class Usage(BaseModel):
+    month: str  # YYYY-MM, UTC
+    spend_usd: float
+    cap_usd: float
+    by_source: list[SpendLine]
+    by_model: list[SpendLine]
+    users: list[UserUsage]
+    jobs: list[JobLine]
+
+
+def _spend(session: Session, column: Any, start: dt.date) -> list[SpendLine]:
+    total = func.sum(LlmSpend.cost)
+    stmt = (
+        select(column, total, func.sum(LlmSpend.tokens_in), func.sum(LlmSpend.tokens_out))
+        .where(LlmSpend.date >= start)
+        .group_by(column)
+        .order_by(total.desc())
+    )
+    return [
+        SpendLine(key=k, cost=float(c or 0), tokens_in=int(i or 0), tokens_out=int(o or 0))
+        for k, c, i, o in session.execute(stmt)
+    ]
+
+
+@router.get("/usage", response_model=Usage, operation_id="getUsage")
+def usage(session: SessionDep) -> Usage:
+    """Server-key LLM spend this month against the Decision 9 cap, messages per user, and the
+    latest job runs. Friends' own-key use costs Rob nothing and has no recorded cost."""
+    start = utc_now().date().replace(day=1)
+    since = dt.datetime.combine(start, dt.time(), dt.UTC)
+    by_source = _spend(session, LlmSpend.source, start)
+    counts = dict(
+        session.execute(
+            select(Message.user_id, func.count())
+            .where(Message.created_at >= since)
+            .group_by(Message.user_id)
+        ).all()
+    )
+    users = [
+        UserUsage(user_id=u.id, clerk_id=u.clerk_id, role=u.role, messages=counts.get(u.id, 0))
+        for u in session.scalars(select(User).order_by(User.id))
+    ]
+    runs = session.scalars(select(JobRun).order_by(JobRun.started_at.desc()).limit(10))
+    jobs = [
+        JobLine(
+            job=j.job,
+            status=j.status,
+            started_at=j.started_at,
+            ended_at=j.ended_at,
+            error=j.error[:500] if j.error else None,
+        )  # fmt: skip
+        for j in runs
+    ]
+    cap = float(load_app_settings().get("budget", {}).get("server_llm_cap_usd_per_month", 8.0))
+    return Usage(
+        month=start.strftime("%Y-%m"),
+        spend_usd=round(sum(line.cost for line in by_source), 6),
+        cap_usd=cap,
+        by_source=by_source,
+        by_model=_spend(session, LlmSpend.model, start),
+        users=users,
+        jobs=jobs,
+    )

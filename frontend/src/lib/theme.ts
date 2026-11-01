@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 // Dark-first (ROADMAP Section 8). The choice lives in localStorage; storage can be missing or
 // throw (private windows, blocked site data), so every access is guarded. The class is applied
@@ -38,8 +38,18 @@ export function saveTheme(theme: Theme): void {
   applyTheme(theme)
 }
 
+/** The theme, kept in step across components (the top bar toggle and Settings) by watching the
+ * class on <html>, which `applyTheme` sets. */
 export function useTheme(): [Theme, (theme: Theme) => void] {
   const [theme, setTheme] = useState<Theme>(storedTheme)
+  useEffect(() => {
+    const root = document.documentElement
+    const observer = new MutationObserver(() =>
+      setTheme(root.classList.contains('dark') ? 'dark' : 'light'),
+    )
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
   return [
     theme,
     (next) => {

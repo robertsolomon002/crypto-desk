@@ -336,6 +336,49 @@
         "title": "DominanceData",
         "type": "object"
       },
+      "Eligibility": {
+        "properties": {
+          "eligible": {
+            "title": "Eligible",
+            "type": "boolean"
+          },
+          "market": {
+            "title": "Market",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "market",
+          "name",
+          "eligible",
+          "reasons"
+        ],
+        "title": "Eligibility",
+        "type": "object"
+      },
       "Envelope_AnalyticsData_": {
         "properties": {
           "as_of": {
@@ -656,6 +699,44 @@
           "data"
         ],
         "title": "Envelope[list[Headline]]",
+        "type": "object"
+      },
+      "Envelope_list_ProviderModels__": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderModels"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[list[ProviderModels]]",
         "type": "object"
       },
       "Envelope_list_SeriesPoint__": {
@@ -991,6 +1072,55 @@
         "title": "InviteCreate",
         "type": "object"
       },
+      "JobLine": {
+        "properties": {
+          "ended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "job": {
+            "title": "Job",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job",
+          "status",
+          "started_at",
+          "ended_at",
+          "error"
+        ],
+        "title": "JobLine",
+        "type": "object"
+      },
       "JobStatus": {
         "properties": {
           "ended_at": {
@@ -1021,6 +1151,76 @@
           "ended_at"
         ],
         "title": "JobStatus",
+        "type": "object"
+      },
+      "KeyTest": {
+        "properties": {
+          "model": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,99}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "provider": {
+            "enum": [
+              "openrouter",
+              "anthropic",
+              "openai"
+            ],
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider"
+        ],
+        "title": "KeyTest",
+        "type": "object"
+      },
+      "KeyTestResult": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "provider": {
+            "enum": [
+              "openrouter",
+              "anthropic",
+              "openai"
+            ],
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "provider",
+          "model",
+          "message"
+        ],
+        "title": "KeyTestResult",
         "type": "object"
       },
       "MacroData": {
@@ -1133,6 +1333,54 @@
         "title": "OverviewData",
         "type": "object"
       },
+      "ProviderModels": {
+        "properties": {
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Choices",
+            "type": "array"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default"
+          },
+          "id": {
+            "enum": [
+              "openrouter",
+              "anthropic",
+              "openai"
+            ],
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "recommended": {
+            "title": "Recommended",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "recommended",
+          "default",
+          "choices"
+        ],
+        "title": "ProviderModels",
+        "type": "object"
+      },
       "RoleUpdate": {
         "properties": {
           "role": {
@@ -1221,6 +1469,34 @@
           "name"
         ],
         "title": "Source",
+        "type": "object"
+      },
+      "SpendLine": {
+        "properties": {
+          "cost": {
+            "title": "Cost",
+            "type": "number"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "tokens_in": {
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "title": "Tokens Out",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "cost",
+          "tokens_in",
+          "tokens_out"
+        ],
+        "title": "SpendLine",
         "type": "object"
       },
       "TableInfo": {
@@ -1330,6 +1606,61 @@
         "title": "Timeframe",
         "type": "string"
       },
+      "Usage": {
+        "properties": {
+          "by_model": {
+            "items": {
+              "$ref": "#/components/schemas/SpendLine"
+            },
+            "title": "By Model",
+            "type": "array"
+          },
+          "by_source": {
+            "items": {
+              "$ref": "#/components/schemas/SpendLine"
+            },
+            "title": "By Source",
+            "type": "array"
+          },
+          "cap_usd": {
+            "title": "Cap Usd",
+            "type": "number"
+          },
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/JobLine"
+            },
+            "title": "Jobs",
+            "type": "array"
+          },
+          "month": {
+            "title": "Month",
+            "type": "string"
+          },
+          "spend_usd": {
+            "title": "Spend Usd",
+            "type": "number"
+          },
+          "users": {
+            "items": {
+              "$ref": "#/components/schemas/UserUsage"
+            },
+            "title": "Users",
+            "type": "array"
+          }
+        },
+        "required": [
+          "month",
+          "spend_usd",
+          "cap_usd",
+          "by_source",
+          "by_model",
+          "users",
+          "jobs"
+        ],
+        "title": "Usage",
+        "type": "object"
+      },
       "UserOut": {
         "properties": {
           "clerk_id": {
@@ -1357,6 +1688,34 @@
           "created_at"
         ],
         "title": "UserOut",
+        "type": "object"
+      },
+      "UserUsage": {
+        "properties": {
+          "clerk_id": {
+            "title": "Clerk Id",
+            "type": "string"
+          },
+          "messages": {
+            "title": "Messages",
+            "type": "integer"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "user_id",
+          "clerk_id",
+          "role",
+          "messages"
+        ],
+        "title": "UserUsage",
         "type": "object"
       },
       "ValidationError": {
@@ -1622,6 +1981,38 @@
         ]
       }
     },
+    "/api/admin/usage": {
+      "get": {
+        "description": "Server-key LLM spend this month against the Decision 9 cap, messages per user, and the\nlatest job runs. Friends' own-key use costs Rob nothing and has no recorded cost.",
+        "operationId": "getUsage",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Usage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Usage",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/admin/users": {
       "get": {
         "operationId": "listUsers",
@@ -1744,7 +2135,7 @@
         ]
       },
       "post": {
-        "description": "Add (or re-activate) a coin. The next daily job backfills its candles from Coinbase.",
+        "description": "Add (or re-activate) an eligible coin. The next daily job backfills its candles.",
         "operationId": "addWatchlistCoin",
         "requestBody": {
           "content": {
@@ -1784,6 +2175,50 @@
         ]
       }
     },
+    "/api/admin/watchlist/check/{symbol}": {
+      "get": {
+        "description": "Whether a coin can join the watchlist (Coinbase USD market, at least a year of history).",
+        "operationId": "checkWatchlistCoin",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Z0-9]{2,10}$",
+              "title": "Symbol",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Eligibility"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Check Watchlist",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/admin/watchlist/{symbol}": {
       "delete": {
         "description": "Deactivate a watchlist coin. Its candle history stays (re-adding resumes it).",
@@ -1817,6 +2252,80 @@
         "summary": "Remove Watchlist",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/agent/models": {
+      "get": {
+        "description": "Providers a friend can bring a key for, with a default and suggested models\n(`config/models.yaml`). OpenRouter is the recommended path (Decision 2).",
+        "operationId": "listModels",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_ProviderModels__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Models",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/agent/test-key": {
+      "post": {
+        "description": "One minimal call with the key from `X-LLM-Key` (1 output token; OpenAI: list models).",
+        "operationId": "testKey",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyTest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyTestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Test Key",
+        "tags": [
+          "agent"
         ]
       }
     },

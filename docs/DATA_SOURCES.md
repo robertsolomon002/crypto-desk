@@ -27,6 +27,8 @@ Decisions that follow from these findings are D20 to D29 in `DECISIONS.md`.
 - Full daily refresh from scratch for BTC, ETH and SOL took about 11 s locally (Stage 1.1). Coinbase has no ETH candles for 2016-05-21 and 2016-05-22.
 - Coinbase has no native 4H candles; 4H bars can be resampled from closed 1h candles (D22).
 
+Watchlist eligibility (Stage 3.4, checked live 2026-11-01, ccxt 4.5.90): `load_markets()` has 1,029 Coinbase markets (405 active USD spot), each with `info.base_name` (for example "Chainlink"). `fetch_ohlcv(market, "1d", since=..., limit=5)` returns only the candles in that window, so a window that starts 366 days back is empty for a coin listed less than a year ago (OPN/USD) and full for older ones (LINK/USD, DOLO/USD).
+
 ### Coin Metrics community API
 
 - Base `https://community-api.coinmetrics.io/v4`, no key. Rate limit from response headers: `x-ratelimit-limit: 6000, 6000;w=20` (6,000 requests per 20-second sliding window, plan `download`).
@@ -92,6 +94,13 @@ All four configured URLs work locally and in CI: CoinDesk (25 items), Cointelegr
 
 - `ChatOpenAI(base_url="https://openrouter.ai/api/v1", model=...)` from `langchain-openai` 1.7.3 works. Structured output works with both `json_schema` and `function_calling` on `anthropic/claude-haiku-5.5` (✅ 2.6 s, $0.00008).
 - Model ids and prices come from the public `GET https://openrouter.ai/api/v1/models`. Cheap candidates (per MTok, in/out): `anthropic/claude-haiku-5.5` $0.10/$0.50, `openai/gpt-5-nano` $0.05/$0.40, `openai/gpt-5-mini` $0.25/$2.00, `google/gemini-3.5-flash-lite` $0.30/$2.50.
+
+### Key test for friends' own keys (Stage 3.4, checked live 2026-11-01, D42)
+
+- OpenRouter `POST /api/v1/chat/completions` with `max_tokens: 1` on `anthropic/claude-haiku-5.5`: 200, 11 + 1 tokens, `usage.cost` $0.0000016. A bad key gets 401.
+- Anthropic `POST /v1/messages` with `max_tokens: 1` and `anthropic-version: 2023-06-01`: 200, `stop_reason: max_tokens`. A bad key gets 401 `authentication_error`. (The current docs show a newer version date in their examples; 2023-06-01 still works.)
+- OpenAI `GET /v1/models` with a bad key gets 401 `invalid_api_key`, and **the message echoes part of the key**, so provider error text is never passed on.
+- Console links for the Settings wizard: OpenRouter keys `https://openrouter.ai/keys` (a credit limit can be set per key; once a key uses it up, requests with it are rejected until the limit is raised), credits `https://openrouter.ai/settings/credits`; Claude Console keys `https://platform.claude.com/settings/keys`, spend limits on Billing `https://platform.claude.com/settings/billing`; OpenAI keys `https://platform.openai.com/settings/organization/api-keys`, limits `https://platform.openai.com/settings/organization/limits`, spend-limit guide `https://developers.openai.com/api/docs/guides/spend-limits`.
 
 ### Gemini (video summaries)
 

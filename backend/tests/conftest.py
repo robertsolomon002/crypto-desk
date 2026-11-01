@@ -4,6 +4,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
+import httpx
 import pytest
 from alembic import command
 from alembic.config import Config
@@ -113,6 +114,13 @@ def api(api_sessions: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(deps, "_user_cache", {})
     monkeypatch.setattr(deps, "rate_limiter", lambda: deps.RateLimiter(10_000))
     app.dependency_overrides[deps.get_verifier] = api_fakes.verifier
+    # No network: Coinbase and the LLM providers are fakes unless a test swaps them.
+    from desk.api.routes import admin, agent
+
+    app.dependency_overrides[admin.exchange_dep] = api_fakes.FakeExchange
+    app.dependency_overrides[agent.provider_client] = lambda: httpx.Client(
+        transport=api_fakes.provider_transport()
+    )
     try:
         yield TestClient(app)
     finally:

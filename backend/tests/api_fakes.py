@@ -6,6 +6,7 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+import httpx
 import jwt
 import numpy as np
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -118,3 +119,37 @@ def seed(session: Session) -> None:
                       title="CPI (October)", source_url="https://www.bls.gov/"),
     ])  # fmt: skip
     session.add(User(clerk_id=ADMIN, role="admin"))
+
+
+class FakeExchange:
+    """ccxt's Coinbase for the watchlist checks: `markets` maps a market to (active, spot,
+    name); markets in `young` have no candles a year back (D42)."""
+
+    def __init__(self, markets: dict[str, tuple[bool, bool, str]] | None = None,
+                 young: set[str] | None = None) -> None:  # fmt: skip
+        default = {f"{s}/USD": (True, True, s.title()) for s in ("LINK", "AAA", "BBB", "CCC")}
+        self.markets = default if markets is None else markets
+        self.young = young or set()
+        self.calls: list[tuple[str, int]] = []
+
+    def load_markets(self) -> dict:
+        return {m: {"active": a, "spot": s, "info": {"base_name": n}}
+                for m, (a, s, n) in self.markets.items()}  # fmt: skip
+
+    def fetch_ohlcv(self, market: str, timeframe: str, since: int, limit: int) -> list:
+        self.calls.append((market, since))
+        return [] if market in self.young else [[since, 1, 1, 1, 1, 1]]
+
+
+def provider_transport(status: int = 200) -> httpx.MockTransport:
+    """Every LLM provider call answers `status`; the requests are kept for assertions."""
+
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(status, json={"error": {"message": "echo " + str(request.headers)}})
+
+    transport = httpx.MockTransport(handler)
+    transport.seen = seen  # type: ignore[attr-defined]
+    return transport

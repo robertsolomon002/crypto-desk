@@ -56,7 +56,7 @@ test('tabs navigate, keep the coin, and hide later versions', async ({ page, vie
     await tabs.getByRole('link', { name: 'Settings' }).click()
   }
   await expect(page).toHaveURL(/\/settings\?coin=ETH$/)
-  await expect(page.getByText('Coming in Stage 3.4')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible()
 })
 
 test('feature flags from /api/me show later tabs', async ({ page, viewport }) => {
@@ -77,11 +77,36 @@ test('the coin selector updates the URL', async ({ page }) => {
 })
 
 test('View data links open the Data tab with the table', async ({ page }) => {
-  await mockApi(page)
+  const columns = [
+    { name: 'coin', type: 'VARCHAR(16)', filterable: true },
+    { name: 'date', type: 'DATE', filterable: true },
+    { name: 'close', type: 'DOUBLE', filterable: true },
+  ]
+  const table = { name: 'candles_daily', description: 'Closed daily candles', visibility: 'member' }
+  await mockApi(page, {
+    '/api/data/tables': {
+      as_of: '2026-10-29',
+      sources: [],
+      data: [{ ...table, rows: 1, last_updated: '2026-10-29', columns }],
+    },
+    '/api/data/tables/candles_daily': {
+      as_of: '2026-10-29',
+      sources: [],
+      data: {
+        table: 'candles_daily',
+        columns: ['coin', 'date', 'close'],
+        total: 1,
+        page: 1,
+        page_size: 100,
+        rows: [{ coin: 'BTC', date: '2026-10-29', close: 90123.45 }],
+      },
+    },
+  })
   await page.goto('/')
   await page.getByTestId('coin-card-BTC').getByRole('link', { name: 'View data' }).click()
   await expect(page).toHaveURL(/\/data\?table=candles_daily&coin=BTC$/)
-  await expect(page.getByText('candles_daily')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'candles_daily' })).toBeVisible()
+  await expect(page.getByTestId('data-grid')).toContainText('90123.45')
 })
 
 test('follows the system theme until toggled, then persists', async ({ page }) => {

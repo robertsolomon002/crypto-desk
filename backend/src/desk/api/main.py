@@ -11,6 +11,7 @@ from desk import __version__
 from desk.api.middleware import ETag, LlmKeyRedaction
 from desk.api.routes import (
     admin,
+    agent,
     calendar,
     coins,
     cycles,
@@ -27,7 +28,7 @@ from desk.api.routes import (
 from desk.config import get_settings
 
 ROUTERS = [health, coins, overview, ohlcv, indicators, cycles, stats, onchain, macro, news,
-           calendar, data, admin]  # fmt: skip
+           calendar, data, agent, admin]  # fmt: skip
 
 
 def create_app() -> FastAPI:
