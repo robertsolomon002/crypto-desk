@@ -228,7 +228,7 @@ export interface paths {
         };
         /**
          * List Coins
-         * @description Active coins (core first, then the watchlist) with their candle coverage.
+         * @description Active coins (core first, then the watchlist) with their candle coverage up to `as_of`.
          */
         get: operations["listCoins"];
         put?: never;
@@ -1799,7 +1799,10 @@ export interface operations {
     };
     listCoins: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;

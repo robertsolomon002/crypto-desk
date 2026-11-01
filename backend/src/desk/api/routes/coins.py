@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
-from desk.api.deps import SessionDep, UserDep, require_role
+from desk.api.deps import AsOfDep, SessionDep, UserDep, require_role
 from desk.api.schemas import Envelope, Source
 from desk.config import get_settings, load_app_settings
 from desk.data.coins import active_coins
@@ -52,15 +52,12 @@ def me(user: UserDep) -> Me:
 
 
 @router.get("/coins", response_model=Envelope[list[CoinOut]], operation_id="listCoins")
-def list_coins(session: SessionDep) -> Envelope[list[CoinOut]]:
-    """Active coins (core first, then the watchlist) with their candle coverage."""
-    bounds = {
-        c: (lo, hi)
-        for c, lo, hi in session.execute(
-            select(CandleDaily.coin, func.min(CandleDaily.date), func.max(CandleDaily.date))
-            .group_by(CandleDaily.coin)
-        )
-    }  # fmt: skip
+def list_coins(session: SessionDep, as_of: AsOfDep = None) -> Envelope[list[CoinOut]]:
+    """Active coins (core first, then the watchlist) with their candle coverage up to `as_of`."""
+    q = select(CandleDaily.coin, func.min(CandleDaily.date), func.max(CandleDaily.date))
+    if as_of is not None:
+        q = q.where(CandleDaily.date <= as_of)
+    bounds = {c: (lo, hi) for c, lo, hi in session.execute(q.group_by(CandleDaily.coin))}
     out = []
     for coin in active_coins(session):
         first, last = bounds.get(coin.symbol, (None, None))
@@ -73,6 +70,6 @@ def list_coins(session: SessionDep) -> Envelope[list[CoinOut]]:
             )
         out.append(CoinOut(symbol=coin.symbol, name=coin.name, is_watchlist=coin.is_watchlist,
                            first_date=first, last_date=last, last_close=close))  # fmt: skip
-    as_of = max((c.last_date for c in out if c.last_date), default=None)
-    return Envelope(as_of=as_of, sources=[Source(name="coins", detail="config/coins.yaml + admin")],
-                    data=out)  # fmt: skip
+    newest = max((c.last_date for c in out if c.last_date), default=None)
+    src = Source(name="coins", detail="config/coins.yaml + admin")
+    return Envelope(as_of=newest, sources=[src], data=out)

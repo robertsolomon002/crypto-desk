@@ -2431,8 +2431,29 @@
     },
     "/api/coins": {
       "get": {
-        "description": "Active coins (core first, then the watchlist) with their candle coverage.",
+        "description": "Active coins (core first, then the watchlist) with their candle coverage up to `as_of`.",
         "operationId": "listCoins",
+        "parameters": [
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {

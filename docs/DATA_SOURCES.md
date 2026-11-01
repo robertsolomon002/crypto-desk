@@ -126,6 +126,11 @@ All four configured URLs work locally and in CI: CoinDesk (25 items), Cointelegr
 - `langchain-mcp-adapters` 0.3.2: `MultiServerMCPClient({"name": {"command", "args", "transport": "stdio"}})` then `await client.get_tools()`. The stdio round trip to a one-tool FastMCP server works (2 + 3 → `5`).
 - `mcp` 1.30.0 (`mcp.server.fastmcp.FastMCP`), `google-genai` 2.33.0, `anthropic` 2.3.0, `openai` 3.40.0.
 
+### MCP SDK and Claude desktop (Stage 4.2, checked 2026-11-01)
+
+- `mcp` 1.30.0 (installed source): `FastMCP.add_tool(fn, name, title, description, annotations, icons, meta, structured_output)`. A tool returning `str` becomes one `TextContent` as-is (other values go through `pydantic_core.to_json(..., indent=2)`); `structured_output=False` turns off the structured copy and the output schema. An exception in a tool becomes `isError` with "Error executing tool <name>: <message>"; an unregistered name gives "Unknown tool". Sync tool functions run directly on the event loop (fine for one stdio client). The SDK logs INFO lines to stderr.
+- Claude desktop (https://modelcontextprotocol.io/docs/develop/connect-local-servers): Settings → Developer → Edit Config opens `%APPDATA%\Claude\claude_desktop_config.json`; `mcpServers.<name>` takes `command`, `args` and optional `env`; paths must be absolute; quit and restart the app to load changes; logs in `%APPDATA%\Claude\logs` (`mcp.log`, `mcp-server-<name>.log` with the server's stderr). The exact command in `docs/USING_WITH_CLAUDE.md` was run with the SDK client from Rob's PC against Neon: 1.9 s to initialize, 19 tools, `get_key_levels` answered.
+
 ## Hosting and services (free tiers)
 
 | Service | Free tier (official source) |
