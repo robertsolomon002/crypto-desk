@@ -5,7 +5,7 @@ features: # Decision 1: switch features off per deployment
   mco_tab: false # v1.2: the MCO tab itself (needs mco on too); `mco` alone governs the data
   agent: false # v1.1
   signals: false # v1.3
-  onchain_macro: false # v1.1
+  onchain_macro: true # v1.1 (tab built in Stage 4.1)
 
 budget: # Decision 9. The cap itself is enforced in backend/src/desk/agents/cost.py
   server_llm_cap_usd_per_month: 8.0

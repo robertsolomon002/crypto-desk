@@ -233,4 +233,5 @@ export const ANALYTICS: {
     label: 'Rolling correlation between coins',
     params: { window: ['90', '30', '180'] },
   },
+  { fn: 'onchain', label: 'On-chain: MVRV, realized price, NUPL, addresses, hash rate (BTC, ETH)' },
 ]

@@ -16,6 +16,7 @@ import { NotFoundPage, PlaceholderPage } from '@/routes/placeholder'
 const ChartsPage = lazy(() => import('@/routes/charts').then((m) => ({ default: m.ChartsPage })))
 const CyclesPage = lazy(() => import('@/routes/cycles').then((m) => ({ default: m.CyclesPage })))
 const StatsPage = lazy(() => import('@/routes/stats').then((m) => ({ default: m.StatsPage })))
+const OnchainPage = lazy(() => import('@/routes/onchain').then((m) => ({ default: m.OnchainPage })))
 const DataPage = lazy(() => import('@/routes/data').then((m) => ({ default: m.DataPage })))
 const SettingsPage = lazy(() =>
   import('@/routes/settings').then((m) => ({ default: m.SettingsPage })),
@@ -44,6 +45,11 @@ const BUILT: Record<string, ReactElement> = {
   '/stats': (
     <TabPage label="The Stats tab">
       <StatsPage />
+    </TabPage>
+  ),
+  '/onchain': (
+    <TabPage label="The On-chain & Macro tab">
+      <OnchainPage />
     </TabPage>
   ),
   '/data': (

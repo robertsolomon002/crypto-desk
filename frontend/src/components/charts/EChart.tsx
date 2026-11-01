@@ -3,6 +3,7 @@ import {
   AriaComponent,
   GridComponent,
   LegendComponent,
+  MarkAreaComponent,
   MarkLineComponent,
   TooltipComponent,
   VisualMapComponent,
@@ -13,7 +14,7 @@ import { useEffect, useRef } from 'react'
 
 import { cn } from '@/lib/utils'
 
-// Only the parts the Cycles and Stats tabs use are registered, which keeps the lazy chunk small.
+// Only the parts the Cycles, Stats and On-chain tabs use are registered, which keeps the lazy chunk small.
 echarts.use([
   BarChart,
   HeatmapChart,
@@ -22,6 +23,7 @@ echarts.use([
   AriaComponent,
   GridComponent,
   LegendComponent,
+  MarkAreaComponent,
   MarkLineComponent,
   TooltipComponent,
   VisualMapComponent,

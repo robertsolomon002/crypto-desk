@@ -57,6 +57,11 @@ Local ✅, CI ✅.
 | | `/coins/bitcoin/market_chart` | 365 days ✅; `days=max` → **401, error 10012** (Demo history capped at 365 days) | | |
 | Hyperliquid (optional) | `POST api.hyperliquid.xyz/info` `fundingHistory` | Hourly funding for BTC, ETH, SOL | ✅ | ✅ |
 
+### Stage 4.1 findings (2026-11-01)
+
+- **Coin Metrics units** (`/v4/reference-data/asset-metrics?metrics=...` and https://docs.coinmetrics.io/network-data/network-data-overview/mining/hash-rate): `HashRate` is "Varies" by protocol; for **BTC it is TH/s** (`(BlkCnt / 144) * DiffMean * ((2^32 / 10^12) / 600)`), and the latest BTC value (about 1.08e9 on 2026-10-31) is about 1.08 ZH/s. `AdrActCnt` counts unique active addresses (senders and recipients) per day. `CapMVRVCur` is dimensionless.
+- **MVRV history in our data** (BTC from 2010-07-18, ETH from 2015-08-08): BTC yearly maxima 2011 7.74, 2013 5.88, 2017 4.72, 2021 3.96, 2024 2.78; ETH 2017 3.14, 2021 2.30. Used for the panel's bands and text (D43).
+
 ### Stage 1.2 findings (2026-10-29)
 
 - **Coin Metrics:** several metrics per request work (`metrics=A,B,C`); a metric with no value that day comes back as `null` (ETH `HashRate` from 2022-09-15). Full BTC and ETH history of the five stored metrics is about 50,000 rows, loaded in a few seconds.

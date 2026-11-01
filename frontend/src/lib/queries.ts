@@ -225,6 +225,26 @@ export function useCorrelation(coin: string, window: number) {
   })
 }
 
+// --- On-chain & Macro (Stage 4.1) ---------------------------------------------------------------
+
+export function useOnchain(coin: string) {
+  return useQuery({
+    queryKey: ['onchain', coin],
+    queryFn: () => unwrap(api.GET('/api/onchain/{coin}', { params: { path: { coin } } })),
+  })
+}
+
+export function useMacro() {
+  return useQuery({ queryKey: ['macro'], queryFn: () => unwrap(api.GET('/api/macro')) })
+}
+
+export function useDominance() {
+  return useQuery({
+    queryKey: ['dominance'],
+    queryFn: () => unwrap(api.GET('/api/macro/dominance')),
+  })
+}
+
 // --- Data tab (Stage 3.4) ------------------------------------------------------------------------
 
 export type TableInfo = Schemas['TableInfo']
@@ -335,6 +355,8 @@ export async function fetchAnalytics(
         api.GET('/api/stats/{coin}/correlation', { params: { path, query: { window } } }),
       )
     }
+    case 'onchain':
+      return unwrap(api.GET('/api/onchain/{coin}', { params: { path } }))
     default:
       throw new ApiError(404, `Unknown analytics result ${fn}`)
   }
