@@ -44,7 +44,9 @@ def day(ts: pd.Timestamp) -> dt.date:
 def to_jsonable(obj: Any) -> Any:
     """JSON-safe structure: frames become records, dates ISO strings, NaN and inf become None."""
     if isinstance(obj, pd.DataFrame):
-        frame = obj.reset_index() if not isinstance(obj.index, pd.RangeIndex) else obj
+        # A named index is data (`month`, `weekday`), even when it is a RangeIndex after reindex.
+        unnamed_range = isinstance(obj.index, pd.RangeIndex) and obj.index.name is None
+        frame = obj if unnamed_range else obj.reset_index()
         return [
             {str(k): to_jsonable(v) for k, v in row.items()}
             for row in frame.to_dict(orient="records")

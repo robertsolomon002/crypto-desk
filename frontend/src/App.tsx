@@ -14,6 +14,8 @@ import { NotFoundPage, PlaceholderPage } from '@/routes/placeholder'
 
 // The chart libraries load only with the tabs that use them, keeping the first load small.
 const ChartsPage = lazy(() => import('@/routes/charts').then((m) => ({ default: m.ChartsPage })))
+const CyclesPage = lazy(() => import('@/routes/cycles').then((m) => ({ default: m.CyclesPage })))
+const StatsPage = lazy(() => import('@/routes/stats').then((m) => ({ default: m.StatsPage })))
 
 function TabPage({ label, children }: { label: string; children: ReactElement }) {
   return (
@@ -28,6 +30,16 @@ const BUILT: Record<string, ReactElement> = {
   '/charts': (
     <TabPage label="The Charts tab">
       <ChartsPage />
+    </TabPage>
+  ),
+  '/cycles': (
+    <TabPage label="The Cycles tab">
+      <CyclesPage />
+    </TabPage>
+  ),
+  '/stats': (
+    <TabPage label="The Stats tab">
+      <StatsPage />
     </TabPage>
   ),
 }

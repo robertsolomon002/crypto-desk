@@ -110,3 +110,117 @@ export function usePivots(coin: string, timeframe: '1d' | '1w', enabled: boolean
     enabled,
   })
 }
+
+// --- Cycles and Stats (Stage 3.3). Each returns the analytics envelope; `result` is typed by the
+// caller from `cycles-data.ts` / `stats-data.ts`. A 404 means the coin has no such data (cycles
+// cover BTC and ETH only).
+
+export type AnalyticsEnvelope = Schemas['Envelope_AnalyticsData_']
+export type AnchorModeParam = 'halving' | 'bottom' | 'top'
+
+export function useCycleAnchors(coin: string) {
+  return useQuery({
+    queryKey: ['cycles', 'anchors', coin],
+    queryFn: () => unwrap(api.GET('/api/cycles/{coin}/anchors', { params: { path: { coin } } })),
+  })
+}
+
+export function useCyclePaths(coin: string, mode: AnchorModeParam, enabled = true) {
+  return useQuery({
+    queryKey: ['cycles', 'paths', coin, mode],
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/cycles/{coin}/paths', {
+          params: { path: { coin }, query: { mode, max_days: 1500 } },
+        }),
+      ),
+    enabled,
+  })
+}
+
+export function useCycleDayN(coin: string, mode: AnchorModeParam, enabled = true) {
+  return useQuery({
+    queryKey: ['cycles', 'day-n', coin, mode],
+    queryFn: () =>
+      unwrap(api.GET('/api/cycles/{coin}/day-n', { params: { path: { coin }, query: { mode } } })),
+    enabled,
+  })
+}
+
+export function useRoiSinceBottom(coin: string, enabled = true) {
+  return useQuery({
+    queryKey: ['cycles', 'roi', coin],
+    queryFn: () => unwrap(api.GET('/api/cycles/{coin}/roi', { params: { path: { coin } } })),
+    enabled,
+  })
+}
+
+export function useYoy(coin: string, enabled = true) {
+  return useQuery({
+    queryKey: ['cycles', 'yoy', coin],
+    queryFn: () => unwrap(api.GET('/api/cycles/{coin}/yoy', { params: { path: { coin } } })),
+    enabled,
+  })
+}
+
+export function useSeasonality(coin: string, period: 'monthly' | 'weekly' | 'dow') {
+  return useQuery({
+    queryKey: ['stats', 'seasonality', coin, period],
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/stats/{coin}/seasonality/{period}', {
+          params: { path: { coin, period } },
+        }),
+      ),
+  })
+}
+
+export function useDistribution(coin: string, horizon: '1d' | '1w' | '30d') {
+  return useQuery({
+    queryKey: ['stats', 'distribution', coin, horizon],
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/stats/{coin}/distribution', {
+          params: { path: { coin }, query: { horizon } },
+        }),
+      ),
+  })
+}
+
+export function useDrawdowns(coin: string) {
+  return useQuery({
+    queryKey: ['stats', 'drawdowns', coin],
+    queryFn: () => unwrap(api.GET('/api/stats/{coin}/drawdowns', { params: { path: { coin } } })),
+  })
+}
+
+export function useDrawdownEpisodes(coin: string) {
+  return useQuery({
+    queryKey: ['stats', 'drawdown-episodes', coin],
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/stats/{coin}/drawdown-episodes', {
+          params: { path: { coin }, query: { top_n: 10 } },
+        }),
+      ),
+  })
+}
+
+export function useVolatility(coin: string) {
+  return useQuery({
+    queryKey: ['stats', 'volatility', coin],
+    queryFn: () => unwrap(api.GET('/api/stats/{coin}/volatility', { params: { path: { coin } } })),
+  })
+}
+
+export function useCorrelation(coin: string, window: number) {
+  return useQuery({
+    queryKey: ['stats', 'correlation', coin, window],
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/stats/{coin}/correlation', {
+          params: { path: { coin }, query: { window } },
+        }),
+      ),
+  })
+}

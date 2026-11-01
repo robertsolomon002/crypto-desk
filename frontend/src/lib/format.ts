@@ -86,3 +86,9 @@ export function fngLabel(value: number): string {
   if (value <= 75) return 'Greed'
   return 'Extreme Greed'
 }
+
+/** A multiple of a reference price: ×1.19, ×106, ×539.1. */
+export const formatMultiple = (v: number | null | undefined) =>
+  v == null || !Number.isFinite(v)
+    ? '—'
+    : `×${v.toLocaleString('en-US', { maximumSignificantDigits: v >= 100 ? 4 : 3 })}`

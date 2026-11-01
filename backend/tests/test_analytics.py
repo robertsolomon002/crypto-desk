@@ -54,6 +54,10 @@ def test_to_jsonable() -> None:
     assert to_jsonable([level]) == [
         {"name": "ath", "value": 2.0, "date": "2024-01-01", "distance": 0.5}
     ]
+    named = pd.DataFrame({"mean": [0.1, 0.2]}).reindex(range(1, 3))
+    named.index.name = "month"
+    assert to_jsonable(named) == [{"month": 1, "mean": 0.2}, {"month": 2, "mean": None}]
+    assert to_jsonable(pd.DataFrame({"a": [1]})) == [{"a": 1}]
 
 
 # --- Indicators -------------------------------------------------------------------------------
