@@ -468,9 +468,7 @@ export function useMcoVideos(coin: string | null, limit = 30, enabled = true) {
   return useQuery({
     queryKey: ['mco', 'videos', coin, limit],
     queryFn: () =>
-      unwrap(
-        api.GET('/api/mco/videos', { params: { query: { coin: coin ?? undefined, limit } } }),
-      ),
+      unwrap(api.GET('/api/mco/videos', { params: { query: { coin: coin ?? undefined, limit } } })),
     enabled,
   })
 }
