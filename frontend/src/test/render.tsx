@@ -4,11 +4,15 @@ import type { ReactElement } from 'react'
 import { MemoryRouter, useLocation } from 'react-router'
 import { vi } from 'vitest'
 
-/** Answers fetches by URL path from `routes`; a number value is an error status. */
+/**
+ * Answers fetches by URL path from `routes`; a number value is an error status, and a function
+ * builds the response itself (an SSE stream, say).
+ */
 export function stubApi(routes: Record<string, unknown>) {
   const fetch = vi.fn(async (request: Request) => {
     const body = routes[new URL(request.url).pathname]
     if (body === undefined) return Response.json({ detail: 'not mocked' }, { status: 404 })
+    if (typeof body === 'function') return (body as (r: Request) => Response)(request)
     if (typeof body === 'number') return Response.json({}, { status: body })
     return Response.json(body)
   })
@@ -35,3 +39,25 @@ export function renderWithProviders(ui: ReactElement, { route = '/' }: { route?:
 }
 
 export const envelope = <T,>(data: T) => ({ as_of: '2026-10-29', sources: [], data })
+
+/** An SSE response from (event, data) pairs, cut into small chunks that split events apart. */
+export function sseResponse(events: [string, unknown][], chunk = 17): Response {
+  const text = events
+    .map(
+      ([e, d]) => `event: ${e}
+data: ${JSON.stringify(d)}
+
+`,
+    )
+    .join('')
+  const bytes = new TextEncoder().encode(`: ping
+
+${text}`)
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (let i = 0; i < bytes.length; i += chunk) controller.enqueue(bytes.slice(i, i + chunk))
+      controller.close()
+    },
+  })
+  return new Response(stream, { headers: { 'content-type': 'text/event-stream' } })
+}

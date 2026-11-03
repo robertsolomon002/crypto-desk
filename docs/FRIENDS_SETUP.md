@@ -21,15 +21,17 @@ banner tells you when that's happening.
 | **Charts** | Candles (1D, 1W, 4H) with moving averages, the 20-week "bull market support band", Bollinger Bands, RSI, MACD, key levels and swing pivots. A ratio mode charts ETH/BTC, SOL/BTC and others. |
 | **Cycles** | This BTC (or ETH) cycle against past ones, aligned by halving, cycle bottom or cycle top, plus a year-over-year view and returns since each bottom. |
 | **Stats** | Monthly returns heatmap, week-of-year and day-of-week patterns, where this week's return sits in history, drawdowns, volatility and correlation between coins. |
+| **On-chain & Macro** | MVRV, realized price, NUPL, active addresses and hash rate for BTC and ETH, Fear & Greed history, dominance, and four macro series you can overlay on BTC. |
+| **Agent** | Ask questions in plain English ("Where is BTC in its cycle vs 2017?"). The agent looks the numbers up with the desk's own tools, shows each lookup as a card, and **View data** opens exactly what it saw. Up to 30 questions an hour. Answers can be wrong: check the data. |
 | **Data** | Every table behind the app: filter, sort, chart a column, export CSV. Each chart's "View data" link opens its exact numbers here. |
 | **Settings** | Theme, and your own AI key for the Agent tab (below). |
 
 The coin selector at the top applies to every tab. View settings live in the page address, so
 you can bookmark or share a view.
 
-More tabs (On-chain & Macro, the AI Agent, MCO summaries, weekly Signals) arrive in later versions.
+More tabs (MCO summaries, weekly Signals) arrive in later versions.
 
-## 3. Your own AI key (for the Agent, from v1.1)
+## 3. Your own AI key (for the Agent)
 
 The Agent answers questions using the desk's data. It runs on **your own key**, so you pay the AI
 provider directly, usually cents a month, and you set the limit. You can set it up now in

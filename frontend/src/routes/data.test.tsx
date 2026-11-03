@@ -173,3 +173,50 @@ describe('DataPage', () => {
     expect(await screen.findByText(/no table “users” you can open/)).toBeInTheDocument()
   })
 })
+
+describe('agent snapshots', () => {
+  const SNAP = {
+    id: 7,
+    conversation_id: 12,
+    tool: 'get_key_levels',
+    args: { coin: 'BTC' },
+    result: {
+      as_of: '2026-11-02',
+      sources: ['coinbase candles_daily:BTC'],
+      data: {
+        columns: ['date', 'name', 'value'],
+        rows: [
+          ['2026-11-02', 'ath', 126000],
+          ['2026-11-02', 'sma200', 98000.5],
+        ],
+        total_rows: 2,
+      },
+    },
+    as_of: '2026-11-02T00:00:00Z',
+    created_at: '2026-11-03T15:00:00Z',
+  }
+
+  it('shows exactly what the agent received, as a table with its provenance', async () => {
+    stubApi({ '/api/data/tables': TABLES, '/api/agent/snapshots/7': SNAP })
+    renderWithProviders(<DataPage />, { route: '/data?snapshot=7' })
+    expect(await screen.findByRole('heading', { name: /Key levels/ })).toBeInTheDocument()
+    expect(
+      screen.getByText(/Agent snapshot #7 · BTC · latest data · data as of/),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Sources: coinbase candles_daily:BTC')).toBeInTheDocument()
+    const grid = screen.getByTestId('data-grid')
+    expect(within(grid).getByText('sma200')).toBeInTheDocument()
+    expect(within(grid).getByText('98000.5')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to the conversation' })).toHaveAttribute(
+      'href',
+      '/agent?c=12',
+    )
+    expect(screen.getByRole('combobox', { name: 'Chart a column' })).toBeInTheDocument()
+  })
+
+  it("says so when the snapshot isn't the user's", async () => {
+    stubApi({ '/api/data/tables': TABLES, '/api/agent/snapshots/9': 404 })
+    renderWithProviders(<DataPage />, { route: '/data?snapshot=9' })
+    expect(await screen.findByText(/Snapshot #9 isn't one you can open/)).toBeInTheDocument()
+  })
+})

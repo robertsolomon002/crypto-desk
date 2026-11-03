@@ -8,6 +8,7 @@ import { QueryStatus } from '@/components/overview/Panel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { describeArgs, toolLabel, useSnapshot } from '@/lib/agent'
 import { useChartColors } from '@/lib/chart-colors'
 import {
   ANALYTICS,
@@ -18,6 +19,7 @@ import {
   isNumeric,
   RESERVED,
   resultView,
+  snapshotView,
   toCsv,
   type ColumnInfo,
   type Row,
@@ -710,6 +712,158 @@ function AnalyticsView({ fn }: { fn: string }) {
   )
 }
 
+// --- An agent tool call's snapshot (Stage 5.2) ---------------------------------------------------
+
+function SnapshotView({ id }: { id: number }) {
+  const [params, set] = useViewParams()
+  const q = useSnapshot(id)
+  const result = useMemo(() => (q.data ? snapshotView(q.data.result) : null), [q.data])
+  const parts = result?.view.parts ?? []
+  const partName = parts.some((p) => p.name === params.get('part'))
+    ? params.get('part')
+    : (parts[0]?.name ?? null)
+  const part = parts.find((p) => p.name === partName) ?? null
+  const numeric = useMemo(
+    () =>
+      new Set(
+        (part?.columns ?? []).filter((c) => part?.rows.some((r) => typeof r[c] === 'number')),
+      ),
+    [part],
+  )
+  const page = Math.max(1, Number(params.get('page')) || 1)
+  const pageSize = PAGE_SIZES.find((s) => s === Number(params.get('size'))) ?? 100
+  const previewCol = numeric.has(params.get('preview') ?? '') ? params.get('preview') : null
+  const xCol = part?.columns.find((c) => c === 'date' || c === 'time') ?? null
+
+  if (q.isPending || q.isError) {
+    const missing = q.error && 'status' in q.error && (q.error as { status: number }).status === 404
+    return missing ? (
+      <p className="text-sm text-muted-foreground">
+        Snapshot #{id} isn't one you can open (it may have been deleted with its conversation).
+      </p>
+    ) : (
+      <QueryStatus {...q} lines={6} />
+    )
+  }
+  const snap = q.data
+  const args = Object.keys(snap.args).length ? describeArgs(snap.args) : 'no arguments'
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <h2 className="text-sm font-medium">
+            {toolLabel(snap.tool)}{' '}
+            <span className="font-mono text-muted-foreground">{snap.tool}</span>
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Agent snapshot #{snap.id} · {args} · data as of {formatDate(result?.asOf)} · called{' '}
+            {formatDateTime(snap.created_at)}
+          </p>
+          {result && result.sources.length > 0 && (
+            <p className="text-xs text-muted-foreground">Sources: {result.sources.join('; ')}</p>
+          )}
+        </div>
+        {part && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1"
+            onClick={() =>
+              download(
+                new Blob([toCsv(part.columns, part.rows)], { type: 'text/csv;charset=utf-8' }),
+                `snapshot_${snap.id}_${snap.tool}${parts.length > 1 ? `_${part.name}` : ''}.csv`,
+              )
+            }
+          >
+            <Download className="size-3" aria-hidden /> Export CSV
+          </Button>
+        )}
+      </div>
+
+      {result?.error && (
+        <p role="alert" className="text-sm text-negative">
+          The tool returned an error: {result.error}
+        </p>
+      )}
+
+      {(parts.length > 1 || (xCol && numeric.size > 0)) && (
+        <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Options">
+          {parts.length > 1 && (
+            <Segmented
+              label="Part"
+              value={partName as string}
+              options={parts.map((p) => [p.name, p.name] as const)}
+              onChange={(v) => set({ part: v })}
+            />
+          )}
+          {xCol && (
+            <PreviewPicker
+              columns={[...numeric]}
+              value={previewCol}
+              onChange={(c) => set({ preview: c }, false)}
+            />
+          )}
+        </div>
+      )}
+
+      {result && result.view.values.length > 0 && (
+        <dl
+          className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs"
+          data-testid="result-values"
+        >
+          {result.view.values.map(([k, v]) => (
+            <div key={k} className="flex gap-1">
+              <dt className="text-muted-foreground">{k}</dt>
+              <dd>{cellText(v) || '—'}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {previewCol && xCol && part && (
+        <Card size="sm" className="px-3 py-2">
+          <Preview
+            rows={part.rows}
+            x={xCol}
+            y={previewCol}
+            note={`${part.rows.length.toLocaleString('en-US')} rows the agent saw`}
+          />
+        </Card>
+      )}
+      {part ? (
+        <>
+          <DataGrid
+            columns={part.columns}
+            rows={part.rows.slice((page - 1) * pageSize, page * pageSize)}
+            sort={null}
+            desc={false}
+            numeric={numeric}
+          />
+          <Pager
+            page={page}
+            pageSize={pageSize}
+            total={part.rows.length}
+            onPage={(p) => set({ page: p > 1 ? String(p) : null }, false)}
+            onSize={(s) => set({ size: s === 100 ? null : String(s) })}
+          />
+        </>
+      ) : (
+        !result?.error &&
+        result?.view.values.length === 0 && (
+          <p className="text-sm text-muted-foreground">This result has no rows.</p>
+        )
+      )}
+      <p className="text-xs text-muted-foreground">
+        Exactly what the agent received, saved when it made the call.{' '}
+        {snap.conversation_id !== null && (
+          <Link to={`/agent?c=${snap.conversation_id}`} className="underline">
+            Back to the conversation
+          </Link>
+        )}
+      </p>
+    </div>
+  )
+}
+
 // --- Page ---------------------------------------------------------------------------------------
 
 export function DataPage() {
@@ -717,6 +871,7 @@ export function DataPage() {
   const tablesQ = useTables()
   const table = params.get('table')
   const fn = params.get('fn')
+  const snapshot = Number(params.get('snapshot')) || null
   const coin = (params.get('coin') ?? 'BTC').toUpperCase()
   const tables = tablesQ.data?.data ?? []
   const info = tables.find((t) => t.name === table)
@@ -726,7 +881,7 @@ export function DataPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-3">
       <div className="flex items-center gap-2">
-        {table && (
+        {(table || snapshot) && (
           <Link
             to={`/data${back.size ? `?${back}` : ''}`}
             className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground"
@@ -734,9 +889,11 @@ export function DataPage() {
             <ChevronLeft className="size-3" aria-hidden /> All data
           </Link>
         )}
-        <h1 className={cn('text-sm font-semibold', table && 'sr-only')}>Data</h1>
+        <h1 className={cn('text-sm font-semibold', (table || snapshot) && 'sr-only')}>Data</h1>
       </div>
-      {table === 'analytics' && fn ? (
+      {snapshot ? (
+        <SnapshotView key={snapshot} id={snapshot} />
+      ) : table === 'analytics' && fn ? (
         <AnalyticsView fn={fn} />
       ) : tablesQ.isPending || tablesQ.isError ? (
         <QueryStatus {...tablesQ} lines={6} />

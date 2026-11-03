@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  expandCompact,
+  snapshotView,
   buildFilters,
   cellText,
   coinColumn,
@@ -148,5 +150,61 @@ describe('analytics results as tables', () => {
       summary: [{ month: 1, mean: 0.1 }],
     })
     expect(view.parts.map((p) => p.name)).toEqual(['matrix', 'summary'])
+  })
+})
+
+describe('agent snapshots', () => {
+  it('expands desk-mcp compact tables into rows, at any depth', () => {
+    const compact = {
+      levels: {
+        columns: ['name', 'value'],
+        rows: [
+          ['ath', 126000],
+          ['sma200', 98000],
+        ],
+        total_rows: 2,
+      },
+      note: 'x',
+    }
+    expect(expandCompact(compact)).toEqual({
+      levels: [
+        { name: 'ath', value: 126000 },
+        { name: 'sma200', value: 98000 },
+      ],
+      note: 'x',
+    })
+  })
+
+  it('reads a tool result into tables, values and provenance', () => {
+    const view = snapshotView({
+      as_of: '2026-11-02',
+      sources: ['coinmetrics candles_daily:BTC'],
+      data: {
+        current: { day: 926, multiple: 1.18 },
+        cycles: { columns: ['cycle', 'multiple'], rows: [['2017', 5.4]], total_rows: 1 },
+      },
+    })
+    expect(view.asOf).toBe('2026-11-02')
+    expect(view.sources).toEqual(['coinmetrics candles_daily:BTC'])
+    expect(view.error).toBeNull()
+    expect(view.view.parts).toEqual([
+      { name: 'cycles', columns: ['cycle', 'multiple'], rows: [{ cycle: '2017', multiple: 5.4 }] },
+    ])
+    expect(view.view.values).toEqual([
+      ['current.day', 926],
+      ['current.multiple', 1.18],
+    ])
+  })
+
+  it('shows a bare record as one row, and a failed call as its error', () => {
+    const one = snapshotView({
+      as_of: '2026-11-02',
+      sources: [],
+      data: { current: 'uptrend', date: '2026-11-02' },
+    })
+    expect(one.view.parts[0].rows).toEqual([{ current: 'uptrend', date: '2026-11-02' }])
+    const failed = snapshotView({ error: 'Error executing tool get_regime: unknown coin NOPE' })
+    expect(failed.error).toMatch(/unknown coin/)
+    expect(failed.view.parts).toEqual([])
   })
 })

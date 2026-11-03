@@ -24,6 +24,7 @@ export const RESERVED = new Set([
   'preview',
   'part',
   'allcoins',
+  'snapshot',
 ])
 
 export const isNumeric = (c: ColumnInfo) =>
@@ -235,3 +236,48 @@ export const ANALYTICS: {
   },
   { fn: 'onchain', label: 'On-chain: MVRV, realized price, NUPL, addresses, hash rate (BTC, ETH)' },
 ]
+
+// --- Agent snapshots (Stage 5.2) ----------------------------------------------------------------
+
+const isCompactTable = (v: unknown): v is { columns: string[]; rows: unknown[][] } =>
+  !!v &&
+  typeof v === 'object' &&
+  Array.isArray((v as Row).columns) &&
+  ((v as Row).columns as unknown[]).every((c) => typeof c === 'string') &&
+  Array.isArray((v as Row).rows) &&
+  ((v as Row).rows as unknown[]).every(Array.isArray)
+
+/** desk-mcp writes long series as `{columns, rows, total_rows}` (D44); turn those into records. */
+export function expandCompact(value: unknown): unknown {
+  if (isCompactTable(value)) {
+    const { columns, rows } = value
+    return rows.map((r) => Object.fromEntries(columns.map((c, i) => [c, r[i]])))
+  }
+  if (Array.isArray(value)) return value.map(expandCompact)
+  if (value && typeof value === 'object') {
+    const out: Row = {}
+    for (const [k, v] of Object.entries(value as Row)) out[k] = expandCompact(v)
+    return out
+  }
+  return value
+}
+
+export interface SnapshotResult {
+  asOf: string | null
+  sources: string[]
+  error: string | null
+  view: ResultView
+}
+
+/** A tool result (`{as_of, sources, data}`, or `{error}` for a failed call) as tables. */
+export function snapshotView(result: unknown): SnapshotResult {
+  const r = (result && typeof result === 'object' ? result : {}) as Row
+  const sources = Array.isArray(r.sources) ? r.sources.map((s) => cellText(s)) : []
+  const error = typeof r.error === 'string' ? r.error : null
+  const data = 'data' in r ? r.data : error || 'as_of' in r ? undefined : result
+  let view = resultView(expandCompact(data))
+  // A bare record (one coin's regime, say) reads better as a one-row table than as values.
+  if (view.parts.length === 0 && view.values.length > 0 && data && typeof data === 'object')
+    view = { parts: [part('result', [data as Row])], values: [] }
+  return { asOf: typeof r.as_of === 'string' ? r.as_of : null, sources, error, view }
+}
