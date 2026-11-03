@@ -81,8 +81,12 @@ def check_budget(session: Session, today: dt.date | None = None) -> Budget:
 
 
 def call_cost(model: str, tokens_in: int, tokens_out: int) -> Decimal:
-    """USD for one call at `config/models.yaml` prices (per million tokens)."""
-    prices = (load_models_config().get("prices") or {}).get(model)
+    """USD for one call at `config/models.yaml` prices (per million tokens). Gemini models cost
+    $0 while `gemini_tier` is `free` (D48)."""
+    cfg = load_models_config()
+    if model.startswith("gemini-") and cfg.get("gemini_tier", "free") == "free":
+        return Decimal("0.000000")
+    prices = (cfg.get("prices") or {}).get(model)
     if not prices:
         raise UnknownPrice(model)
     long = prices.get("long_above") is not None and tokens_in > int(prices["long_above"])

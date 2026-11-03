@@ -9,6 +9,10 @@ server:
     - gemini-3.5-flash-lite
     - gemini-3.8-flash
 
+# Gemini billing tier (Stage 6.1, D48). `free`: MCO calls are recorded in llm_spend with their
+# tokens at $0, because nothing is charged. `paid`: the paid prices below count toward the cap.
+gemini_tier: free
+
 # Defaults offered to friends who bring their own key (cheap first).
 byo_defaults:
   openrouter: anthropic/claude-haiku-5.5

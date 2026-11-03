@@ -81,6 +81,8 @@ All four configured URLs work locally and in CI: CoinDesk (25 items), Cointelegr
 - Feed `https://www.youtube.com/feeds/videos.xml?channel_id=UCngIhBkikUe6e7tZTjpKK7Q`: local ✅ (15 most recent videos); **CI ❌ on all three GitHub runner attempts (HTTP 404, 500, 500)**. YouTube's RSS is unreliable from cloud IPs.
 - Fallback: YouTube Data API v3 `playlistItems.list` on the channel's uploads playlist costs **1 unit**; the default quota is **10,000 units/day** (https://developers.google.com/youtube/v3/determine_quota_cost). It needs an API key with the YouTube Data API enabled (a Rob step in Stage 6.1). See D26.
 - Probe output for MCO is limited to the channel id and a video count; no titles, descriptions or summaries go into logs or this repo.
+- Checked live in Stage 6.1 (2026-11-03, D48): `channels.list` gives the uploads playlist `UUngIhBkikUe6e7tZTjpKK7Q`; `playlistItems.list` returns `contentDetails.videoPublishedAt`; `videos.list` returns ISO 8601 durations and `snippet.liveBroadcastContent` (`none`, `live`, `upcoming`). Each method costs 1 unit. Many uploads are Shorts (42 to 73 s), so the pipeline skips videos under 180 s.
+- google-genai 2.33: without `HttpOptions.retry_options`, a call is tried once; `HttpOptions.timeout` is in milliseconds.
 
 ## LLMs
 
@@ -117,7 +119,7 @@ All four configured URLs work locally and in CI: CoinDesk (25 items), Cointelegr
 - Probe on MCO's newest crypto video:
   - `gemini-3.5-flash-lite`: ✅ 10 s, 83,747 input / 1,130 output tokens, schema valid (paid-equivalent $0.028). Levels, invalidation and targets looked plausible, but **the BTC bias said "bullish" while the targets were a C-wave down**: the bias field needs a consistency check and Rob's review (D25).
   - `gemini-3.8-flash` and `gemini-3.6-flash`: **503 UNAVAILABLE "high demand"** on the first attempts; a later 3.8 Flash retry succeeded but took **299 s** (83,747 in / 2,804 out, schema valid, paid-equivalent $0.073). Its content was not compared with Flash-Lite. The pipeline needs retries, a model fallback chain and a long client timeout (or async jobs, not a request path).
-- Cost if the free tier ever goes away: about 84K tokens per video × 4 a day × 30 days ≈ $0.30/month input + output on Flash-Lite, about $1/month on 3.8 Flash.
+- Cost if the free tier ever goes away: about 84K input + 1.1K output tokens per video, about $0.028 on Flash-Lite, so **about $3.40/month** at 4 videos a day (about $8/month on 3.8 Flash). *Corrected in Stage 6.1 (D48): the earlier "$0.30/month" was about 10× too low.*
 
 ## Agent libraries (installed versions)
 

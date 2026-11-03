@@ -20,6 +20,7 @@ from desk.api.routes import (
     health,
     indicators,
     macro,
+    mco,
     news,
     ohlcv,
     onchain,
@@ -29,7 +30,7 @@ from desk.api.routes import (
 from desk.config import get_settings
 
 ROUTERS = [health, coins, overview, ohlcv, indicators, cycles, stats, onchain, macro, news,
-           calendar, data, agent, admin]  # fmt: skip
+           calendar, data, agent, mco, admin]  # fmt: skip
 
 
 def create_app() -> FastAPI:

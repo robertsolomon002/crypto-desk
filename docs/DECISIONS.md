@@ -499,3 +499,34 @@ The function returns the label series, the current label, and the values that pr
   - The desk mode shows a coin picker, the estimate and Run; Stop aborts the run.
   - Cards appear in graph order: the analysts with their tool cards, the four debate turns with citation chips (unknown ones struck through), and the signal with the validator's verdict, plus a "retried" badge when the head ran twice.
   - All model text is plain text. The shared SSE reader moved to `readEvents`/`parseEvents` in `lib/agent.ts`, and the tool card to `components/agent/ToolCard.tsx`.
+
+## D48. MCO ingest pipeline
+
+*2026-11-03, Stage 6.1.*
+
+- **Discovery** (`mco/discover.py`): RSS first, then the YouTube Data API uploads playlist (`channels.list` for the uploads id, then `playlistItems.list`). One `videos.list` call adds duration and `snippet.liveBroadcastContent` for unseen videos. Each call costs 1 quota unit (checked in the quota docs), so a run uses about 3 of the 10,000 daily units.
+  - A live check on 2026-11-03 found the uploads full of Shorts (42 to 73 s). YouTube Shorts can run up to 3 minutes, so videos under `mco.min_duration_seconds: 180` are stored as `skip`.
+  - Keywords match whole words (`sol` matches "SOL", not "solid").
+  - Live and upcoming broadcasts are not stored, so they come back as uploads.
+  - Unseen videos older than `mco.backfill_days: 3` are stored as `skip`, so the first run does not work through the backlog.
+  - At most 4 videos a day, newest first. Videos already processed that UTC day count toward the cap. A failed video is retried on later runs, up to 3 attempts.
+  - Decision 9 step 2: from 80% of the cap, only 2 a day, and only videos that name BTC, ETH or SOL.
+- **Summaries** (`mco/summarize.py`, prompts `mco_extract_v1`, `mco_repair_v1`, `mco_fallback_v1`):
+  - Chain: `gemini-3.5-flash-lite`, then `gemini-3.8-flash`. Invalid JSON gets one text-only repair call per model; after that, a title-and-description fallback marked low detail (all coins `low`, no pivot labels).
+  - google-genai 2.33 retries only when `HttpOptions.retry_options` is set (the default is a single attempt), and `HttpOptions.timeout` is in milliseconds (installed source). We use 3 attempts on 408/429/5xx with backoff from 5 s, and a 300 s timeout.
+  - The schema adds `pivot_kind` (high or low) to each pivot label so snapping knows which pivot type to look for. Coins are mapped to our symbols through the `coins` aliases, and duplicates are dropped. Summaries longer than 120 words are trimmed, not rejected.
+  - D25 check: a bullish bias with every target below the last close, or with the invalidation above it (and the bearish mirror image), sets that coin to `low` and adds a note to the payload's `checks`.
+- **Cost:** each Gemini call is one `llm_spend` row (source `mco`) with its real tokens at **$0** while `models.yaml` `gemini_tier` is `free` (Rob's choice). Setting it to `paid` applies the paid prices that are already in `prices`. The earlier "≈$0.30/month if paid" estimate was about 10× too low: 84K input plus 1.1K output tokens is about $0.028 per video, so about $3.40/month at 4 a day on Flash-Lite.
+- **Snapping** (`mco/snap.py`): pivots come from the same zigzag and timeframe defaults as `/api/pivots`, as of the day before publication (the last closed bar), with the open week included on 1W.
+  - A label matches the pivot of the same kind with the lowest bars/tol + |pct|/tol inside ±5 bars and ±3% (1D) or ±2 bars and ±6% (1W) (`mco.snap`).
+  - 4h and 1h labels snap on 1D; monthly ones on 1W.
+  - Labels on coins we don't track stay only in the extract payload.
+  - Every row is `pending`. An unmatched row keeps a `match_note`.
+- **Privacy (Decision 6):**
+  - The job summary (public Actions log, ops alerts) holds ids, counts, model ids and error codes only. Unexpected errors are logged as type and code location, never as a message.
+  - `mco_videos.error` holds a short code.
+  - `desk mco show` prints extracts and refuses to run in CI.
+  - Members' `/api/mco/videos` never returns the raw `pivot_labels`, only `approved`/`edited` label rows.
+  - `/api/admin/mco/review` is admin-only, and every MCO route answers 404 when MCO is off.
+  - Tests cover a canary in the title and summary, writes under the repo, and the role matrix.
+- **Alerts:** `new_mco_summary` per video (title, per-coin bias, link, "AI-extracted" note) to Telegram and Discord. `mco_review_pending` (counts only) goes to Telegram.

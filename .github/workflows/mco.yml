@@ -1,0 +1,67 @@
+name: MCO
+
+# Stage 6.1: discover MCO's new public videos, summarize them with Gemini, snap wave labels
+# (pending Rob's review), and alert Telegram and Discord. 06:30 UTC daily.
+# Privacy (Decision 6): MCO-derived text goes only to Neon and the alert channels. This log is
+# public, so the job prints ids, counts and codes only; nothing is uploaded as an artifact.
+# Untrusted text (the summary) only travels through files and env vars.
+on:
+  schedule:
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Summarize at most this many videos (blank: the daily cap)"
+        type: string
+        default: ""
+      alert:
+        description: "Send the Telegram/Discord alerts"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mco
+  cancel-in-progress: false # never kill a run mid-write; queue the next one
+
+jobs:
+  mco:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45 # 4 videos x up to 2 models x 300 s, plus retries
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      PYTHONUTF8: "1"
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      DISCORD_OPS_WEBHOOK_URL: ${{ secrets.DISCORD_OPS_WEBHOOK_URL }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      LIMIT: ${{ inputs.limit }}
+      ALERT: ${{ inputs.alert }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3 (no floating major tag)
+        with:
+          version: "0.11.7"
+          python-version: "3.12"
+          working-directory: backend
+          enable-cache: true
+      - run: uv sync --locked
+      - name: MCO pipeline
+        run: |
+          args=(--summary-file "$RUNNER_TEMP/mco_summary.txt")
+          if [ -n "$LIMIT" ]; then args+=(--limit "$LIMIT"); fi
+          if [ "$ALERT" = "false" ]; then args+=(--no-alert); fi
+          uv run desk jobs mco "${args[@]}"
+      - name: Alert admins on failure
+        if: failure()
+        run: >-
+          uv run desk notify send ops_failure --title "MCO job failed"
+          --body-file "$RUNNER_TEMP/mco_summary.txt" --url "$RUN_URL"

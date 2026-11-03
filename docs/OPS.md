@@ -113,6 +113,19 @@ The runtime account (`desk-api`) gets read access to the values. The deployer ge
 5. Update the GitHub secret too.
 6. Redeploy ("Deploy backend" by hand), because instances read secrets when they start.
 
+## MCO job (Stage 6.1, D48)
+
+- **Schedule:** `.github/workflows/mco.yml`, daily at 06:30 UTC, or by hand: `gh workflow run mco.yml -f limit=1 -f alert=false`. Secrets: `DATABASE_URL`, `GOOGLE_API_KEY`, `YOUTUBE_API_KEY`, plus the alert secrets.
+- **What it does:**
+  - discovers new videos (RSS, falling back to the YouTube Data API);
+  - summarizes up to 4 a day with Gemini (free tier, $0 in `llm_spend`);
+  - snaps wave labels as `pending`;
+  - sends `new_mco_summary` to Telegram and Discord, and `mco_review_pending` to Telegram.
+- **Privacy:** the Actions log and the `ops_failure` alert carry only video ids, counts, model ids and error codes. Do not add steps that print extracts or upload artifacts.
+- **Read results locally:** `uv run desk mco show --latest 2` prints the newest extracts and their snapped labels. It is local only and refuses to run in CI.
+- **Re-run a video:** `uv run desk jobs mco --video <id> --no-alert`. A failed video is retried automatically on later runs, up to 3 attempts. `mco_videos.error` holds the last error code (for example `gemini-3.8-flash:fallback:503`).
+- **Switch off:** `features.mco: false` in `config/settings.yaml`, or `MCO_ENABLED=false`. The job exits at once and every `/api/mco` route answers 404.
+
 ## Free-tier guard rails (Section 7)
 
 - Cloud Run: max 2 instances, 1 vCPU / 512 MiB, request-based billing (CPU only while serving), min 0 instances.

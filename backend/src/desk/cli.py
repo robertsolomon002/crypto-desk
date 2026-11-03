@@ -342,6 +342,78 @@ def jobs_daily(
         raise typer.Exit(1)
 
 
+@jobs_app.command("mco")
+def jobs_mco(
+    summary_file: Annotated[
+        Path | None, typer.Option(help="Also write the summary here (read by the alert step).")
+    ] = None,
+    limit: Annotated[int | None, typer.Option(help="Summarize at most N videos.")] = None,
+    video: Annotated[
+        list[str] | None, typer.Option(help="Re-run these discovered video ids (no discovery).")
+    ] = None,
+    alert: Annotated[bool, typer.Option(help="Send the Telegram/Discord alerts.")] = True,
+) -> None:
+    """MCO job: discover new videos, summarize them with Gemini, snap wave labels (pending).
+
+    The summary holds ids, counts and codes only (Decision 6). Exit code 1 if anything failed;
+    the workflow then sends an ops_failure alert."""
+    from desk.db import get_engine, session_factory
+    from desk.jobs.mco_daily import run_mco
+
+    result = run_mco(session_factory(get_engine()), limit=limit, video_ids=video or None,
+                     alerts=alert)  # fmt: skip
+    summary = result.summary()
+    typer.echo(summary)
+    if summary_file:
+        summary_file.write_text(summary + "\n", encoding="utf-8")
+    if result.status == "failed":
+        raise typer.Exit(1)
+
+
+mco_app = typer.Typer(help="Inspect MCO extracts locally (private; never in CI).",
+                      no_args_is_help=True)  # fmt: skip
+app.add_typer(mco_app, name="mco")
+
+
+@mco_app.callback()
+def _mco() -> None: ...
+
+
+@mco_app.command("show")
+def mco_show(
+    latest: Annotated[int, typer.Option(help="How many of the newest extracts.")] = 2,
+) -> None:
+    """Print the newest extracts with their video links and snapped labels. MCO-derived text:
+    for Rob's terminal only. Refuses to run in CI so it never lands in a public log."""
+    import json
+    import os
+
+    from sqlalchemy import select
+
+    from desk.db import get_engine, session_factory
+    from desk.models import McoExtract, McoVideo, McoWaveLabel
+
+    if os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"):
+        typer.echo("desk mco show is local only (Decision 6).", err=True)
+        raise typer.Exit(2)
+    with session_factory(get_engine())() as s:
+        rows = s.execute(select(McoExtract, McoVideo).join(McoVideo)
+                         .order_by(McoVideo.published_at.desc()).limit(latest)).all()  # fmt: skip
+        for ex, v in rows:
+            typer.echo(f"=== {v.published_at:%Y-%m-%d %H:%M} UTC  {v.url}")
+            typer.echo(f"    {v.title}")
+            typer.echo(f"    model {ex.model}, low detail {v.low_detail}, {v.duration_s} s")
+            typer.echo(json.dumps(ex.payload, indent=2, ensure_ascii=False))
+            labels = s.scalars(select(McoWaveLabel).where(McoWaveLabel.extract_id == ex.id))
+            for lab in labels:
+                where = (f"-> {lab.pivot_kind} {lab.pivot_date} {lab.pivot_price:g} "
+                         f"({lab.snap_bars} bars, {lab.snap_pct:+.1%})" if lab.pivot_date
+                         else f"-> {lab.match_note}")  # fmt: skip
+                typer.echo(f"    label {lab.coin} {lab.label} {lab.timeframe} ~{lab.approx_date} "
+                           f"~{lab.approx_price:g} {where}")  # fmt: skip
+            typer.echo("")
+
+
 @notify_app.callback()
 def _notify() -> None: ...
 

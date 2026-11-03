@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from desk.api.auth import ClerkVerifier
 from desk.data import market, news, series
 from desk.data.coins import seed_coins
-from desk.models import CalendarEvent, User
+from desk.models import CalendarEvent, McoExtract, McoVideo, McoWaveLabel, User
 
 ISSUER = "https://test-instance.clerk.accounts.dev"
 ORIGIN = "http://localhost:5173"
@@ -62,7 +62,17 @@ def auth(sub: str, /, **overrides: Any) -> dict[str, str]:
 
 
 COINS = ["BTC", "ETH", "SOL"]
-SEEDED = {"coins", "candles_daily", "series", "news", "calendar_events", "users"}
+SEEDED = {
+    "coins",
+    "candles_daily",
+    "series",
+    "news",
+    "calendar_events",
+    "users",
+    "mco_videos",
+    "mco_extracts",
+    "mco_wave_labels",
+}
 
 MEMBER = "user_member"
 OTHER_MEMBER = "user_other"
@@ -119,6 +129,80 @@ def seed(session: Session) -> None:
                       title="CPI (October)", source_url="https://www.bls.gov/"),
     ])  # fmt: skip
     session.add(User(clerk_id=ADMIN, role="admin"))
+    seed_mco(session)
+
+
+MCO_VIDEO = "fakeVideo01"
+PENDING_CANARY = "PENDING-LABEL-CANARY"
+
+
+def seed_mco(session: Session) -> None:
+    """One summarized (made-up) MCO video: an approved and a pending label, plus raw
+    pivot_labels in the payload that must never reach members (Decision 7)."""
+    session.add(
+        McoVideo(
+            video_id=MCO_VIDEO,
+            title="Fake title",
+            url="https://www.youtube.com/watch?v=fakeVideo01",
+            published_at=dt.datetime(2026, 10, 26, 13, tzinfo=dt.UTC),
+            status="done",
+        )
+    )
+    session.add(
+        McoVideo(
+            video_id="fakeVideo02",
+            title="Not yet done",
+            url="https://www.youtube.com/watch?v=fakeVideo02",
+            published_at=dt.datetime(2026, 10, 27, 13, tzinfo=dt.UTC),
+            status="new",
+        )
+    )
+    session.flush()
+    view = {
+        "coin": "BTC",
+        "bias": "bearish",
+        "wave_position": "wave B",
+        "primary_scenario": "C down",
+        "alternative_scenario": "new high",
+        "key_levels": [{"price": 60000.0, "label": "support"}],
+        "invalidation": 70000.0,
+        "targets": [58000.0],
+        "timeframe": "weeks",
+        "extraction_confidence": "medium",
+        "pivot_labels": [
+            {
+                "wave_label": PENDING_CANARY,
+                "pivot_kind": "high",
+                "approx_date": "2026-10-20",
+                "approx_price": 65000.0,
+                "chart_timeframe": "1d",
+            }
+        ],
+    }
+    ex = McoExtract(
+        video_id=MCO_VIDEO,
+        model="gemini-3.5-flash-lite",
+        prompt_version="mco_extract_v1",
+        payload={"coins": [view], "summary": "Fake summary.", "checks": []},
+        summary="Fake summary.",
+    )
+    session.add(ex)
+    session.flush()
+    for label, status in (("1", "approved"), ("PENDING", "pending"), ("X", "rejected")):
+        session.add(
+            McoWaveLabel(
+                extract_id=ex.id,
+                coin="BTC",
+                label=label,
+                timeframe="1d",
+                approx_date=dt.date(2026, 10, 20),
+                approx_price=65000.0,
+                pivot_kind="high",
+                pivot_date=dt.date(2026, 10, 20),
+                pivot_price=65100.0,
+                status=status,
+            )
+        )
 
 
 class FakeExchange:

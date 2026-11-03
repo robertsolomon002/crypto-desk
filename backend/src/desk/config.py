@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     # Data sources
     fred_api_key: SecretStr | None = None
     coingecko_demo_key: SecretStr | None = None
+    youtube_api_key: SecretStr | None = None  # MCO discovery fallback (D26, Stage 6.1)
 
     # Alerts
     telegram_bot_token: SecretStr | None = None

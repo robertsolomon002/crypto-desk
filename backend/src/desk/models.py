@@ -209,6 +209,12 @@ class McoVideo(Base):
     status: Mapped[str] = mapped_column(String(16), server_default="new")  # new|done|failed|skip
     low_detail: Mapped[bool] = mapped_column(server_default="false")
     processed_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime)
+    # Stage 6.1. `error` is a short code (e.g. `gemini:503`), never model or video text.
+    description: Mapped[str | None] = mapped_column(Text)
+    duration_s: Mapped[int | None] = mapped_column(Integer)
+    priority: Mapped[int] = mapped_column(Integer, server_default="0")  # 1: names a core coin
+    attempts: Mapped[int] = mapped_column(Integer, server_default="0")
+    error: Mapped[str | None] = mapped_column(String(64))
 
 
 class McoExtract(Base):
@@ -240,6 +246,11 @@ class McoWaveLabel(Base):
     approx_price: Mapped[float | None] = mapped_column(Double)
     pivot_date: Mapped[dt.date | None] = mapped_column(Date)  # null when unmatched
     pivot_price: Mapped[float | None] = mapped_column(Double)
+    # Stage 6.1: the label's pivot kind (high|low), the snap distance, and why it is unmatched.
+    pivot_kind: Mapped[str | None] = mapped_column(String(8))
+    snap_bars: Mapped[int | None] = mapped_column(Integer)
+    snap_pct: Mapped[float | None] = mapped_column(Double)
+    match_note: Mapped[str | None] = mapped_column(String(128))
     status: Mapped[str] = mapped_column(String(16), server_default="pending")
     reviewed_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime)
 

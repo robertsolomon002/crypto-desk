@@ -43,6 +43,16 @@ desk: # Section 3.3, the multi-agent desk (Stage 5.3, D47)
     bear_rebut: [3550, 450]
     head: [5100, 420]
 
+mco: # Section 3.4, the private MCO pipeline (Stage 6.1, D48). Channel and keywords: feeds.yaml
+  backfill_days: 3 # on discovery, older unseen videos are stored as `skip`, never summarized
+  min_duration_seconds: 180 # shorter uploads are Shorts (YouTube allows up to 3 minutes)
+  degraded_max_videos: 2 # Decision 9, step 2: near the cap, fewer videos and core coins only
+  gemini_timeout_seconds: 300 # 3.8 Flash took 299 s in the Stage 0.3 probe (D25)
+  gemini_attempts: 3 # per model, with exponential backoff on 408/429/5xx
+  snap: # pivot_labels -> zigzag pivots of the same kind
+    1d: { bars: 5, pct: 0.03 }
+    1w: { bars: 2, pct: 0.06 }
+
 signals: # Decision 8 and Section 3.5
   version: v1
   horizon_days: 7
