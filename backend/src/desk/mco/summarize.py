@@ -1,15 +1,17 @@
-"""Gemini video extract to strict JSON (Section 3.4 step 2, D25, D48).
+"""Gemini video extract to strict JSON (Section 3.4 step 2, D25, D48, D49).
 
 For each model in `models.yaml` `server.video_summary` (Flash-Lite, then 3.8 Flash):
-1. send the public YouTube URL with `prompts/mco_extract_v1.md` and the response schema
+1. send the public YouTube URL with `prompts/mco_extract_v2.md` (his earlier views as
+   context) and the response schema
    (low media resolution; the SDK retries 408/429/5xx with backoff; long client timeout);
 2. validate with Pydantic; on failure, one text-only repair call (`mco_repair_v1.md`);
 3. on an API error or a second invalid answer, move to the next model.
-If every model fails, extract from the title and description only (`mco_fallback_v1.md`),
-marked low detail: every coin `low` confidence, no pivot labels.
+If every model fails, extract from the title and description only (`mco_fallback_v2.md`),
+marked low detail: every coin `low` confidence.
 
-Afterwards, deterministic checks (D25): a bias that contradicts its own targets or invalidation
-relative to the last close sets that coin's confidence to `low` and adds a note to `checks`.
+Afterwards, deterministic checks (D25), per scenario: a bias that contradicts its own targets
+or invalidation relative to the last close sets that coin's confidence to `low` and adds a
+note to `checks`.
 
 Every Gemini call is reported to `spend` (one `llm_spend` row, source `mco`; $0 on the free
 tier). Logs carry ids, models, token counts and error codes only, never model or video text.
@@ -29,7 +31,7 @@ from desk.mco.schemas import Extract, response_schema
 
 log = logging.getLogger(__name__)
 
-PROMPT_VERSION = "mco_extract_v1"
+PROMPT_VERSION = "mco_extract_v2"  # D49; v1 extracts stay readable (schemas.load_payload)
 RETRY_CODES = [408, 429, 500, 502, 503, 504]
 
 
@@ -165,8 +167,10 @@ def summarize(
     aliases: dict[str, str] | None = None,
     closes: dict[str, float] | None = None,
     models: list[str] | None = None,
+    previous: str = "",
 ) -> Summary:
-    """Extract one video; raises `SummarizeFailed` when even the fallback fails."""
+    """Extract one video; raises `SummarizeFailed` when even the fallback fails. `previous` is
+    his earlier views as text (`previous_views`), for references to earlier videos."""
     models = models or model_chain()
     date = published.isoformat()
     errors: list[str] = []
@@ -187,7 +191,9 @@ def summarize(
             spend(model, fixed.tokens_in, fixed.tokens_out)
             return Extract.model_validate_json(fixed.text)
 
-    prompt = _fill(load_prompt("mco_extract_v1"), published_date=date)
+    prompt = _fill(
+        load_prompt("mco_extract_v2"), published_date=date, previous_views=previous or "none"
+    )
     for model in models:
         try:
             extract = attempt(model, lambda m=model: client.video(m, url, prompt))
@@ -204,7 +210,7 @@ def summarize(
         return out
 
     fallback = _fill(
-        load_prompt("mco_fallback_v1"),
+        load_prompt("mco_fallback_v2"),
         published_date=date,
         title=title,
         description=description[:5000],
@@ -217,7 +223,6 @@ def summarize(
             continue
         for c in extract.coins:
             c.extraction_confidence = "low"
-            c.pivot_labels = []
         log.info("mco summarize: low-detail fallback on %s", model)
         return Summary(finish(extract, aliases, closes), model, True, calls, errors)
     raise SummarizeFailed(errors[-1] if errors else "no_models")
@@ -242,27 +247,56 @@ def finish(
 
 
 def consistency(extract: Extract, closes: dict[str, float]) -> list[str]:
-    """D25: bias vs where targets and invalidation sit relative to the last close."""
+    """D25, per scenario: its bias vs where its targets and invalidation sit relative to the
+    last close. A contradiction sets the coin's confidence to `low`."""
     notes = []
     for c in extract.coins:
         close = closes.get(c.coin)
         if not close:
             continue
-        bad = None
-        if c.bias == "bullish":
-            if c.targets and all(t < close for t in c.targets):
-                bad = "bias bullish but every target is below the last close"
-            elif c.invalidation is not None and c.invalidation > close:
-                bad = "bias bullish but the invalidation is above the last close"
-        elif c.bias == "bearish":
-            if c.targets and all(t > close for t in c.targets):
-                bad = "bias bearish but every target is above the last close"
-            elif c.invalidation is not None and c.invalidation < close:
-                bad = "bias bearish but the invalidation is below the last close"
-        if bad:
-            c.extraction_confidence = "low"
-            notes.append(f"{c.coin}: {bad} ({close:g})")
+        for sc in c.scenarios:
+            bad = _contradiction(sc.bias, sc.targets, sc.invalidation, close)
+            if bad:
+                c.extraction_confidence = "low"
+                notes.append(f"{c.coin} {sc.name}: {bad} ({close:g})")
     return notes
+
+
+def _contradiction(
+    bias: str, targets: list[float], invalidation: float | None, close: float
+) -> str | None:
+    if bias == "bullish":
+        if targets and all(t < close for t in targets):
+            return "bias bullish but every target is below the last close"
+        if invalidation is not None and invalidation > close:
+            return "bias bullish but the invalidation is above the last close"
+    elif bias == "bearish":
+        if targets and all(t > close for t in targets):
+            return "bias bearish but every target is above the last close"
+        if invalidation is not None and invalidation < close:
+            return "bias bearish but the invalidation is below the last close"
+    return None
+
+
+def previous_views(extracts: list[tuple[dt.date, Extract]], limit_coins: int = 8) -> str:
+    """His latest earlier view per coin, newest first, as compact text for the prompt."""
+    seen: set[str] = set()
+    lines: list[str] = []
+    for day, ex in sorted(extracts, key=lambda x: x[0], reverse=True):
+        for c in ex.coins:
+            if c.coin in seen or len(seen) >= limit_coins:
+                continue
+            seen.add(c.coin)
+            parts = [f"{c.coin} (video of {day.isoformat()}): {c.bias}; {c.wave_position}"]
+            for sc in c.scenarios:
+                tgt = ", ".join(f"{t:g}" for t in sc.targets) or "none"
+                inv = f"{sc.invalidation:g}" if sc.invalidation is not None else "none"
+                parts.append(
+                    f"  {sc.name}: {sc.bias}; {sc.description} Targets {tgt}; "
+                    f"invalidation {inv}; trigger {sc.trigger or 'none'}"
+                )
+            lines.extend(parts)
+    return "\n".join(lines)
 
 
 def to_payload(extract: Extract) -> dict:

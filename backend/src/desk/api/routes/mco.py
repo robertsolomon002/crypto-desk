@@ -1,11 +1,11 @@
-"""`/api/mco` routes (Stage 6.1): MCO's extracted views, private by Decision 6.
+"""`/api/mco` routes: MCO's extracted views, private by Decision 6 (Stage 6.1, D48, D49).
 
 - Every route needs a login and answers 404 when MCO is switched off (`features.mco` or
   `MCO_ENABLED`).
-- Members get the summarized videos with only `approved` and `edited` wave labels
-  (Decision 7); the raw `pivot_labels` in each extract are never returned, so pending labels
-  cannot leak through the payload.
-- `/api/admin/mco/review` (admin) lists videos with labels still `pending`, matched or not.
+- Each video gives per coin a primary and an alternative scenario with their own levels,
+  targets, invalidation and trigger (extract v2). Extracts stored as v1 are converted.
+- No wave labels: Rob dropped chart wave counts (D49, Decision 7 updated), so neither the
+  `mco_wave_labels` rows nor any label in a stored payload is ever returned.
 
 Everything here is AI-extracted, untrusted text: the UI renders it as text only.
 """
@@ -20,10 +20,11 @@ from sqlalchemy.orm import Session
 
 from desk.api.deps import SessionDep, require_role
 from desk.api.schemas import Envelope, Source
-from desk.models import McoExtract, McoVideo, McoWaveLabel
+from desk.mco.schemas import load_payload
+from desk.models import McoExtract, McoVideo
 
-VISIBLE = ("approved", "edited")
 CHANNEL = "https://www.youtube.com/@MoreCryptoOnline"
+Bias = Literal["bullish", "bearish", "neutral"]
 
 
 def mco_on() -> None:
@@ -41,39 +42,28 @@ class McoLevel(BaseModel):
     label: str
 
 
+class McoScenario(BaseModel):
+    name: Literal["primary", "alternative"]
+    color: str | None
+    bias: Bias
+    description: str
+    levels: list[McoLevel]
+    targets: list[float]
+    invalidation: float | None
+    trigger: str | None
+
+
 class McoCoinView(BaseModel):
     coin: str
-    bias: Literal["bullish", "bearish", "neutral"]
+    bias: Bias  # the primary scenario's
     wave_position: str
-    primary_scenario: str
-    alternative_scenario: str
-    key_levels: list[McoLevel]
-    invalidation: float | None
-    targets: list[float]
     timeframe: str
+    key_levels: list[McoLevel]
+    scenarios: list[McoScenario]
     extraction_confidence: Literal["high", "medium", "low"]
 
 
-class McoLabel(BaseModel):
-    id: int
-    coin: str
-    label: str
-    timeframe: str | None
-    status: Literal["pending", "approved", "rejected", "edited"]
-    pivot_kind: str | None
-    approx_date: dt.date | None
-    approx_price: float | None
-    pivot_date: dt.date | None  # null when unmatched
-    pivot_price: float | None
-
-
-class McoReviewLabel(McoLabel):
-    snap_bars: int | None
-    snap_pct: float | None
-    match_note: str | None
-
-
-class McoVideoBase(BaseModel):
+class McoVideoItem(BaseModel):
     video_id: str
     title: str
     url: str
@@ -86,29 +76,9 @@ class McoVideoBase(BaseModel):
     coins: list[McoCoinView]
 
 
-class McoVideoItem(McoVideoBase):
-    labels: list[McoLabel]
-
-
-class McoReviewItem(McoVideoBase):
-    labels: list[McoReviewLabel]
-
-
-def _sources(rows: list) -> list[Source]:
-    last = max((v.published_at.date() for v, _ in rows), default=None)
-    return [
-        Source(
-            name="More Crypto Online (YouTube)",
-            detail="AI-extracted from public videos",
-            url=CHANNEL,
-            last_date=last,
-        )
-    ]
-
-
-def _latest_extracts(
+def _latest(
     session: Session, coin: str | None, limit: int, video_id: str | None = None
-) -> list[tuple[McoVideo, McoExtract]]:
+) -> list[McoVideoItem]:
     q = (
         select(McoVideo, McoExtract)
         .join(McoExtract, McoExtract.video_id == McoVideo.video_id)
@@ -117,110 +87,53 @@ def _latest_extracts(
     )
     if video_id:
         q = q.where(McoVideo.video_id == video_id)
-    out, seen = [], set()
+    out: list[McoVideoItem] = []
+    seen: set[str] = set()
     for v, ex in session.execute(q):
         if v.video_id in seen:  # newest extract per video
             continue
-        coins = [c["coin"] for c in (ex.payload or {}).get("coins", [])]
-        if coin and coin.upper() not in coins:
-            continue
         seen.add(v.video_id)
-        out.append((v, ex))
+        try:
+            extract = load_payload(ex.payload or {}, ex.prompt_version)
+        except ValueError:
+            continue
+        if coin and coin.upper() not in {c.coin for c in extract.coins}:
+            continue
+        coins = [McoCoinView.model_validate(c.model_dump()) for c in extract.coins]
+        out.append(McoVideoItem(
+            video_id=v.video_id, title=v.title, url=v.url, published_at=v.published_at,
+            low_detail=v.low_detail, model=ex.model, prompt_version=ex.prompt_version,
+            summary=ex.summary, checks=extract.checks, coins=coins,
+        ))  # fmt: skip
         if len(out) >= limit:
             break
     return out
 
 
-def _base(v: McoVideo, ex: McoExtract) -> dict:
-    payload = ex.payload or {}
-    coins = [
-        McoCoinView(**{k: c[k] for k in McoCoinView.model_fields}) for c in payload.get("coins", [])
-    ]  # drops pivot_labels
-    return dict(
-        video_id=v.video_id,
-        title=v.title,
-        url=v.url,
-        published_at=v.published_at,
-        low_detail=v.low_detail,
-        model=ex.model,
-        prompt_version=ex.prompt_version,
-        summary=ex.summary,
-        checks=list(payload.get("checks", [])),
-        coins=coins,
-    )
+def _sources(items: list[McoVideoItem]) -> list[Source]:
+    last = max((i.published_at.date() for i in items), default=None)
+    return [Source(name="More Crypto Online (YouTube)", detail="AI-extracted from public videos",
+                   url=CHANNEL, last_date=last)]  # fmt: skip
 
 
-def _labels(session: Session, extract_id: int, statuses: tuple[str, ...]) -> list[McoWaveLabel]:
-    return list(
-        session.scalars(
-            select(McoWaveLabel)
-            .where(McoWaveLabel.extract_id == extract_id, McoWaveLabel.status.in_(statuses))
-            .order_by(McoWaveLabel.coin, McoWaveLabel.approx_date, McoWaveLabel.id)
-        )
-    )
-
-
-def _label(row: McoWaveLabel, model: type[McoLabel]) -> McoLabel:
-    return model.model_validate(row, from_attributes=True)
-
-
-@router.get(
-    "/mco/videos", response_model=Envelope[list[McoVideoItem]], operation_id="listMcoVideos"
-)
+@router.get("/mco/videos", response_model=Envelope[list[McoVideoItem]],
+            operation_id="listMcoVideos")  # fmt: skip
 def list_videos(
     session: SessionDep,
     coin: str | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> Envelope[list[McoVideoItem]]:
-    """Summarized MCO videos, newest first, with approved wave labels only."""
-    rows = _latest_extracts(session, coin, limit)
-    items = [
-        McoVideoItem(
-            **_base(v, ex), labels=[_label(r, McoLabel) for r in _labels(session, ex.id, VISIBLE)]
-        )
-        for v, ex in rows
-    ]
-    return Envelope(
-        as_of=items[0].published_at.date() if items else None, sources=_sources(rows), data=items
-    )
+    """Summarized MCO videos, newest first, optionally only those that discuss `coin`."""
+    items = _latest(session, coin, limit)
+    return Envelope(as_of=items[0].published_at.date() if items else None,
+                    sources=_sources(items), data=items)  # fmt: skip
 
 
-@router.get(
-    "/mco/videos/{video_id}", response_model=Envelope[McoVideoItem], operation_id="getMcoVideo"
-)
+@router.get("/mco/videos/{video_id}", response_model=Envelope[McoVideoItem],
+            operation_id="getMcoVideo")  # fmt: skip
 def get_video(video_id: str, session: SessionDep) -> Envelope[McoVideoItem]:
-    """One summarized video with approved wave labels only."""
-    rows = _latest_extracts(session, None, 1, video_id)
-    if not rows:
+    """One summarized video."""
+    items = _latest(session, None, 1, video_id)
+    if not items:
         raise HTTPException(404, "video not found")
-    v, ex = rows[0]
-    item = McoVideoItem(
-        **_base(v, ex), labels=[_label(r, McoLabel) for r in _labels(session, ex.id, VISIBLE)]
-    )
-    return Envelope(as_of=v.published_at.date(), sources=_sources(rows), data=item)
-
-
-@router.get(
-    "/admin/mco/review",
-    response_model=Envelope[list[McoReviewItem]],
-    operation_id="listMcoReview",
-    dependencies=[Depends(require_role("admin"))],
-)
-def list_review(
-    session: SessionDep, limit: Annotated[int, Query(ge=1, le=100)] = 50
-) -> Envelope[list[McoReviewItem]]:
-    """Videos whose wave labels still await Rob's review, newest first (admin)."""
-    items, rows = [], []
-    for v, ex in _latest_extracts(session, None, 500):
-        pending = _labels(session, ex.id, ("pending",))
-        if not pending:
-            continue
-        rows.append((v, ex))
-        items.append(
-            McoReviewItem(**_base(v, ex), labels=[_label(r, McoReviewLabel) for r in pending])
-        )
-        if len(items) >= limit:
-            break
-    return Envelope(
-        as_of=items[0].published_at.date() if items else None, sources=_sources(rows), data=items
-    )
+    return Envelope(as_of=items[0].published_at.date(), sources=_sources(items), data=items[0])

@@ -42,26 +42,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/admin/mco/review": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Review
-         * @description Videos whose wave labels still await Rob's review, newest first (admin).
-         */
-        get: operations["listMcoReview"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/admin/usage": {
         parameters: {
             query?: never;
@@ -670,7 +650,7 @@ export interface paths {
         };
         /**
          * List Videos
-         * @description Summarized MCO videos, newest first, with approved wave labels only.
+         * @description Summarized MCO videos, newest first, optionally only those that discuss `coin`.
          */
         get: operations["listMcoVideos"];
         put?: never;
@@ -690,7 +670,7 @@ export interface paths {
         };
         /**
          * Get Video
-         * @description One summarized video with approved wave labels only.
+         * @description One summarized video.
          */
         get: operations["getMcoVideo"];
         put?: never;
@@ -1566,18 +1546,6 @@ export interface components {
             /** Sources */
             sources: components["schemas"]["Source"][];
         };
-        /** Envelope[list[McoReviewItem]] */
-        Envelope_list_McoReviewItem__: {
-            /**
-             * As Of
-             * @description Last UTC date the data covers
-             */
-            as_of: string | null;
-            /** Data */
-            data: components["schemas"]["McoReviewItem"][];
-            /** Sources */
-            sources: components["schemas"]["Source"][];
-        };
         /** Envelope[list[McoVideoItem]] */
         Envelope_list_McoVideoItem__: {
             /**
@@ -1824,8 +1792,6 @@ export interface components {
         };
         /** McoCoinView */
         McoCoinView: {
-            /** Alternative Scenario */
-            alternative_scenario: string;
             /**
              * Bias
              * @enum {string}
@@ -1838,44 +1804,14 @@ export interface components {
              * @enum {string}
              */
             extraction_confidence: "high" | "medium" | "low";
-            /** Invalidation */
-            invalidation: number | null;
             /** Key Levels */
             key_levels: components["schemas"]["McoLevel"][];
-            /** Primary Scenario */
-            primary_scenario: string;
-            /** Targets */
-            targets: number[];
+            /** Scenarios */
+            scenarios: components["schemas"]["McoScenario"][];
             /** Timeframe */
             timeframe: string;
             /** Wave Position */
             wave_position: string;
-        };
-        /** McoLabel */
-        McoLabel: {
-            /** Approx Date */
-            approx_date: string | null;
-            /** Approx Price */
-            approx_price: number | null;
-            /** Coin */
-            coin: string;
-            /** Id */
-            id: number;
-            /** Label */
-            label: string;
-            /** Pivot Date */
-            pivot_date: string | null;
-            /** Pivot Kind */
-            pivot_kind: string | null;
-            /** Pivot Price */
-            pivot_price: number | null;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "pending" | "approved" | "rejected" | "edited";
-            /** Timeframe */
-            timeframe: string | null;
         };
         /** McoLevel */
         McoLevel: {
@@ -1884,65 +1820,30 @@ export interface components {
             /** Price */
             price: number;
         };
-        /** McoReviewItem */
-        McoReviewItem: {
-            /** Checks */
-            checks: string[];
-            /** Coins */
-            coins: components["schemas"]["McoCoinView"][];
-            /** Labels */
-            labels: components["schemas"]["McoReviewLabel"][];
-            /** Low Detail */
-            low_detail: boolean;
-            /** Model */
-            model: string;
-            /** Prompt Version */
-            prompt_version: string;
+        /** McoScenario */
+        McoScenario: {
             /**
-             * Published At
-             * Format: date-time
-             */
-            published_at: string;
-            /** Summary */
-            summary: string | null;
-            /** Title */
-            title: string;
-            /** Url */
-            url: string;
-            /** Video Id */
-            video_id: string;
-        };
-        /** McoReviewLabel */
-        McoReviewLabel: {
-            /** Approx Date */
-            approx_date: string | null;
-            /** Approx Price */
-            approx_price: number | null;
-            /** Coin */
-            coin: string;
-            /** Id */
-            id: number;
-            /** Label */
-            label: string;
-            /** Match Note */
-            match_note: string | null;
-            /** Pivot Date */
-            pivot_date: string | null;
-            /** Pivot Kind */
-            pivot_kind: string | null;
-            /** Pivot Price */
-            pivot_price: number | null;
-            /** Snap Bars */
-            snap_bars: number | null;
-            /** Snap Pct */
-            snap_pct: number | null;
-            /**
-             * Status
+             * Bias
              * @enum {string}
              */
-            status: "pending" | "approved" | "rejected" | "edited";
-            /** Timeframe */
-            timeframe: string | null;
+            bias: "bullish" | "bearish" | "neutral";
+            /** Color */
+            color: string | null;
+            /** Description */
+            description: string;
+            /** Invalidation */
+            invalidation: number | null;
+            /** Levels */
+            levels: components["schemas"]["McoLevel"][];
+            /**
+             * Name
+             * @enum {string}
+             */
+            name: "primary" | "alternative";
+            /** Targets */
+            targets: number[];
+            /** Trigger */
+            trigger: string | null;
         };
         /** McoVideoItem */
         McoVideoItem: {
@@ -1950,8 +1851,6 @@ export interface components {
             checks: string[];
             /** Coins */
             coins: components["schemas"]["McoCoinView"][];
-            /** Labels */
-            labels: components["schemas"]["McoLabel"][];
             /** Low Detail */
             low_detail: boolean;
             /** Model */
@@ -2424,37 +2323,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Invite"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    listMcoReview: {
-        parameters: {
-            query?: {
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Envelope_list_McoReviewItem__"];
                 };
             };
             /** @description Validation Error */

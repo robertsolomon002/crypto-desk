@@ -71,7 +71,6 @@ SAMPLES: dict[tuple[str, str], tuple[str, dict | None]] = {
     ("PATCH", "/api/admin/users/{user_id}"): ("/api/admin/users/1", {"role": "admin"}),
     ("GET", "/api/mco/videos"): ("/api/mco/videos", None),
     ("GET", "/api/mco/videos/{video_id}"): ("/api/mco/videos/fakeVideo01", None),
-    ("GET", "/api/admin/mco/review"): ("/api/admin/mco/review", None),
 }  # fmt: skip
 PUBLIC = {("GET", "/api/health")}
 # The key test needs a key; the providers are faked in the `api` fixture.

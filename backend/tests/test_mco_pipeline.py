@@ -235,26 +235,10 @@ def run_job(sessions, fake, notifier, **kw):
         )
 
 
-def labels_reply() -> str:
-    lab = [
-        {
-            "wave_label": "(b)",
-            "pivot_kind": "high",
-            "approx_date": "2026-08-02",
-            "approx_price": 66500,
-            "chart_timeframe": "1d",
-        },
-        {
-            "wave_label": "X",
-            "pivot_kind": "low",
-            "approx_date": "2026-07-03",
-            "approx_price": 90000,
-            "chart_timeframe": "1d",
-        },
-    ]
-    body = json.loads(good(pivot_labels=lab))
+def canary_reply() -> str:
+    body = json.loads(good())
     body["summary"] = f"Summary {CANARY}"
-    body["coins"].append({**body["coins"][0], "coin": "XRP"})  # untracked: kept in payload only
+    body["coins"].append({**body["coins"][0], "coin": "XRP"})  # untracked coins are kept too
     return json.dumps(body)
 
 
@@ -263,7 +247,7 @@ def test_job_end_to_end(seeded, monkeypatch, caplog, settings_with_keys) -> None
     videos = ["vidAAAAAAA1", "vidAAAAAAA2", "vidAAAAAAA7", "vidAAAAAAA6"]
     fake = FakeGemini(
         {
-            ("video", "gemini-3.5-flash-lite"): [labels_reply(), good(), good(), "{bad"],
+            ("video", "gemini-3.5-flash-lite"): [canary_reply(), good(), good(), "{bad"],
             ("text", "gemini-3.5-flash-lite"): ["{bad again"],
             ("video", "gemini-3.8-flash"): [good(coin="SOL")],
         }
@@ -272,39 +256,55 @@ def test_job_end_to_end(seeded, monkeypatch, caplog, settings_with_keys) -> None
     r = run_job(seeded, fake, notifier)
     assert r.status == "success", r.summary()
     assert [v.video_id for v in r.videos] == videos
-    first = r.videos[0]
-    assert (first.labels, first.matched, first.coins) == (2, 1, 2)
-    assert r.videos[3].model == "gemini-3.8-flash"
+    assert r.videos[0].coins == 2 and r.videos[3].model == "gemini-3.8-flash"
     with seeded() as s:
         assert {
             v.status for v in s.scalars(select(McoVideo).where(McoVideo.video_id.in_(videos)))
         } == {"done"}
-        labels = {lab.label: lab for lab in s.scalars(select(McoWaveLabel))}
-        assert {lab.status for lab in labels.values()} == {"pending"}
-        assert (
-            labels["(b)"].pivot_date == dt.date(2026, 7, 31) and labels["(b)"].pivot_kind == "high"
-        )
-        assert labels["X"].pivot_date is None and labels["X"].match_note.startswith("unmatched")
         ex = s.scalars(select(McoExtract).where(McoExtract.video_id == "vidAAAAAAA1")).one()
-        assert ex.prompt_version == "mco_extract_v1" and CANARY in ex.summary
+        assert ex.prompt_version == "mco_extract_v2" and CANARY in ex.summary
         assert [c["coin"] for c in ex.payload["coins"]] == ["BTC", "XRP"]
+        assert [sc["name"] for sc in ex.payload["coins"][0]["scenarios"]] == [
+            "primary",
+            "alternative",
+        ]
+        assert s.scalar(select(func.count()).select_from(McoWaveLabel)) == 0  # D49: no counts
         spend = s.scalars(select(LlmSpend)).all()
         assert len(spend) == 6 and {x.source for x in spend} == {"mco"}
         assert sum(x.cost for x in spend) == 0  # free tier
         run = s.get(JobRun, r.run_id)
         assert run.job == "mco" and run.status == "success" and run.ended_at
-    events = [a.event for a in notifier.alerts]
-    assert events == ["new_mco_summary"] * 4 + ["mco_review_pending"]
+    assert [a.event for a in notifier.alerts] == ["new_mco_summary"] * 4
     a = notifier.alerts[0]
     assert a.url == "https://www.youtube.com/watch?v=vidAAAAAAA1" and "BTC bearish" in a.body
-    assert (
-        "5 new wave labels from 4 video(s) await review (4 unmatched)" in notifier.alerts[-1].body
-    )
     # Privacy: no MCO text in the public summary or in any log record.
     summary = r.summary()
     assert CANARY not in summary and "vidAAAAAAA1: done" in summary
     assert "bearish" not in summary and "Bitcoin" not in summary
     assert not [rec for rec in caplog.records if CANARY in rec.getMessage()]
+
+
+def test_earlier_views_reach_the_next_video(seeded, settings_with_keys) -> None:
+    fake = FakeGemini(
+        {
+            ("video", "gemini-3.5-flash-lite"): [
+                good(wave_position="older count"),
+                good(wave_position="newer count"),
+            ]
+        }
+    )
+    run_job(seeded, fake, Notifier(), limit=0)  # discovery only
+    r = mco_daily.run_mco(
+        seeded, NOW, gemini=lambda: fake, notify=Notifier(), video_ids=["vidAAAAAAA6"]
+    )
+    assert r.status == "success"
+    assert "<earlier_views>\nnone\n</earlier_views>" in fake.calls[0][2]
+    mco_daily.run_mco(
+        seeded, NOW, gemini=lambda: fake, notify=Notifier(), video_ids=["vidAAAAAAA1"]
+    )
+    prompt = fake.calls[1][2]
+    day = (NOW - dt.timedelta(hours=30)).date().isoformat()
+    assert f"BTC (video of {day}): bearish; older count" in prompt
 
 
 def test_failed_video_and_retry_limit(seeded, settings_with_keys) -> None:
@@ -358,7 +358,7 @@ def test_job_writes_nothing_under_the_repo(seeded, monkeypatch, settings_with_ke
 
     monkeypatch.setattr(builtins, "open", guarded)
     monkeypatch.setattr(io, "open", guarded)  # pathlib's write_text goes through io.open
-    fake = FakeGemini({("video", "gemini-3.5-flash-lite"): [labels_reply()]})
+    fake = FakeGemini({("video", "gemini-3.5-flash-lite"): [canary_reply()]})
     r = run_job(seeded, fake, Notifier(), limit=1)
     assert r.status == "success" and writes == []
 

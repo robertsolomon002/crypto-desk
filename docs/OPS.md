@@ -119,10 +119,10 @@ The runtime account (`desk-api`) gets read access to the values. The deployer ge
 - **What it does:**
   - discovers new videos (RSS, falling back to the YouTube Data API);
   - summarizes up to 4 a day with Gemini (free tier, $0 in `llm_spend`);
-  - snaps wave labels as `pending`;
-  - sends `new_mco_summary` to Telegram and Discord, and `mco_review_pending` to Telegram.
+  - sends `new_mco_summary` to Telegram and Discord.
+- **No wave labels** (D49): extracts give a primary and an alternative scenario per coin. `mco/snap.py` is kept but unused.
 - **Privacy:** the Actions log and the `ops_failure` alert carry only video ids, counts, model ids and error codes. Do not add steps that print extracts or upload artifacts.
-- **Read results locally:** `uv run desk mco show --latest 2` prints the newest extracts and their snapped labels. It is local only and refuses to run in CI.
+- **Read results locally:** `uv run desk mco show --latest 2` prints the newest extracts (re-extracted videos show each version). It is local only and refuses to run in CI.
 - **Re-run a video:** `uv run desk jobs mco --video <id> --no-alert`. A failed video is retried automatically on later runs, up to 3 attempts. `mco_videos.error` holds the last error code (for example `gemini-3.8-flash:fallback:503`).
 - **Switch off:** `features.mco: false` in `config/settings.yaml`, or `MCO_ENABLED=false`. The job exits at once and every `/api/mco` route answers 404.
 

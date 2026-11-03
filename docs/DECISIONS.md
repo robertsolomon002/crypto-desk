@@ -530,3 +530,26 @@ The function returns the label series, the current label, and the values that pr
   - `/api/admin/mco/review` is admin-only, and every MCO route answers 404 when MCO is off.
   - Tests cover a canary in the title and summary, writes under the repo, and the role matrix.
 - **Alerts:** `new_mco_summary` per video (title, per-coin bias, link, "AI-extracted" note) to Telegram and Discord. `mco_review_pending` (counts only) goes to Telegram.
+
+## D49. MCO wave counts dropped; extract v2 with scenarios
+
+*2026-11-03, after Stage 6.1. Rob's decision; it updates Decision 7 and removes Stage 6.3.*
+
+- **Evidence:**
+  - Rob checked the v1 extract of a SOL video against the video. Bias, wave position, targets, levels, the alternative scenario and the missing invalidation were all right. The wave labels mixed past swings with projected ones and with both of his scenarios, which he draws in different colours that change from video to video.
+  - The same video, 3 runs on `gemini-3.5-flash-lite`, gave three entirely different label sets: different labels, dates and prices, with some impossible (dated after the video) and some mistaken for a resistance level. Levels, targets and scenarios were the same in every run.
+  - `media_resolution` LOW, MEDIUM and HIGH all used exactly 33,636 input tokens on that video, so the setting appears to have no effect for YouTube URLs on Flash-Lite.
+  - `gemini-3.8-flash` failed with 503 "high demand" on all 3 runs (4 attempts each, about 15 minutes), as in Stage 0.3.
+- **Decision:** Rob does not want to place labels by hand, so chart wave counts are dropped.
+  - The app shows MCO's levels, targets, invalidation and triggers per scenario.
+  - `mco_wave_labels` and `mco/snap.py` stay in the code, unused, in case a stronger model makes labels reliable later.
+  - The 8 labels stored by v1 were set to `rejected`, not deleted.
+  - `GET /api/admin/mco/review` and the job's `mco_review_pending` alert are removed. The event name stays in the alert routing for now.
+- **Extract v2** (`prompts/mco_extract_v2.md`, `mco_fallback_v2.md`; `mco_repair_v1.md` is unchanged):
+  - Per coin: bias (the primary's), wave position in words, timeframe, shared `key_levels`, and `scenarios`. Each scenario has `name` (primary or alternative), `color` (only when clearly visible), `bias`, `description`, `levels`, `targets`, `invalidation` and `trigger`.
+  - The D25 check runs per scenario.
+  - The prompt says that "what would change his view" is the alternative scenario with that condition as its trigger, and asks for every level he names. The first v2 draft put the alternative into the primary's trigger and dropped levels; the tightened prompt gave the same primary, alternative and shared levels on 3 of 3 runs. Colours were inconsistent ("orange" once, "yellow" twice, the alternative's never given), so they are shown as a hint only.
+  - **Earlier views as context:** the latest extract per coin from the previous 14 days (at most 10 extracts, 8 coins) goes into the prompt as compact text inside `<earlier_views>`, marked untrusted. This is for "as mentioned yesterday" references.
+  - v1 payloads are read as v2 (`schemas.load_payload`): the primary takes v1's targets and invalidation, the alternative's bias is unknown (neutral), and labels are dropped.
+- **API:** `/api/mco/videos[/{id}]` return scenarios and never any label, from rows or from stored payloads.
+- Today's 3 videos were re-extracted with v2 (Neon, alerts off).

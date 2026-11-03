@@ -1,4 +1,4 @@
-"""MCO daily job (GitHub Actions, 06:30 UTC; Section 3.4, D48): discover, summarize, snap,
+"""MCO daily job (GitHub Actions, 06:30 UTC; Section 3.4, D48, D49): discover, summarize,
 alert, and record the run in `job_runs`.
 
 Privacy (Decision 6): MCO-derived text (titles, descriptions, summaries, scenarios, biases)
@@ -23,9 +23,8 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from desk.config import get_settings, load_app_settings
 from desk.mco import discover as disc
-from desk.mco import snap as snapper
 from desk.mco import summarize as summ
-from desk.models import Coin, JobRun, McoExtract, McoVideo, McoWaveLabel
+from desk.models import Coin, JobRun, McoExtract, McoVideo
 
 log = logging.getLogger(__name__)
 
@@ -39,8 +38,6 @@ class VideoOutcome:
     model: str | None = None
     low_detail: bool = False
     coins: int = 0
-    labels: int = 0
-    matched: int = 0
     calls: int = 0
     error: str | None = None  # short code
 
@@ -95,7 +92,7 @@ class McoResult:
                     detail = " (low detail)" if v.low_detail else ""
                     lines.append(
                         f"- {v.video_id}: done on {v.model}{detail}; {v.coins} coins, "
-                        f"{v.matched}/{v.labels} labels snapped, {v.calls} calls"
+                        f"{v.calls} calls"
                     )
                 else:
                     lines.append(f"- {v.video_id}: failed ({v.error})")
@@ -122,70 +119,39 @@ def alias_map(session: Session) -> dict[str, str]:
     return out
 
 
-def bars_for(session: Session, coin: str, as_of: dt.date, timeframe: str):
+def last_closes(session: Session, coins: list[str], as_of: dt.date) -> dict[str, float]:
+    """Each coin's last daily close up to `as_of`, for the D25 check."""
     from desk.data import market
 
-    daily = market.load_daily(session, coin, as_of)
-    if timeframe == "1w":  # include the open week: he labels the current swing too
-        return market.resample_weekly(daily, include_partial=True)
-    return daily
-
-
-def last_closes(session: Session, coins: list[str], as_of: dt.date) -> dict[str, float]:
     out = {}
     for c in coins:
-        daily = bars_for(session, c, as_of, "1d")
+        daily = market.load_daily(session, c, as_of)
         if not daily.empty:
             out[c] = float(daily["close"].iloc[-1])
     return out
 
 
-def snap_labels(
-    session: Session, extract_id: int, payload: dict, as_of: dt.date
-) -> tuple[int, int]:
-    """Write one `pending` row per pivot label; returns (labels, matched)."""
-    from desk.analytics import pivots as pv
+def earlier_extracts(session: Session, before: dt.datetime, days: int = 14, n: int = 10):
+    """(publication date, v2 extract) of the newest earlier videos, for `previous_views`."""
+    from desk.mco.schemas import load_payload
 
-    known = set(session.scalars(select(Coin.symbol)))
-    cache: dict[tuple[str, str], tuple[list, list]] = {}
-    labels = matched = 0
-    for view in payload.get("coins", []):
-        coin = view["coin"]
-        if coin not in known:  # the FK needs a tracked coin; the labels stay in the payload
+    rows = session.execute(
+        select(McoVideo.published_at, McoExtract.payload, McoExtract.prompt_version)
+        .join(McoExtract, McoExtract.video_id == McoVideo.video_id)
+        .where(
+            McoVideo.published_at < before,
+            McoVideo.published_at >= before - dt.timedelta(days=days),
+        )
+        .order_by(McoVideo.published_at.desc(), McoExtract.id.desc())
+        .limit(n)
+    )
+    out = []
+    for published, payload, version in rows:
+        try:
+            out.append((published.date(), load_payload(payload, version)))
+        except ValueError:  # an old payload that no longer validates is skipped
             continue
-        for lab in view.get("pivot_labels", []):
-            labels += 1
-            tf = snapper.snap_timeframe(lab.get("chart_timeframe"))
-            approx = dt.date.fromisoformat(lab["approx_date"])
-            if (coin, tf) not in cache:
-                bars = bars_for(session, coin, as_of, tf)
-                cache[(coin, tf)] = (
-                    pv.zigzag(bars, None, **pv.DEFAULTS[tf]),
-                    [ts.date() for ts in bars.index],
-                )
-            pivots, dates = cache[(coin, tf)]
-            result = snapper.snap_label(
-                pivots, dates, lab.get("pivot_kind"), approx, float(lab["approx_price"]), tf
-            )
-            matched += result.pivot is not None
-            session.add(
-                McoWaveLabel(
-                    extract_id=extract_id,
-                    coin=coin,
-                    label=str(lab["wave_label"])[:16],
-                    timeframe=tf,
-                    approx_date=approx,
-                    approx_price=float(lab["approx_price"]),
-                    pivot_kind=lab.get("pivot_kind"),
-                    pivot_date=result.pivot.date if result.pivot else None,
-                    pivot_price=result.pivot.price if result.pivot else None,
-                    snap_bars=result.bars,
-                    snap_pct=result.pct,
-                    match_note=result.note,
-                    status="pending",
-                )
-            )
-    return labels, matched
+    return out
 
 
 def process_video(
@@ -199,6 +165,7 @@ def process_video(
         aliases = alias_map(session)
         closes = last_closes(session, sorted(set(aliases.values())), as_of)
         url, title, desc, published = v.url, v.title, v.description or "", v.published_at
+        previous = summ.previous_views(earlier_extracts(session, published))
 
     def spend(model: str, tin: int, tout: int) -> None:
         with sessions() as s:
@@ -206,7 +173,9 @@ def process_video(
 
     out = VideoOutcome(video_id, "failed")
     try:
-        result = summ.summarize(client, url, title, desc, published.date(), spend, aliases, closes)
+        result = summ.summarize(
+            client, url, title, desc, published.date(), spend, aliases, closes, previous=previous
+        )
     except summ.SummarizeFailed as exc:
         out.error = exc.code[:64]
         with sessions.begin() as session:
@@ -226,7 +195,6 @@ def process_video(
         )
         session.add(row)
         session.flush()
-        out.labels, out.matched = snap_labels(session, row.id, payload, as_of)
         v = session.get(McoVideo, video_id)
         v.status, v.low_detail, v.processed_at, v.error = "done", result.low_detail, now, None
         v.attempts = (v.attempts or 0) + 1
@@ -270,7 +238,7 @@ def run_mco(
     alerts: bool = True,
 ) -> McoResult:
     from desk.agents import cost
-    from desk.notify import Alert, send
+    from desk.notify import send
 
     now = now or dt.datetime.now(dt.UTC)
     clock = time.monotonic()
@@ -317,16 +285,6 @@ def run_mco(
                     if v.status == "done":
                         status = notify(video_alert(session, v.video_id))
                         _tally(result.alerts, "new_mco_summary", status)
-            labels = sum(v.labels for v in result.videos if v.status == "done")
-            matched = sum(v.matched for v in result.videos if v.status == "done")
-            if labels:
-                n = sum(1 for v in result.videos if v.labels)
-                body = (
-                    f"{labels} new wave labels from {n} video(s) await review "
-                    f"({labels - matched} unmatched)."
-                )
-                status = notify(Alert("mco_review_pending", "MCO labels to review", body))
-                _tally(result.alerts, "mco_review_pending", status)
     except Exception as exc:  # recorded and reported; the workflow alerts on the exit code
         # Type and code locations only: exception messages can quote extracted text.
         where = " < ".join(

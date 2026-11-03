@@ -1764,44 +1764,6 @@
         "title": "Envelope[list[Headline]]",
         "type": "object"
       },
-      "Envelope_list_McoReviewItem__": {
-        "properties": {
-          "as_of": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Last UTC date the data covers",
-            "title": "As Of"
-          },
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/McoReviewItem"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "sources": {
-            "items": {
-              "$ref": "#/components/schemas/Source"
-            },
-            "title": "Sources",
-            "type": "array"
-          }
-        },
-        "required": [
-          "as_of",
-          "sources",
-          "data"
-        ],
-        "title": "Envelope[list[McoReviewItem]]",
-        "type": "object"
-      },
       "Envelope_list_McoVideoItem__": {
         "properties": {
           "as_of": {
@@ -2484,10 +2446,6 @@
       },
       "McoCoinView": {
         "properties": {
-          "alternative_scenario": {
-            "title": "Alternative Scenario",
-            "type": "string"
-          },
           "bias": {
             "enum": [
               "bullish",
@@ -2510,17 +2468,6 @@
             "title": "Extraction Confidence",
             "type": "string"
           },
-          "invalidation": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Invalidation"
-          },
           "key_levels": {
             "items": {
               "$ref": "#/components/schemas/McoLevel"
@@ -2528,15 +2475,11 @@
             "title": "Key Levels",
             "type": "array"
           },
-          "primary_scenario": {
-            "title": "Primary Scenario",
-            "type": "string"
-          },
-          "targets": {
+          "scenarios": {
             "items": {
-              "type": "number"
+              "$ref": "#/components/schemas/McoScenario"
             },
-            "title": "Targets",
+            "title": "Scenarios",
             "type": "array"
           },
           "timeframe": {
@@ -2552,123 +2495,12 @@
           "coin",
           "bias",
           "wave_position",
-          "primary_scenario",
-          "alternative_scenario",
-          "key_levels",
-          "invalidation",
-          "targets",
           "timeframe",
+          "key_levels",
+          "scenarios",
           "extraction_confidence"
         ],
         "title": "McoCoinView",
-        "type": "object"
-      },
-      "McoLabel": {
-        "properties": {
-          "approx_date": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Approx Date"
-          },
-          "approx_price": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Approx Price"
-          },
-          "coin": {
-            "title": "Coin",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
-            "type": "integer"
-          },
-          "label": {
-            "title": "Label",
-            "type": "string"
-          },
-          "pivot_date": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pivot Date"
-          },
-          "pivot_kind": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pivot Kind"
-          },
-          "pivot_price": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pivot Price"
-          },
-          "status": {
-            "enum": [
-              "pending",
-              "approved",
-              "rejected",
-              "edited"
-            ],
-            "title": "Status",
-            "type": "string"
-          },
-          "timeframe": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Timeframe"
-          }
-        },
-        "required": [
-          "id",
-          "coin",
-          "label",
-          "timeframe",
-          "status",
-          "pivot_kind",
-          "approx_date",
-          "approx_price",
-          "pivot_date",
-          "pivot_price"
-        ],
-        "title": "McoLabel",
         "type": "object"
       },
       "McoLevel": {
@@ -2689,201 +2521,18 @@
         "title": "McoLevel",
         "type": "object"
       },
-      "McoReviewItem": {
+      "McoScenario": {
         "properties": {
-          "checks": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Checks",
-            "type": "array"
-          },
-          "coins": {
-            "items": {
-              "$ref": "#/components/schemas/McoCoinView"
-            },
-            "title": "Coins",
-            "type": "array"
-          },
-          "labels": {
-            "items": {
-              "$ref": "#/components/schemas/McoReviewLabel"
-            },
-            "title": "Labels",
-            "type": "array"
-          },
-          "low_detail": {
-            "title": "Low Detail",
-            "type": "boolean"
-          },
-          "model": {
-            "title": "Model",
-            "type": "string"
-          },
-          "prompt_version": {
-            "title": "Prompt Version",
-            "type": "string"
-          },
-          "published_at": {
-            "format": "date-time",
-            "title": "Published At",
-            "type": "string"
-          },
-          "summary": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Summary"
-          },
-          "title": {
-            "title": "Title",
-            "type": "string"
-          },
-          "url": {
-            "title": "Url",
-            "type": "string"
-          },
-          "video_id": {
-            "title": "Video Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "video_id",
-          "title",
-          "url",
-          "published_at",
-          "low_detail",
-          "model",
-          "prompt_version",
-          "summary",
-          "checks",
-          "coins",
-          "labels"
-        ],
-        "title": "McoReviewItem",
-        "type": "object"
-      },
-      "McoReviewLabel": {
-        "properties": {
-          "approx_date": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Approx Date"
-          },
-          "approx_price": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Approx Price"
-          },
-          "coin": {
-            "title": "Coin",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
-            "type": "integer"
-          },
-          "label": {
-            "title": "Label",
-            "type": "string"
-          },
-          "match_note": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Match Note"
-          },
-          "pivot_date": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pivot Date"
-          },
-          "pivot_kind": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pivot Kind"
-          },
-          "pivot_price": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pivot Price"
-          },
-          "snap_bars": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Snap Bars"
-          },
-          "snap_pct": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Snap Pct"
-          },
-          "status": {
+          "bias": {
             "enum": [
-              "pending",
-              "approved",
-              "rejected",
-              "edited"
+              "bullish",
+              "bearish",
+              "neutral"
             ],
-            "title": "Status",
+            "title": "Bias",
             "type": "string"
           },
-          "timeframe": {
+          "color": {
             "anyOf": [
               {
                 "type": "string"
@@ -2892,25 +2541,68 @@
                 "type": "null"
               }
             ],
-            "title": "Timeframe"
+            "title": "Color"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "invalidation": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invalidation"
+          },
+          "levels": {
+            "items": {
+              "$ref": "#/components/schemas/McoLevel"
+            },
+            "title": "Levels",
+            "type": "array"
+          },
+          "name": {
+            "enum": [
+              "primary",
+              "alternative"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "targets": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Targets",
+            "type": "array"
+          },
+          "trigger": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger"
           }
         },
         "required": [
-          "id",
-          "coin",
-          "label",
-          "timeframe",
-          "status",
-          "pivot_kind",
-          "approx_date",
-          "approx_price",
-          "pivot_date",
-          "pivot_price",
-          "snap_bars",
-          "snap_pct",
-          "match_note"
+          "name",
+          "color",
+          "bias",
+          "description",
+          "levels",
+          "targets",
+          "invalidation",
+          "trigger"
         ],
-        "title": "McoReviewLabel",
+        "title": "McoScenario",
         "type": "object"
       },
       "McoVideoItem": {
@@ -2929,13 +2621,6 @@
             "title": "Coins",
             "type": "array"
           },
-          "labels": {
-            "items": {
-              "$ref": "#/components/schemas/McoLabel"
-            },
-            "title": "Labels",
-            "type": "array"
-          },
           "low_detail": {
             "title": "Low Detail",
             "type": "boolean"
@@ -2987,8 +2672,7 @@
           "prompt_version",
           "summary",
           "checks",
-          "coins",
-          "labels"
+          "coins"
         ],
         "title": "McoVideoItem",
         "type": "object"
@@ -4105,52 +3789,6 @@
         "summary": "Revoke Invite",
         "tags": [
           "admin"
-        ]
-      }
-    },
-    "/api/admin/mco/review": {
-      "get": {
-        "description": "Videos whose wave labels still await Rob's review, newest first (admin).",
-        "operationId": "listMcoReview",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 50,
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Envelope_list_McoReviewItem__"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "List Review",
-        "tags": [
-          "mco"
         ]
       }
     },
@@ -6119,7 +5757,7 @@
     },
     "/api/mco/videos": {
       "get": {
-        "description": "Summarized MCO videos, newest first, with approved wave labels only.",
+        "description": "Summarized MCO videos, newest first, optionally only those that discuss `coin`.",
         "operationId": "listMcoVideos",
         "parameters": [
           {
@@ -6181,7 +5819,7 @@
     },
     "/api/mco/videos/{video_id}": {
       "get": {
-        "description": "One summarized video with approved wave labels only.",
+        "description": "One summarized video.",
         "operationId": "getMcoVideo",
         "parameters": [
           {
