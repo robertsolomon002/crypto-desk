@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { DESK_SIGNAL, DESK_STREAM } from '../src/lib/__fixtures__/desk.ts'
 import { ME, mockApi } from './fixtures.ts'
 
 // Agent tab smoke tests at 1440 and 390 px, with the chat stream mocked (the real one is tested
@@ -176,4 +177,75 @@ test('the chat box stays usable on a phone', async ({ page, viewport }) => {
     await page.getByRole('button', { name: 'Conversations' }).click()
     await expect(page.getByRole('button', { name: 'New chat' })).toBeVisible()
   }
+})
+
+test('ask the desk: stages, signal and the full run in the Data tab', async ({
+  page,
+  viewport,
+}) => {
+  const dialogs: string[] = []
+  page.on('dialog', (d) => {
+    dialogs.push(d.message())
+    void d.dismiss()
+  })
+  await mock(page)
+  await mockApi(page, {
+    '/api/me': AGENT_ME,
+    '/api/agent/models': MODELS,
+    '/api/agent/conversations': [],
+    '/api/data/tables': env([]),
+    '/api/agent/desk/estimate': env({
+      provider: 'openrouter',
+      model: 'anthropic/claude-haiku-5.5',
+      model_calls: 11,
+      tokens_in: 49000,
+      tokens_out: 4000,
+      cost_usd: null,
+      nodes: [],
+    }),
+    '/api/agent/snapshots/40': {
+      ...SNAPSHOT,
+      id: 40,
+      tool: 'desk_run',
+      args: { coin: 'SOL' },
+      result: { coin: 'SOL', status: 'valid', signal: DESK_SIGNAL },
+    },
+  })
+  const seen: unknown[] = []
+  await page.route('**/api/agent/desk', (route) => {
+    seen.push(route.request().postDataJSON())
+    return route.fulfill({ body: sse(DESK_STREAM), contentType: 'text/event-stream' })
+  })
+  await page.goto('/agent')
+  await page.getByRole('button', { name: 'Ask the desk' }).click()
+  await page.getByRole('combobox', { name: 'Coin for the desk' }).selectOption('SOL')
+  await expect(page.getByTestId('desk-estimate')).toContainText('About 11 model calls')
+  await page.getByRole('button', { name: /Run the desk/ }).click()
+
+  const run = page.getByTestId('desk-run')
+  await expect(run.getByTestId('desk-validation')).toHaveText('Validator: passed after one retry')
+  await expect(run.getByTestId('desk-signal')).toContainText('Lean long SOL')
+  await expect(run.getByTestId('desk-node-context')).toContainText('Report unavailable')
+  await expect(run.getByTestId('desk-node-bear_rebut')).toContainText('bear rebuttal point')
+  await expect(run.locator('img')).toHaveCount(0)
+  await expect(page).toHaveURL(/\/agent\?c=30/)
+  expect(seen).toEqual([
+    { coin: 'SOL', provider: 'openrouter', model: 'anthropic/claude-haiku-5.5' },
+  ])
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  )
+  expect(overflow).toBeLessThanOrEqual(1)
+  if ((viewport?.width ?? 1440) >= 768) {
+    // Analysts sit side by side on wide screens.
+    const a = await run.getByTestId('desk-node-technical').boundingBox()
+    const b = await run.getByTestId('desk-node-context').boundingBox()
+    expect(a && b && Math.abs(a.y - b.y) < 2).toBe(true)
+  }
+
+  await run.getByRole('link', { name: /View the full run/ }).click()
+  await expect(page).toHaveURL(/\/data\?snapshot=40/)
+  await expect(page.getByRole('heading', { name: /Desk run/ })).toBeVisible()
+  expect(dialogs).toEqual([])
 })

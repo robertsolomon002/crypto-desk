@@ -22,7 +22,7 @@ banner tells you when that's happening.
 | **Cycles** | This BTC (or ETH) cycle against past ones, aligned by halving, cycle bottom or cycle top, plus a year-over-year view and returns since each bottom. |
 | **Stats** | Monthly returns heatmap, week-of-year and day-of-week patterns, where this week's return sits in history, drawdowns, volatility and correlation between coins. |
 | **On-chain & Macro** | MVRV, realized price, NUPL, active addresses and hash rate for BTC and ETH, Fear & Greed history, dominance, and four macro series you can overlay on BTC. |
-| **Agent** | Ask questions in plain English ("Where is BTC in its cycle vs 2017?"). The agent looks the numbers up with the desk's own tools, shows each lookup as a card, and **View data** opens exactly what it saw. Up to 30 questions an hour. Answers can be wrong: check the data. |
+| **Agent** | Ask questions in plain English ("Where is BTC in its cycle vs 2017?"). The agent looks the numbers up with the desk's own tools, shows each lookup as a card, and **View data** opens exactly what it saw. Up to 30 questions an hour. Answers can be wrong: check the data. **Ask the desk** (the switch above the question box) runs a small team on one coin: two analysts gather data, a bull and a bear argue it out, and a head gives a 7-day lean long or flat view with levels. One run is about 11 model calls and 50,000 tokens, roughly 1 cent on Claude Haiku, and takes 15 to 30 seconds. Up to 5 runs an hour. |
 | **Data** | Every table behind the app: filter, sort, chart a column, export CSV. Each chart's "View data" link opens its exact numbers here. |
 | **Settings** | Theme, and your own AI key for the Agent tab (below). |
 

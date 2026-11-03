@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { DESK_STREAM, DESK_SIGNAL } from '@/lib/__fixtures__/desk'
 import { KEY_STORAGE } from '@/lib/keys'
 import { envelope, renderWithProviders, sseResponse, stubApi } from '@/test/render'
 
@@ -231,5 +232,160 @@ describe('AgentPage', () => {
       expect(fetch.mock.calls.some(([r]) => (r as Request).method === 'DELETE')).toBe(true),
     )
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(/^\/agent$/))
+  })
+})
+
+describe('Ask the desk', () => {
+  const COINS = envelope(
+    ['BTC', 'ETH', 'SOL'].map((symbol) => ({ symbol, name: symbol, is_watchlist: false })),
+  )
+  const ESTIMATE = envelope({
+    provider: 'openrouter',
+    model: 'anthropic/claude-haiku-5.5',
+    model_calls: 11,
+    tokens_in: 49000,
+    tokens_out: 4000,
+    cost_usd: null,
+    nodes: [],
+  })
+  const deskRoutes = (desk: unknown = () => sseResponse(DESK_STREAM)) => ({
+    '/api/coins': COINS,
+    '/api/agent/desk/estimate': ESTIMATE,
+    '/api/agent/desk': desk,
+  })
+
+  async function openDesk(user: ReturnType<typeof userEvent.setup>) {
+    renderWithProviders(<AgentPage />, { route: '/agent' })
+    await user.click(await screen.findByRole('button', { name: 'Ask the desk' }))
+    await user.selectOptions(
+      await screen.findByRole('combobox', { name: 'Coin for the desk' }),
+      'SOL',
+    )
+  }
+
+  it('runs the desk and shows every stage, the signal and the data', async () => {
+    useKey()
+    const fetch = setup('member', deskRoutes())
+    const user = userEvent.setup()
+    await openDesk(user)
+    expect(await screen.findByTestId('desk-estimate')).toHaveTextContent(
+      'About 11 model calls and 53k tokens per run · the price depends on your provider',
+    )
+    await user.click(screen.getByRole('button', { name: /Run the desk/ }))
+
+    const run = await screen.findByTestId('desk-run')
+    await within(run).findByText(/View the full run/)
+    const tech = within(run).getByTestId('desk-node-technical')
+    expect(tech).toHaveAttribute('data-status', 'done')
+    expect(within(tech).getByRole('link', { name: /View data/ })).toHaveAttribute(
+      'href',
+      '/data?snapshot=38',
+    )
+    expect(tech).toHaveTextContent('technical finding one · 91.83 USD')
+    expect(run.querySelector('img')).toBeNull() // model text is never HTML
+    expect(within(run).getByTestId('desk-node-context')).toHaveTextContent(
+      'Report unavailable: took longer than 60 seconds',
+    )
+    const bear = within(run).getByTestId('desk-node-bear_rebut')
+    expect(bear).toHaveTextContent('bear rebuttal point')
+    expect(within(bear).getByTitle("C9 isn't in any report")).toBeInTheDocument()
+
+    const signal = within(run).getByTestId('desk-signal')
+    expect(signal).toHaveTextContent('Lean long SOL')
+    expect(signal).toHaveTextContent('confidence 0.58')
+    expect(signal).toHaveTextContent('90.00–92.00')
+    expect(signal).toHaveTextContent('retried')
+    expect(within(signal).getByTestId('desk-validation')).toHaveTextContent(
+      'Validator: passed after one retry',
+    )
+    expect(within(run).getByRole('link', { name: /View the full run/ })).toHaveAttribute(
+      'href',
+      '/data?snapshot=40',
+    )
+    expect(run).toHaveTextContent('11 model calls · 2 tool calls · 52,500 tokens')
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/agent?c=30'))
+
+    const req = fetch.mock.calls
+      .map(([r]) => r as Request)
+      .find((r) => r.method === 'POST' && r.url.endsWith('/api/agent/desk'))
+    expect(req?.headers.get('X-LLM-Key')).toBe(OR_KEY)
+    expect(await req?.json()).toEqual({
+      coin: 'SOL',
+      provider: 'openrouter',
+      model: 'anthropic/claude-haiku-5.5',
+    })
+  })
+
+  it("shows the API's message when a run is refused", async () => {
+    useKey()
+    setup(
+      'member',
+      deskRoutes(() =>
+        Response.json({ detail: "You've run the desk 5 times in the last hour." }, { status: 429 }),
+      ),
+    )
+    const user = userEvent.setup()
+    await openDesk(user)
+    await user.click(screen.getByRole('button', { name: /Run the desk/ }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('5 times in the last hour')
+  })
+
+  it('reopens a saved run from its snapshot', async () => {
+    setup('admin', {
+      ...deskRoutes(),
+      '/api/agent/conversations/30': {
+        id: 30,
+        title: 'Ask the desk: SOL',
+        created_at: '2026-11-03T10:00:00Z',
+        messages: [
+          {
+            id: 1,
+            role: 'user',
+            content: 'Ask the desk: SOL',
+            model: null,
+            created_at: '2026-11-03T10:00:00Z',
+            snapshots: [],
+          },
+          {
+            id: 2,
+            role: 'assistant',
+            content: '**Desk view on SOL**: flat.',
+            model: 'claude-haiku-5-5',
+            created_at: '2026-11-03T10:00:20Z',
+            snapshots: [
+              { id: 38, tool: 'get_key_levels', created_at: '2026-11-03T10:00:05Z' },
+              { id: 40, tool: 'desk_run', created_at: '2026-11-03T10:00:20Z' },
+            ],
+          },
+        ],
+      },
+      '/api/agent/snapshots/40': {
+        id: 40,
+        conversation_id: 30,
+        tool: 'desk_run',
+        args: { coin: 'SOL' },
+        as_of: null,
+        created_at: '2026-11-03T10:00:20Z',
+        result: {
+          coin: 'SOL',
+          as_of: null,
+          model: 'claude-haiku-5-5',
+          status: 'invalid',
+          error: null,
+          reference_close: 91.83,
+          reference_date: '2026-11-02',
+          reports: {},
+          debate: {},
+          signal: { ...DESK_SIGNAL, invalidation: null },
+          validation: { ok: false, errors: ['lean_long needs invalidation.'], attempts: 2 },
+          usage: [],
+        },
+      },
+    })
+    renderWithProviders(<AgentPage />, { route: '/agent?c=30' })
+    const signal = await screen.findByTestId('desk-signal')
+    expect(within(signal).getByTestId('desk-validation')).toHaveTextContent('Validator: rejected')
+    expect(signal).toHaveTextContent('lean_long needs invalidation.')
+    expect(screen.getByTestId('data-used')).toHaveTextContent('Key levels')
   })
 })

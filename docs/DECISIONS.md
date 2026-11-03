@@ -438,3 +438,64 @@ The function returns the label series, the current label, and the values that pr
 - **Who can chat:** with a saved key, anyone, on the model picker's choice (the key's provider only: saved model, provider default, then `byo_choices`); the admin without a key, on the capped server key (a badge says so); a member without a key gets a card linking to Settings. Starter questions from the roadmap.
 - **Data tab:** `?snapshot=<id>` opens `GET /api/agent/snapshots/{id}`: tool, arguments, as-of date, sources, then the result as tables (desk-mcp's compact `columns`/`rows` tables expanded at any depth, a bare record as one row, single values beside), a column chart when there is a `date` or `time` column, CSV, and a link back to the conversation. A 404 explains that the snapshot isn't the user's or was deleted with its conversation.
 - **Flag:** `features.agent` is on. The key wizard's "Test key" was already live since Stage 3.4 (D42); the roadmap's step 3 needed no change.
+
+## D47. The multi-agent desk and "Ask the desk"
+
+*2026-11-03, Stage 5.3.*
+
+- **Graph** (`agents/desk_graph.py`) is the Section 3.3 diagram, using LangGraph fan-out and fan-in edges:
+  - `START` → `technical` and `context` in parallel;
+  - `["technical", "context"]` → `bull_open` and `bear_open` in parallel;
+  - `["bull_open", "bear_open"]` → `bull_rebut` and `bear_rebut`;
+  - then `head` → `validator`, which routes back to `head` once if the signal is invalid.
+  - Parallel branches write only their own keys (a dict-merge reducer), and progress streams as `stream_mode="custom"` events.
+- **Analyst tools:** each analyst opens its own in-memory desk-mcp session with `build_server(groups)`, the same code path as `desk-mcp --groups`, so a call to another group's tool gets "Unknown tool". Rob chose a wider group for the technical analyst than Section 3.3's "market tools":
+  - technical: `market,cycles,stats`;
+  - context: `context,views`.
+- **Analyst flow:**
+  - A tool loop of at most 6 calls, ending when the model replies without a tool call (the prompt asks for "done").
+  - Then one fresh structured call, with the tool results passed as a data block, writes the report.
+  - Why a fresh call: it is a single structured call that works the same on every provider, and it never has tool calls in its history (Anthropic requires the tools to be bound while the history holds tool calls).
+  - Finding ids (T1.., C1..) are assigned by the code, not the model. Debaters cite them; citations to ids no report contains are kept and flagged (`unknown_cites`), never hidden.
+- **Structured output:** `with_structured_output(schema, method="function_calling", include_raw=True)`, checked in the installed source.
+  - `ChatAnthropic` 1.7.7 binds a forced tool. Haiku 5.5 accepts forced `tool_choice`; Fable 5.1, Opus 5.5 and Sonnet 5.5 don't, and the library falls back for them.
+  - `ChatOpenAI` 1.7.3 defaults to `json_schema` but accepts `function_calling`, which is what OpenRouter models support most widely.
+  - `include_raw` keeps the usage for cost, and a parsing error becomes a validator error instead of a crash.
+- **Schemas:** the model schemas are loose; `validate()` does the strict checks:
+  - confidence within `signals.confidence_min`/`max`;
+  - for `lean_long`, all four levels present and `invalidation < entry_low ≤ entry_high < target`;
+  - every level positive and within ±50% of the reference close.
+  - The reference close is the last daily close up to `as_of`, read from `candles_daily` when the run is prepared, not parsed from tool output.
+  - A signal invalid twice is reported as `invalid` with its errors. No signal is ever made up (Stage 7.1 decides its own fallback).
+- **Limits** (`desk:` in `config/settings.yaml`):
+  - 180 s for a run, 60 s per analyst, 30 s per debate turn and head attempt;
+  - an analyst that fails or times out is marked unavailable, and the run goes on; the head is told and the UI says so;
+  - both analysts failing, or any later node failing, ends the run with an `error` event (our own text) after saving the partial state;
+  - 5 runs per user per rolling hour (user messages starting "Ask the desk:"), on top of the chat's 30 questions, which count the run's question too.
+- **Persistence:**
+  - a run is a conversation titled "Ask the desk: SOL" with one question and one answer, a short Markdown summary of the signal;
+  - every analyst tool call is an `agent_snapshots` row, as in chat;
+  - the full state (`DeskRunState`: reports, debate, signal, validation, per-node usage) is one `desk_run` snapshot, which the Agent tab re-renders when a run is reopened.
+  - `DeskRunState` is published in the OpenAPI components, and the desk's SSE payloads are mapped under `x-sse-events` like chat's.
+- **API and CLI:**
+  - `POST /api/agent/desk` (SSE; refusals 400/402/404/422/429 before the stream);
+  - `GET /api/agent/desk/estimate` (tokens per node from `desk.estimate_tokens`; USD only when the model has a price in `models.yaml`, so most OpenRouter ids get "depends on your provider");
+  - `desk agent desk-run --coin SOL [--as-of]` runs it on the server key as the first admin and prints the projected cost and the per-node costs.
+  - `as_of`, when given, is forced into every tool call.
+- **Cost:** server-key calls are recorded with source `desk`. The run counts against the $8 cap and moves to the degraded model settings at 80%, like chat.
+- **Live run, 2026-11-03** (SOL, server key, Haiku 5.5, Neon): 16.7 s, 11 model calls, 9 tool calls, 48,982 input and 4,567 output tokens, **$0.0072**. Every debate citation resolved, and the head returned a valid `flat` at 0.55 on the first try. Per node:
+
+| Node | Calls | Tools | In | Out | USD |
+|---|---|---|---|---|---|
+| technical | 3 | 4 | 17,675 | 1,118 | 0.00233 |
+| context | 3 | 5 | 13,616 | 1,317 | 0.00202 |
+| bull_open | 1 | 0 | 2,730 | 394 | 0.00047 |
+| bear_open | 1 | 0 | 2,774 | 429 | 0.00049 |
+| bull_rebut | 1 | 0 | 3,527 | 457 | 0.00058 |
+| bear_rebut | 1 | 0 | 3,571 | 436 | 0.00057 |
+| head | 1 | 0 | 5,089 | 416 | 0.00072 |
+
+- **Agent tab:** a Chat / Ask the desk switch.
+  - The desk mode shows a coin picker, the estimate and Run; Stop aborts the run.
+  - Cards appear in graph order: the analysts with their tool cards, the four debate turns with citation chips (unknown ones struck through), and the signal with the validator's verdict, plus a "retried" badge when the head ran twice.
+  - All model text is plain text. The shared SSE reader moved to `readEvents`/`parseEvents` in `lib/agent.ts`, and the tool card to `components/agent/ToolCard.tsx`.

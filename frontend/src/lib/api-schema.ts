@@ -222,6 +222,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent/desk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Desk Stream
+         * @description Server-Sent Events: desk, node_start, tool_start, tool_end, node_end, signal, done, error. `desk` comes first. Each node (technical, context, bull_open, bear_open, bull_rebut, bear_rebut, head, validator) sends `node_start` then `node_end`; the analysts' tool calls send `tool_start` and `tool_end` with their node and snapshot id. The head and validator can run twice (one retry). `signal` carries the final signal and verdict. The stream ends with `done` (with the `desk_run` snapshot id) or `error`; both save the full state.
+         */
+        post: operations["askDesk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/desk/estimate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Desk Estimate
+         * @description Typical tokens for one desk run and, when the model has a known price, its USD. With no
+         *     provider, the server key's model (admins).
+         */
+        get: operations["deskEstimate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent/models": {
         parameters: {
             query?: never;
@@ -1031,6 +1072,267 @@ export interface components {
              */
             updated_at: string;
         };
+        /** DebatePoint */
+        DebatePoint: {
+            /** Cites */
+            cites: string[];
+            /** Text */
+            text: string;
+            /**
+             * Unknown Cites
+             * @description Cited ids that no report contains (flagged, not hidden)
+             */
+            unknown_cites?: string[];
+        };
+        /** DeskCase */
+        DeskCase: {
+            /**
+             * Phase
+             * @enum {string}
+             */
+            phase: "opening" | "rebuttal";
+            /** Points */
+            points: components["schemas"]["DebatePoint"][];
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "bull" | "bear";
+        };
+        /** DeskDoneEvent */
+        DeskDoneEvent: {
+            /** Cost Usd */
+            cost_usd: number | null;
+            /** Message Id */
+            message_id: number;
+            /** Model */
+            model: string;
+            /** Model Calls */
+            model_calls: number;
+            /**
+             * Snapshot Id
+             * @description The desk_run snapshot with the full state
+             */
+            snapshot_id: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "valid" | "invalid";
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
+            /** Tool Calls */
+            tool_calls: number;
+            /** Usage */
+            usage: components["schemas"]["NodeUsage"][];
+        };
+        /** DeskErrorEvent */
+        DeskErrorEvent: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "timeout" | "provider" | "budget" | "internal";
+            /** Message */
+            message: string;
+            /**
+             * Snapshot Id
+             * @description The partial desk_run snapshot, when one was saved
+             */
+            snapshot_id: number | null;
+        };
+        /** DeskEstimate */
+        DeskEstimate: {
+            /**
+             * Cost Usd
+             * @description null when the model has no price in models.yaml
+             */
+            cost_usd: number | null;
+            /** Model */
+            model: string;
+            /**
+             * Model Calls
+             * @description Typical model calls in one run (without a retry)
+             */
+            model_calls: number;
+            /** Nodes */
+            nodes: components["schemas"]["NodeEstimate"][];
+            /** Provider */
+            provider: string;
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
+        };
+        /** DeskReport */
+        DeskReport: {
+            /**
+             * Analyst
+             * @enum {string}
+             */
+            analyst: "technical" | "context";
+            /** Findings */
+            findings: components["schemas"]["Finding"][];
+            /**
+             * Note
+             * @description Why the report is unavailable
+             * @default null
+             */
+            note: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "done" | "unavailable";
+            /** Summary */
+            summary: string;
+        };
+        /** DeskRequest */
+        DeskRequest: {
+            /**
+             * As Of
+             * @description Run the desk on data up to this date
+             */
+            as_of?: string | null;
+            /** Coin */
+            coin: string;
+            /** Model */
+            model?: string | null;
+            /**
+             * Provider
+             * @description Required with an X-LLM-Key header; omitted for the server key
+             */
+            provider?: ("openrouter" | "anthropic" | "openai") | null;
+        };
+        /**
+         * DeskRunEvent
+         * @description First event: the conversation the run is saved in, and what it runs on.
+         */
+        DeskRunEvent: {
+            /** As Of */
+            as_of: string | null;
+            /** Coin */
+            coin: string;
+            /** Conversation Id */
+            conversation_id: number;
+            /** Model */
+            model: string;
+            /**
+             * Reference Close
+             * @description The last daily close; levels are checked on it
+             */
+            reference_close: number | null;
+            /** Reference Date */
+            reference_date: string | null;
+            /** Server Key */
+            server_key: boolean;
+            /** Title */
+            title: string;
+        };
+        /**
+         * DeskRunState
+         * @description The `desk_run` snapshot's result: everything one run produced.
+         */
+        DeskRunState: {
+            /** As Of */
+            as_of: string | null;
+            /** Coin */
+            coin: string;
+            /** Debate */
+            debate: {
+                [key: string]: components["schemas"]["DeskCase"];
+            };
+            /**
+             * Error
+             * @default null
+             */
+            error: string | null;
+            /** Model */
+            model: string;
+            /** Reference Close */
+            reference_close: number | null;
+            /** Reference Date */
+            reference_date: string | null;
+            /** Reports */
+            reports: {
+                [key: string]: components["schemas"]["DeskReport"];
+            };
+            signal: components["schemas"]["DeskSignal"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "running" | "valid" | "invalid" | "error";
+            /** Usage */
+            usage: components["schemas"]["NodeUsage"][];
+            validation: components["schemas"]["Validation"] | null;
+        };
+        /**
+         * DeskSignal
+         * @description Decision 8: one coin, one week. Levels are required for lean_long.
+         */
+        DeskSignal: {
+            /** Cites */
+            cites: string[];
+            /** Coin */
+            coin: string;
+            /** Confidence */
+            confidence: number;
+            /** Entry High */
+            entry_high: number | null;
+            /** Entry Low */
+            entry_low: number | null;
+            /** Invalidation */
+            invalidation: number | null;
+            /** Rationale */
+            rationale: string;
+            /**
+             * Stance
+             * @enum {string}
+             */
+            stance: "lean_long" | "flat";
+            /** Target */
+            target: number | null;
+        };
+        /** DeskToolEndEvent */
+        DeskToolEndEvent: {
+            /** Call Id */
+            call_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Node
+             * @enum {string}
+             */
+            node: "technical" | "context" | "bull_open" | "bear_open" | "bull_rebut" | "bear_rebut" | "head" | "validator";
+            /** Ok */
+            ok: boolean;
+            /**
+             * Preview
+             * @description The first 300 characters of the tool's JSON result
+             */
+            preview: string;
+            /** Snapshot Id */
+            snapshot_id: number;
+        };
+        /** DeskToolStartEvent */
+        DeskToolStartEvent: {
+            /** Args */
+            args: {
+                [key: string]: unknown;
+            };
+            /** Call Id */
+            call_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Node
+             * @enum {string}
+             */
+            node: "technical" | "context" | "bull_open" | "bear_open" | "bull_rebut" | "bear_rebut" | "head" | "validator";
+        };
         /** DominanceData */
         DominanceData: {
             /** Rows */
@@ -1087,6 +1389,17 @@ export interface components {
              */
             as_of: string | null;
             data: components["schemas"]["AnalyticsData"];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
+        /** Envelope[DeskEstimate] */
+        Envelope_DeskEstimate_: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            data: components["schemas"]["DeskEstimate"];
             /** Sources */
             sources: components["schemas"]["Source"][];
         };
@@ -1258,6 +1571,26 @@ export interface components {
             /** Signals */
             signals: boolean;
         };
+        /** Finding */
+        Finding: {
+            /** Claim */
+            claim: string;
+            /**
+             * Id
+             * @description T1, T2, ... (technical) or C1, C2, ... (context)
+             */
+            id: string;
+            /**
+             * Tool
+             * @default null
+             */
+            tool: string | null;
+            /**
+             * Value
+             * @default null
+             */
+            value: string | null;
+        };
         /** Freshness */
         Freshness: {
             /** Last Date */
@@ -1402,6 +1735,87 @@ export interface components {
             /** Role */
             role: string;
         };
+        /** NodeEndEvent */
+        NodeEndEvent: {
+            /** @default null */
+            case: components["schemas"]["DeskCase"] | null;
+            /**
+             * Error
+             * @default null
+             */
+            error: string | null;
+            /**
+             * Node
+             * @enum {string}
+             */
+            node: "technical" | "context" | "bull_open" | "bear_open" | "bull_rebut" | "bear_rebut" | "head" | "validator";
+            /** @default null */
+            report: components["schemas"]["DeskReport"] | null;
+            /** @default null */
+            signal: components["schemas"]["DeskSignal"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "done" | "unavailable" | "failed";
+            usage: components["schemas"]["NodeUsage"];
+            /** @default null */
+            validation: components["schemas"]["Validation"] | null;
+        };
+        /** NodeEstimate */
+        NodeEstimate: {
+            /**
+             * Node
+             * @enum {string}
+             */
+            node: "technical" | "context" | "bull_open" | "bear_open" | "bull_rebut" | "bear_rebut" | "head" | "validator";
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
+        };
+        /** NodeStartEvent */
+        NodeStartEvent: {
+            /**
+             * Node
+             * @enum {string}
+             */
+            node: "technical" | "context" | "bull_open" | "bear_open" | "bull_rebut" | "bear_rebut" | "head" | "validator";
+        };
+        /** NodeUsage */
+        NodeUsage: {
+            /**
+             * Cost Usd
+             * @description Server-key spend; null for keys
+             * @default null
+             */
+            cost_usd: number | null;
+            /**
+             * Model Calls
+             * @default 0
+             */
+            model_calls: number;
+            /**
+             * Node
+             * @enum {string}
+             */
+            node: "technical" | "context" | "bull_open" | "bear_open" | "bull_rebut" | "bear_rebut" | "head" | "validator";
+            /**
+             * Tokens In
+             * @default 0
+             */
+            tokens_in: number;
+            /**
+             * Tokens Out
+             * @default 0
+             */
+            tokens_out: number;
+            /**
+             * Tool Calls
+             * @default 0
+             */
+            tool_calls: number;
+        };
         /** OverviewData */
         OverviewData: {
             /** Coins */
@@ -1443,6 +1857,14 @@ export interface components {
             date: string;
             /** Value */
             value: number | null;
+        };
+        /**
+         * SignalEvent
+         * @description The desk's final answer: the head's last signal and the validator's verdict.
+         */
+        SignalEvent: {
+            signal: components["schemas"]["DeskSignal"] | null;
+            validation: components["schemas"]["Validation"];
         };
         /** Snapshot */
         Snapshot: {
@@ -1613,6 +2035,18 @@ export interface components {
             role: string;
             /** User Id */
             user_id: number;
+        };
+        /** Validation */
+        Validation: {
+            /**
+             * Attempts
+             * @description Head attempts: 1, or 2 after one retry
+             */
+            attempts: number;
+            /** Errors */
+            errors: string[];
+            /** Ok */
+            ok: boolean;
         };
         /** ValidationError */
         ValidationError: {
@@ -2083,6 +2517,71 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    askDesk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deskEstimate: {
+        parameters: {
+            query?: {
+                provider?: ("openrouter" | "anthropic" | "openai") | null;
+                model?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_DeskEstimate_"];
+                };
             };
             /** @description Validation Error */
             422: {

@@ -18,6 +18,7 @@ api_app = typer.Typer(help="Run the API and export its OpenAPI schema.", no_args
 notify_app = typer.Typer(help="Send alerts (Telegram, Discord).", no_args_is_help=True)
 db_app = typer.Typer(help="Database migrations.", no_args_is_help=True)
 deploy_app = typer.Typer(help="Deploy helpers for the workflows (Stage 2.2).", no_args_is_help=True)
+agent_app = typer.Typer(help="The agent and the multi-agent desk (Stage 5).", no_args_is_help=True)
 
 app.add_typer(data_app, name="data")
 app.add_typer(analytics_app, name="analytics")
@@ -28,6 +29,7 @@ app.add_typer(api_app, name="api")
 app.add_typer(notify_app, name="notify")
 app.add_typer(db_app, name="db")
 app.add_typer(deploy_app, name="deploy")
+app.add_typer(agent_app, name="agent")
 
 
 @app.command()
@@ -467,3 +469,77 @@ def deploy_smoke(
         raise typer.Exit(1) from None
     for line in report:
         typer.echo(line)
+
+
+@agent_app.command("desk-run")
+def agent_desk_run(
+    coin: Annotated[str, typer.Option(help="Coin symbol, e.g. SOL")],
+    as_of: Annotated[str | None, typer.Option(help="Run on data up to YYYY-MM-DD")] = None,
+) -> None:
+    """Run the multi-agent desk once on the server key (capped by cost.py) as the first admin
+    user, and print each node's tokens and cost. The run is saved as an Ask the desk
+    conversation with its snapshots, like one from the Agent tab."""
+    import asyncio
+    import datetime as dt
+
+    from sqlalchemy import select
+
+    from desk.agents import desk_graph
+    from desk.agents.chat import ChatError
+    from desk.config import load_models_config
+    from desk.db import get_engine, session_factory
+    from desk.models import User
+
+    sessions = session_factory(get_engine())
+    day = dt.date.fromisoformat(as_of) if as_of else None
+    model = (load_models_config().get("server") or {}).get("agent", "?")
+    est = desk_graph.estimate("server", model)
+    typer.echo(f"Projected: about {est['model_calls']} model calls, {est['tokens_in']:,} input "
+               f"and {est['tokens_out']:,} output tokens, ${est['cost_usd'] or 0:.4f} on "
+               f"{model}.")  # fmt: skip
+    with sessions() as session:
+        user = session.scalars(select(User).where(User.role == "admin").order_by(User.id)).first()
+        if user is None:
+            typer.echo("No admin user in the database.", err=True)
+            raise typer.Exit(1)
+        try:
+            prepared = desk_graph.prepare(session, sessions, user_id=user.id, is_admin=True,
+                                          coin=coin, as_of=day, provider=None, model=None,
+                                          key=None)  # fmt: skip
+        except ChatError as e:
+            typer.echo(f"Refused ({e.status}): {e.message}", err=True)
+            raise typer.Exit(1) from None
+
+    async def go() -> int:
+        start = dt.datetime.now(dt.UTC)
+        code = 0
+        async for name, payload in desk_graph.run(prepared):
+            secs = (dt.datetime.now(dt.UTC) - start).total_seconds()
+            if name == "node_end":
+                extra = payload.error or ""
+                if payload.report:
+                    extra = f"{len(payload.report.findings)} findings {payload.report.note or ''}"
+                typer.echo(f"{secs:6.1f}s  {payload.node:<10} {payload.status} {extra}".rstrip())
+            elif name == "tool_end":
+                typer.echo(f"{secs:6.1f}s    {payload.node}: {payload.name} ok={payload.ok}")
+            elif name == "signal":
+                typer.echo(f"Signal: {payload.signal.model_dump() if payload.signal else None}")
+                typer.echo(f"Validation: {payload.validation.model_dump()}")
+            elif name == "done":
+                typer.echo("")
+                typer.echo(f"{'node':<11}{'calls':>6}{'tools':>6}{'in':>9}{'out':>7}{'USD':>10}")
+                for u in payload.usage:
+                    typer.echo(f"{u.node:<11}{u.model_calls:>6}{u.tool_calls:>6}{u.tokens_in:>9}"
+                               f"{u.tokens_out:>7}{u.cost_usd or 0:>10.5f}")  # fmt: skip
+                typer.echo(f"{'total':<11}{payload.model_calls:>6}{payload.tool_calls:>6}"
+                           f"{payload.tokens_in:>9}{payload.tokens_out:>7}"
+                           f"{payload.cost_usd or 0:>10.5f}")  # fmt: skip
+                typer.echo(f"{secs:.1f}s, status {payload.status}, snapshot "
+                           f"{payload.snapshot_id}")  # fmt: skip
+            elif name == "error":
+                typer.echo(f"Error ({payload.code}): {payload.message}; snapshot "
+                           f"{payload.snapshot_id}", err=True)  # fmt: skip
+                code = 1
+        return code
+
+    raise typer.Exit(asyncio.run(go()))

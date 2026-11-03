@@ -4,6 +4,10 @@ import { api } from './api'
 import type { components } from './api-schema'
 import { keyHeader, type LlmKey, type Provider } from './keys'
 import { unwrap } from './queries'
+import type { DeskView } from './desk'
+
+/** The tool name of the snapshot that holds a whole desk run (Stage 5.3). */
+export const DESK_SNAPSHOT = 'desk_run'
 
 // The Agent tab's API (Stage 5.2): `POST /api/agent/chat` streams Server-Sent Events (D45); the
 // event payload types come from the OpenAPI components. The user's key goes only into this
@@ -33,10 +37,18 @@ const EVENT_NAMES = new Set(['conversation', 'token', 'tool_start', 'tool_end', 
 
 /** Complete events from an SSE buffer, and the unfinished rest to keep for the next chunk. */
 export function parseSse(buffer: string): { events: ChatEvent[]; rest: string } {
+  return parseEvents<ChatEvent>(buffer, EVENT_NAMES)
+}
+
+/** `parseSse` for any stream: only events named in `names` are kept. */
+export function parseEvents<E extends { event: string; data: unknown }>(
+  buffer: string,
+  names: Set<string>,
+): { events: E[]; rest: string } {
   const text = buffer.replace(/\r\n/g, '\n')
   const blocks = text.split('\n\n')
   const rest = blocks.pop() ?? ''
-  const events: ChatEvent[] = []
+  const events: E[] = []
   for (const block of blocks) {
     let name: string | null = null
     const data: string[] = []
@@ -45,9 +57,9 @@ export function parseSse(buffer: string): { events: ChatEvent[]; rest: string } 
       if (line.startsWith('event:')) name = line.slice(6).trim()
       else if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, ''))
     }
-    if (!name || !EVENT_NAMES.has(name) || data.length === 0) continue
+    if (!name || !names.has(name) || data.length === 0) continue
     try {
-      events.push({ event: name, data: JSON.parse(data.join('\n')) } as ChatEvent)
+      events.push({ event: name, data: JSON.parse(data.join('\n')) } as E)
     } catch {
       // a malformed event is skipped, never shown
     }
@@ -75,7 +87,7 @@ export interface ChatInput {
   model: string | null
 }
 
-function detailOf(error: unknown): string | null {
+export function detailOf(error: unknown): string | null {
   if (error && typeof error === 'object' && 'detail' in error) {
     const d = (error as { detail: unknown }).detail
     if (typeof d === 'string') return d
@@ -106,17 +118,26 @@ export async function streamChat(
       response.status === 422 ? 'That question is too long.' : `Request failed (${response.status})`
     throw new ChatRequestError(response.status, detailOf(error) ?? fallback, retry)
   }
-  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader()
+  await readEvents(response.body, EVENT_NAMES, onEvent)
+}
+
+/** Read an SSE body to its end, calling `onEvent` for each complete event in `names`. */
+export async function readEvents<E extends { event: string; data: unknown }>(
+  body: NonNullable<Response['body']>,
+  names: Set<string>,
+  onEvent: (event: E) => void,
+): Promise<void> {
+  const reader = body.pipeThrough(new TextDecoderStream()).getReader()
   let buffer = ''
   for (;;) {
     const { value, done } = await reader.read()
     if (done) break
     buffer += value
-    const { events, rest } = parseSse(buffer)
+    const { events, rest } = parseEvents<E>(buffer, names)
     buffer = rest
     for (const e of events) onEvent(e)
   }
-  const { events } = parseSse(buffer + '\n\n')
+  const { events } = parseEvents<E>(buffer + '\n\n', names)
   for (const e of events) onEvent(e)
 }
 
@@ -194,6 +215,7 @@ const TOOL_LABELS: Record<string, string> = {
   get_news: 'Headlines',
   get_calendar: 'Macro calendar',
   get_external_views: 'Analyst views',
+  desk_run: 'Desk run',
 }
 
 export function toolLabel(name: string): string {
@@ -273,25 +295,36 @@ export interface Turn {
   done?: DoneEvent
   error?: string
   streaming?: boolean
+  /** An "Ask the desk" run streamed in this session (Stage 5.3). */
+  desk?: DeskView
+  /** A desk run loaded from history: its `desk_run` snapshot. */
+  deskSnapshotId?: number
 }
 
 let turnSeq = 0
 export const nextTurnKey = () => `t${++turnSeq}`
 
 export function turnsFromDetail(detail: ConversationDetail): Turn[] {
-  return detail.messages.map((m) => ({
-    key: `m${m.id}`,
-    role: m.role,
-    text: m.content,
-    tools: (m.snapshots ?? []).map((s) => ({
-      callId: `s${s.id}`,
-      name: s.tool,
-      args: null,
-      snapshotId: s.id,
-      ok: true,
-      preview: null,
-    })),
-  }))
+  return detail.messages.map((m) => {
+    const snaps = m.snapshots ?? []
+    const desk = snaps.find((s) => s.tool === DESK_SNAPSHOT)
+    return {
+      key: `m${m.id}`,
+      role: m.role,
+      text: m.content,
+      tools: snaps
+        .filter((s) => s.tool !== DESK_SNAPSHOT)
+        .map((s) => ({
+          callId: `s${s.id}`,
+          name: s.tool,
+          args: null,
+          snapshotId: s.id,
+          ok: true,
+          preview: null,
+        })),
+      ...(desk ? { deskSnapshotId: desk.id } : {}),
+    }
+  })
 }
 
 /** One event applied to the answer being streamed. */

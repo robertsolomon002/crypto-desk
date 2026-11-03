@@ -24,6 +24,25 @@ agent: # Section 3.2
   max_output_tokens: 4000 # Haiku 5.5's adaptive thinking counts here; 2000 cut answers off
   degraded_max_output_tokens: 1500
 
+desk: # Section 3.3, the multi-agent desk (Stage 5.3, D47)
+  timeout_seconds: 180 # a whole run
+  analyst_timeout_seconds: 60 # each analyst; a late analyst is marked unavailable
+  node_timeout_seconds: 30 # each debate turn and the head
+  analyst_max_tool_calls: 6
+  runs_per_user_per_hour: 5 # "Ask the desk" runs, on top of the chat limit
+  max_reference_distance: 0.5 # validator: levels within +-50% of the last close
+  groups: # desk-mcp tool groups per analyst
+    technical: market,cycles,stats
+    context: context,views
+  estimate_tokens: # per node, input and output: the live SOL run on Haiku 5.5, 2026-11-03 (D47)
+    technical: [17700, 1100]
+    context: [13600, 1300]
+    bull_open: [2750, 410]
+    bear_open: [2750, 410]
+    bull_rebut: [3550, 450]
+    bear_rebut: [3550, 450]
+    head: [5100, 420]
+
 signals: # Decision 8 and Section 3.5
   version: v1
   horizon_days: 7

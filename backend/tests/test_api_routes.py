@@ -66,18 +66,31 @@ SAMPLES: dict[tuple[str, str], tuple[str, dict | None]] = {
     ("GET", "/api/agent/snapshots/{snapshot_id}"): ("/api/agent/snapshots/1", None),
     ("DELETE", "/api/agent/conversations/{conversation_id}"):
         ("/api/agent/conversations/1", None),
+    ("POST", "/api/agent/desk"): ("/api/agent/desk", {"coin": "BTC", "provider": "openrouter"}),
+    ("GET", "/api/agent/desk/estimate"): ("/api/agent/desk/estimate?provider=openrouter", None),
     ("PATCH", "/api/admin/users/{user_id}"): ("/api/admin/users/1", {"role": "admin"}),
 }  # fmt: skip
 PUBLIC = {("GET", "/api/health")}
 # The key test needs a key; the providers are faked in the `api` fixture.
 HEADERS = {("POST", "/api/agent/test-key"): {"X-LLM-Key": CANARY},
-           ("POST", "/api/agent/chat"): {"X-LLM-Key": CANARY}}  # fmt: skip
+           ("POST", "/api/agent/chat"): {"X-LLM-Key": CANARY},
+           ("POST", "/api/agent/desk"): {"X-LLM-Key": CANARY}}  # fmt: skip
 # Conversations are private: the member's chat (sample POST) made conversation and snapshot 1,
-# which the member then deletes, so the admin's run uses the ones its own chat made.
-ADMIN_URLS = {("GET", "/api/agent/conversations/{conversation_id}"): "/api/agent/conversations/2",
-              ("GET", "/api/agent/snapshots/{snapshot_id}"): "/api/agent/snapshots/2",
-              ("DELETE", "/api/agent/conversations/{conversation_id}"):
-                  "/api/agent/conversations/2"}  # fmt: skip
+# which the member then deletes (the desk sample runs after that), so the admin's run uses the
+# newest conversation its own chat made and that conversation's snapshot.
+ADMIN_OWN = {("GET", "/api/agent/conversations/{conversation_id}"): "conversation",
+             ("GET", "/api/agent/snapshots/{snapshot_id}"): "snapshot",
+             ("DELETE", "/api/agent/conversations/{conversation_id}"): "conversation"}  # fmt: skip
+
+
+def admin_url(api, kind: str) -> str:
+    convs = api.get("/api/agent/conversations", headers=auth(ADMIN)).json()
+    conv_id = convs[0]["id"]
+    if kind == "conversation":
+        return f"/api/agent/conversations/{conv_id}"
+    detail = api.get(f"/api/agent/conversations/{conv_id}", headers=auth(ADMIN)).json()
+    snap = next(x for m in detail["messages"] for x in m["snapshots"])
+    return f"/api/agent/snapshots/{snap['id']}"
 
 
 def api_routes() -> list[tuple[str, str]]:
@@ -125,7 +138,8 @@ def test_roles_on_every_route(api, clerk) -> None:
             assert r.is_success, (method, path, r.status_code, r.text[:300])
     for (method, path), (url, body) in SAMPLES.items():  # dict order: POST before DELETE
         extra = HEADERS.get((method, path), {})
-        url = ADMIN_URLS.get((method, path), url)
+        if (method, path) in ADMIN_OWN:
+            url = admin_url(api, ADMIN_OWN[(method, path)])
         r = api.request(method, url, json=body, headers={**auth(ADMIN), **extra})
         assert r.is_success, (method, path, r.status_code, r.text[:300])
 

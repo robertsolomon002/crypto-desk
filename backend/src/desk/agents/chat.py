@@ -161,6 +161,37 @@ def load_history(session: Session, conversation_id: int, limit: int) -> list[Bas
     return out
 
 
+def has_user_key(key: SecretStr | None) -> bool:
+    return key is not None and bool(key.get_secret_value().strip())
+
+
+def resolve_model(
+    session: Session,
+    *,
+    is_admin: bool,
+    provider: Provider | None,
+    model: str | None,
+    key: SecretStr | None,
+) -> tuple[llm.ModelChoice, BaseChatModel]:
+    """The model a request runs on: the user's key, or (admin only) the capped server key.
+    Raises `ChatError` 402 when the server budget is used up and 400 for a bad choice."""
+    degraded = False
+    if not has_user_key(key) and is_admin:
+        try:
+            degraded = cost.check_budget(session).degraded
+        except cost.BudgetExceeded:
+            raise ChatError(
+                402,
+                "Rob's monthly AI budget is used up. It resets on the 1st "
+                "(UTC); you can also add your own key in Settings.",
+            ) from None
+    try:
+        choice = llm.choose(provider, model, key, is_admin=is_admin, degraded=degraded)
+        return choice, llm.make_chat_model(choice, key)
+    except llm.ModelError as e:
+        raise ChatError(400, str(e)) from None
+
+
 def prepare(
     session: Session,
     sessions: Sessions,
@@ -180,22 +211,9 @@ def prepare(
         raise ChatError(422, "Ask a question.")
     if len(question) > int(cfg.get("max_message_chars", 4000)):
         raise ChatError(422, "That question is too long.")
-    has_key = key is not None and bool(key.get_secret_value().strip())
-    degraded = False
-    if not has_key and is_admin:
-        try:
-            degraded = cost.check_budget(session).degraded
-        except cost.BudgetExceeded:
-            raise ChatError(
-                402,
-                "Rob's monthly AI budget is used up. It resets on the 1st "
-                "(UTC); you can also add your own key in Settings.",
-            ) from None
-    try:
-        choice = llm.choose(provider, model, key, is_admin=is_admin, degraded=degraded)
-        chat_model = llm.make_chat_model(choice, key)
-    except llm.ModelError as e:
-        raise ChatError(400, str(e)) from None
+    has_key = has_user_key(key)
+    choice, chat_model = resolve_model(session, is_admin=is_admin, provider=provider,
+                                       model=model, key=key)  # fmt: skip
 
     if conversation_id is not None:
         conv = session.get(Conversation, conversation_id)
@@ -285,6 +303,32 @@ def _no_tools_choice(model: BaseChatModel) -> Any:
     return {"type": "none"} if isinstance(model, ChatAnthropic) else "none"
 
 
+async def call_tool(
+    by_name: dict[str, BaseTool], call_id: str, name: str, args: dict[str, Any]
+) -> tuple[str, bool]:
+    """Run one tool call: (result text, ok). Never raises: a tool must never end the answer."""
+    tool = by_name.get(name)
+    if tool is None:
+        return f"Unknown tool: {name}", False
+    try:
+        msg = await tool.ainvoke({"name": name, "args": args, "id": call_id, "type": "tool_call"})
+    except Exception as e:
+        log.warning("tool %s failed: %s", name, type(e).__name__)
+        return f"Error executing tool {name}", False
+    return _content_text(getattr(msg, "content", msg)), getattr(msg, "status", "success") != "error"
+
+
+def save_snapshot(sessions: Sessions, user_id: int, conversation_id: int | None, tool: str,
+                  args: dict[str, Any], result: Any) -> int:  # fmt: skip
+    """Write one `agent_snapshots` row (the Data tab's "View data") and return its id."""
+    with sessions() as s:
+        row = AgentSnapshot(user_id=user_id, conversation_id=conversation_id, tool=tool,
+                            args=args, result=result, as_of=_as_of(result))  # fmt: skip
+        s.add(row)
+        s.commit()
+        return row.id
+
+
 def build_graph(p: Prepared, tools: list[BaseTool], usage: Usage):
     by_name = {t.name: t for t in tools}
     with_tools = p.model.bind_tools(tools)
@@ -326,13 +370,8 @@ def build_graph(p: Prepared, tools: list[BaseTool], usage: Usage):
             message = AIMessage(content=message.content, id=message.id)  # no more tools
         return {"messages": [message]}
 
-    def save_snapshot(name: str, args: dict[str, Any], result: Any) -> int:
-        with p.sessions() as s:
-            row = AgentSnapshot(user_id=p.user_id, conversation_id=p.conversation_id, tool=name,
-                                args=args, result=result, as_of=_as_of(result))  # fmt: skip
-            s.add(row)
-            s.commit()
-            return row.id
+    def save(name: str, args: dict[str, Any], result: Any) -> int:
+        return save_snapshot(p.sessions, p.user_id, p.conversation_id, name, args, result)
 
     async def run_tools(state: AgentState) -> dict[str, Any]:
         write = get_stream_writer()
@@ -351,19 +390,9 @@ def build_graph(p: Prepared, tools: list[BaseTool], usage: Usage):
             used += 1
             usage.tool_calls += 1
             write(("tool_start", ToolStartEvent(call_id=call_id, name=name, args=args)))
-            tool = by_name.get(name)
-            if tool is None:
-                text, ok = f"Unknown tool: {name}", False
-            else:
-                try:
-                    msg = await tool.ainvoke({**call, "id": call_id, "type": "tool_call"})
-                    text = _content_text(getattr(msg, "content", msg))
-                    ok = getattr(msg, "status", "success") != "error"
-                except Exception as e:  # a tool must never end the answer
-                    log.warning("tool %s failed: %s", name, type(e).__name__)
-                    text, ok = f"Error executing tool {name}", False
+            text, ok = await call_tool(by_name, call_id, name, args)
             result = _parse_result(text, ok)
-            snapshot_id = await anyio.to_thread.run_sync(save_snapshot, name, args, result)
+            snapshot_id = await anyio.to_thread.run_sync(save, name, args, result)
             write(("tool_end", ToolEndEvent(call_id=call_id, name=name, snapshot_id=snapshot_id,
                                             ok=ok, preview=text[:PREVIEW_CHARS])))  # fmt: skip
             out.append(ToolMessage(text, tool_call_id=call_id, name=name,
@@ -389,11 +418,15 @@ def build_graph(p: Prepared, tools: list[BaseTool], usage: Usage):
 
 
 @contextlib.asynccontextmanager
-async def desk_tools(sessions: Sessions) -> AsyncIterator[list[BaseTool]]:
-    """desk-mcp's tools over an in-memory MCP session, on the API's database sessions."""
+async def desk_tools(
+    sessions: Sessions, groups: str | None = None
+) -> AsyncIterator[list[BaseTool]]:
+    """desk-mcp's tools (all groups, or a comma-separated subset) over an in-memory MCP
+    session, on the API's database sessions."""
     token = mcp_tools.session_override.set(sessions)
+    server = build_server(groups, threaded=True)
     try:
-        async with create_connected_server_and_client_session(build_server(threaded=True)) as s:
+        async with create_connected_server_and_client_session(server) as s:
             yield await load_mcp_tools(s)
     finally:
         mcp_tools.session_override.reset(token)

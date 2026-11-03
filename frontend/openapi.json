@@ -544,6 +544,718 @@
         "title": "ConversationSummary",
         "type": "object"
       },
+      "DebatePoint": {
+        "properties": {
+          "cites": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Cites",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "unknown_cites": {
+            "description": "Cited ids that no report contains (flagged, not hidden)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Unknown Cites",
+            "type": "array"
+          }
+        },
+        "required": [
+          "text",
+          "cites"
+        ],
+        "title": "DebatePoint",
+        "type": "object"
+      },
+      "DeskCase": {
+        "properties": {
+          "phase": {
+            "enum": [
+              "opening",
+              "rebuttal"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/DebatePoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "side": {
+            "enum": [
+              "bull",
+              "bear"
+            ],
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "side",
+          "phase",
+          "points"
+        ],
+        "title": "DeskCase",
+        "type": "object"
+      },
+      "DeskDoneEvent": {
+        "properties": {
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "message_id": {
+            "title": "Message Id",
+            "type": "integer"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "model_calls": {
+            "title": "Model Calls",
+            "type": "integer"
+          },
+          "snapshot_id": {
+            "description": "The desk_run snapshot with the full state",
+            "title": "Snapshot Id",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "valid",
+              "invalid"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tokens_in": {
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "title": "Tokens Out",
+            "type": "integer"
+          },
+          "tool_calls": {
+            "title": "Tool Calls",
+            "type": "integer"
+          },
+          "usage": {
+            "items": {
+              "$ref": "#/components/schemas/NodeUsage"
+            },
+            "title": "Usage",
+            "type": "array"
+          }
+        },
+        "required": [
+          "message_id",
+          "snapshot_id",
+          "status",
+          "model",
+          "tokens_in",
+          "tokens_out",
+          "model_calls",
+          "tool_calls",
+          "cost_usd",
+          "usage"
+        ],
+        "title": "DeskDoneEvent",
+        "type": "object"
+      },
+      "DeskErrorEvent": {
+        "properties": {
+          "code": {
+            "enum": [
+              "timeout",
+              "provider",
+              "budget",
+              "internal"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The partial desk_run snapshot, when one was saved",
+            "title": "Snapshot Id"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "snapshot_id"
+        ],
+        "title": "DeskErrorEvent",
+        "type": "object"
+      },
+      "DeskEstimate": {
+        "properties": {
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "null when the model has no price in models.yaml",
+            "title": "Cost Usd"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "model_calls": {
+            "description": "Typical model calls in one run (without a retry)",
+            "title": "Model Calls",
+            "type": "integer"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/NodeEstimate"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "tokens_in": {
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "title": "Tokens Out",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "provider",
+          "model",
+          "model_calls",
+          "tokens_in",
+          "tokens_out",
+          "cost_usd",
+          "nodes"
+        ],
+        "title": "DeskEstimate",
+        "type": "object"
+      },
+      "DeskReport": {
+        "properties": {
+          "analyst": {
+            "enum": [
+              "technical",
+              "context"
+            ],
+            "title": "Analyst",
+            "type": "string"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Why the report is unavailable",
+            "title": "Note"
+          },
+          "status": {
+            "enum": [
+              "done",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analyst",
+          "status",
+          "summary",
+          "findings"
+        ],
+        "title": "DeskReport",
+        "type": "object"
+      },
+      "DeskRequest": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Run the desk on data up to this date",
+            "title": "As Of"
+          },
+          "coin": {
+            "pattern": "^[A-Za-z0-9]{1,16}$",
+            "title": "Coin",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,99}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "enum": [
+                  "openrouter",
+                  "anthropic",
+                  "openai"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required with an X-LLM-Key header; omitted for the server key",
+            "title": "Provider"
+          }
+        },
+        "required": [
+          "coin"
+        ],
+        "title": "DeskRequest",
+        "type": "object"
+      },
+      "DeskRunEvent": {
+        "description": "First event: the conversation the run is saved in, and what it runs on.",
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "coin": {
+            "title": "Coin",
+            "type": "string"
+          },
+          "conversation_id": {
+            "title": "Conversation Id",
+            "type": "integer"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "reference_close": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last daily close; levels are checked on it",
+            "title": "Reference Close"
+          },
+          "reference_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Date"
+          },
+          "server_key": {
+            "title": "Server Key",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "conversation_id",
+          "title",
+          "coin",
+          "as_of",
+          "model",
+          "server_key",
+          "reference_close",
+          "reference_date"
+        ],
+        "title": "DeskRunEvent",
+        "type": "object"
+      },
+      "DeskRunState": {
+        "description": "The `desk_run` snapshot's result: everything one run produced.",
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "coin": {
+            "title": "Coin",
+            "type": "string"
+          },
+          "debate": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DeskCase"
+            },
+            "title": "Debate",
+            "type": "object"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "reference_close": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Close"
+          },
+          "reference_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Date"
+          },
+          "reports": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DeskReport"
+            },
+            "title": "Reports",
+            "type": "object"
+          },
+          "signal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeskSignal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "running",
+              "valid",
+              "invalid",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "usage": {
+            "items": {
+              "$ref": "#/components/schemas/NodeUsage"
+            },
+            "title": "Usage",
+            "type": "array"
+          },
+          "validation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Validation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "coin",
+          "as_of",
+          "model",
+          "status",
+          "reference_close",
+          "reference_date",
+          "reports",
+          "debate",
+          "signal",
+          "validation",
+          "usage"
+        ],
+        "title": "DeskRunState",
+        "type": "object"
+      },
+      "DeskSignal": {
+        "description": "Decision 8: one coin, one week. Levels are required for lean_long.",
+        "properties": {
+          "cites": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Cites",
+            "type": "array"
+          },
+          "coin": {
+            "title": "Coin",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "entry_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry High"
+          },
+          "entry_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Low"
+          },
+          "invalidation": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invalidation"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "stance": {
+            "enum": [
+              "lean_long",
+              "flat"
+            ],
+            "title": "Stance",
+            "type": "string"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          }
+        },
+        "required": [
+          "coin",
+          "stance",
+          "confidence",
+          "entry_low",
+          "entry_high",
+          "invalidation",
+          "target",
+          "rationale",
+          "cites"
+        ],
+        "title": "DeskSignal",
+        "type": "object"
+      },
+      "DeskToolEndEvent": {
+        "properties": {
+          "call_id": {
+            "title": "Call Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "node": {
+            "enum": [
+              "technical",
+              "context",
+              "bull_open",
+              "bear_open",
+              "bull_rebut",
+              "bear_rebut",
+              "head",
+              "validator"
+            ],
+            "title": "Node",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "preview": {
+            "description": "The first 300 characters of the tool's JSON result",
+            "title": "Preview",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "title": "Snapshot Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "call_id",
+          "name",
+          "snapshot_id",
+          "ok",
+          "preview",
+          "node"
+        ],
+        "title": "DeskToolEndEvent",
+        "type": "object"
+      },
+      "DeskToolStartEvent": {
+        "properties": {
+          "args": {
+            "additionalProperties": true,
+            "title": "Args",
+            "type": "object"
+          },
+          "call_id": {
+            "title": "Call Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "node": {
+            "enum": [
+              "technical",
+              "context",
+              "bull_open",
+              "bear_open",
+              "bull_rebut",
+              "bear_rebut",
+              "head",
+              "validator"
+            ],
+            "title": "Node",
+            "type": "string"
+          }
+        },
+        "required": [
+          "call_id",
+          "name",
+          "args",
+          "node"
+        ],
+        "title": "DeskToolStartEvent",
+        "type": "object"
+      },
       "DominanceData": {
         "properties": {
           "rows": {
@@ -694,6 +1406,40 @@
           "data"
         ],
         "title": "Envelope[AnalyticsData]",
+        "type": "object"
+      },
+      "Envelope_DeskEstimate_": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DeskEstimate"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[DeskEstimate]",
         "type": "object"
       },
       "Envelope_DominanceData_": {
@@ -1200,6 +1946,49 @@
         "title": "Features",
         "type": "object"
       },
+      "Finding": {
+        "properties": {
+          "claim": {
+            "title": "Claim",
+            "type": "string"
+          },
+          "id": {
+            "description": "T1, T2, ... (technical) or C1, C2, ... (context)",
+            "title": "Id",
+            "type": "string"
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tool"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Value"
+          }
+        },
+        "required": [
+          "id",
+          "claim"
+        ],
+        "title": "Finding",
+        "type": "object"
+      },
       "Freshness": {
         "properties": {
           "last_date": {
@@ -1605,6 +2394,211 @@
         "title": "Me",
         "type": "object"
       },
+      "NodeEndEvent": {
+        "properties": {
+          "case": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeskCase"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          },
+          "node": {
+            "enum": [
+              "technical",
+              "context",
+              "bull_open",
+              "bear_open",
+              "bull_rebut",
+              "bear_rebut",
+              "head",
+              "validator"
+            ],
+            "title": "Node",
+            "type": "string"
+          },
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeskReport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "signal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeskSignal"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "status": {
+            "enum": [
+              "done",
+              "unavailable",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/NodeUsage"
+          },
+          "validation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Validation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "node",
+          "status",
+          "usage"
+        ],
+        "title": "NodeEndEvent",
+        "type": "object"
+      },
+      "NodeEstimate": {
+        "properties": {
+          "node": {
+            "enum": [
+              "technical",
+              "context",
+              "bull_open",
+              "bear_open",
+              "bull_rebut",
+              "bear_rebut",
+              "head",
+              "validator"
+            ],
+            "title": "Node",
+            "type": "string"
+          },
+          "tokens_in": {
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "title": "Tokens Out",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "node",
+          "tokens_in",
+          "tokens_out"
+        ],
+        "title": "NodeEstimate",
+        "type": "object"
+      },
+      "NodeStartEvent": {
+        "properties": {
+          "node": {
+            "enum": [
+              "technical",
+              "context",
+              "bull_open",
+              "bear_open",
+              "bull_rebut",
+              "bear_rebut",
+              "head",
+              "validator"
+            ],
+            "title": "Node",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node"
+        ],
+        "title": "NodeStartEvent",
+        "type": "object"
+      },
+      "NodeUsage": {
+        "properties": {
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Server-key spend; null for keys",
+            "title": "Cost Usd"
+          },
+          "model_calls": {
+            "default": 0,
+            "title": "Model Calls",
+            "type": "integer"
+          },
+          "node": {
+            "enum": [
+              "technical",
+              "context",
+              "bull_open",
+              "bear_open",
+              "bull_rebut",
+              "bear_rebut",
+              "head",
+              "validator"
+            ],
+            "title": "Node",
+            "type": "string"
+          },
+          "tokens_in": {
+            "default": 0,
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "default": 0,
+            "title": "Tokens Out",
+            "type": "integer"
+          },
+          "tool_calls": {
+            "default": 0,
+            "title": "Tool Calls",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "node"
+        ],
+        "title": "NodeUsage",
+        "type": "object"
+      },
       "OverviewData": {
         "properties": {
           "coins": {
@@ -1729,6 +2723,30 @@
           "value"
         ],
         "title": "SeriesPoint",
+        "type": "object"
+      },
+      "SignalEvent": {
+        "description": "The desk's final answer: the head's last signal and the validator's verdict.",
+        "properties": {
+          "signal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeskSignal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "validation": {
+            "$ref": "#/components/schemas/Validation"
+          }
+        },
+        "required": [
+          "signal",
+          "validation"
+        ],
+        "title": "SignalEvent",
         "type": "object"
       },
       "Snapshot": {
@@ -2177,6 +3195,33 @@
           "messages"
         ],
         "title": "UserUsage",
+        "type": "object"
+      },
+      "Validation": {
+        "properties": {
+          "attempts": {
+            "description": "Head attempts: 1, or 2 after one retry",
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "errors",
+          "attempts"
+        ],
+        "title": "Validation",
         "type": "object"
       },
       "ValidationError": {
@@ -2901,6 +3946,161 @@
           }
         },
         "summary": "Get Conversation",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/agent/desk": {
+      "post": {
+        "description": "Server-Sent Events: desk, node_start, tool_start, tool_end, node_end, signal, done, error. `desk` comes first. Each node (technical, context, bull_open, bear_open, bull_rebut, bear_rebut, head, validator) sends `node_start` then `node_end`; the analysts' tool calls send `tool_start` and `tool_end` with their node and snapshot id. The head and validator can run twice (one retry). `signal` carries the final signal and verdict. The stream ends with `done` (with the `desk_run` snapshot id) or `error`; both save the full state.",
+        "operationId": "askDesk",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "type": "string"
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Desk Stream",
+        "tags": [
+          "agent"
+        ],
+        "x-sse-events": {
+          "desk": {
+            "$ref": "#/components/schemas/DeskRunEvent"
+          },
+          "done": {
+            "$ref": "#/components/schemas/DeskDoneEvent"
+          },
+          "error": {
+            "$ref": "#/components/schemas/DeskErrorEvent"
+          },
+          "node_end": {
+            "$ref": "#/components/schemas/NodeEndEvent"
+          },
+          "node_start": {
+            "$ref": "#/components/schemas/NodeStartEvent"
+          },
+          "signal": {
+            "$ref": "#/components/schemas/SignalEvent"
+          },
+          "tool_end": {
+            "$ref": "#/components/schemas/DeskToolEndEvent"
+          },
+          "tool_start": {
+            "$ref": "#/components/schemas/DeskToolStartEvent"
+          }
+        }
+      }
+    },
+    "/api/agent/desk/estimate": {
+      "get": {
+        "description": "Typical tokens for one desk run and, when the model has a known price, its USD. With no\nprovider, the server key's model (admins).",
+        "operationId": "deskEstimate",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "provider",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "openrouter",
+                    "anthropic",
+                    "openai"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider"
+            }
+          },
+          {
+            "in": "query",
+            "name": "model",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,99}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_DeskEstimate_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Desk Estimate",
         "tags": [
           "agent"
         ]

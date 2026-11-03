@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from desk import __version__
-from desk.agents.schemas import EVENTS
+from desk.agents.schemas import DESK_EVENTS, EVENTS, DeskRunState
 from desk.api.middleware import ETag, LlmKeyRedaction
 from desk.api.routes import (
     admin,
@@ -57,7 +57,8 @@ def create_app() -> FastAPI:
 def _add_event_schemas(app: FastAPI) -> None:
     """Add the agent's SSE event payloads to the schema's components (FastAPI only describes
     the generic event envelope), and map each event name to its payload under `x-sse-events`
-    on `POST /api/agent/chat`, so the generated client has their types (Stage 5.1)."""
+    on `POST /api/agent/chat` and `POST /api/agent/desk`, so the generated client has their
+    types (Stages 5.1 and 5.3)."""
 
     def openapi() -> dict:
         if app.openapi_schema:
@@ -65,13 +66,18 @@ def _add_event_schemas(app: FastAPI) -> None:
         schema = FastAPI.openapi(app)  # FastAPI's own schema, then the additions
         components = schema.setdefault("components", {}).setdefault("schemas", {})
         ref = "#/components/schemas/{model}"
-        for model in EVENTS.values():
-            body = model.model_json_schema(ref_template=ref)
-            components.update(body.pop("$defs", {}))
-            components[model.__name__] = body
-        post = schema["paths"]["/api/agent/chat"]["post"]
-        post["x-sse-events"] = {name: {"$ref": ref.format(model=m.__name__)}
-                                for name, m in EVENTS.items()}  # fmt: skip
+        for path, events in (("/api/agent/chat", EVENTS), ("/api/agent/desk", DESK_EVENTS)):
+            for model in events.values():
+                body = model.model_json_schema(ref_template=ref)
+                components.update(body.pop("$defs", {}))
+                components[model.__name__] = body
+            post = schema["paths"][path]["post"]
+            post["x-sse-events"] = {name: {"$ref": ref.format(model=m.__name__)}
+                                    for name, m in events.items()}  # fmt: skip
+        # The `desk_run` snapshot's result (a snapshot's `result` is untyped JSON).
+        body = DeskRunState.model_json_schema(ref_template=ref)
+        components.update(body.pop("$defs", {}))
+        components["DeskRunState"] = body
         app.openapi_schema = schema
         return schema
 

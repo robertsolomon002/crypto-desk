@@ -1,5 +1,6 @@
 """`/api/agent` routes: the model list and the key test behind the Settings wizard (Stage 3.4),
-and the chat agent with its conversations and data snapshots (Stage 5.1, D45).
+the chat agent with its conversations and data snapshots (Stage 5.1, D45), and the
+multi-agent desk behind "Ask the desk" (Stage 5.3, D47).
 
 The user's key arrives only as the `X-LLM-Key` header, which `LlmKeyRedaction` removes before
 any route runs and keeps as a `SecretStr` in the request state (D37). It is sent to the chosen
@@ -11,17 +12,20 @@ from collections.abc import AsyncIterable, Iterator
 from typing import Annotated
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from pydantic import BaseModel, Field, SecretStr
 
-from desk.agents import chat
+from desk.agents import chat, desk_graph
 from desk.agents.keycheck import Provider, check_key
 from desk.agents.schemas import (
+    DESK_EVENTS,
     EVENTS,
     ChatRequest,
     ConversationDetail,
     ConversationSummary,
+    DeskEstimate,
+    DeskRequest,
     Snapshot,
 )
 from desk.api import deps
@@ -186,3 +190,76 @@ def get_snapshot(snapshot_id: int, user: UserDep, session: SessionDep) -> Snapsh
     return Snapshot(id=row.id, conversation_id=row.conversation_id, tool=row.tool,
                     args=row.args or {}, result=row.result, as_of=row.as_of,
                     created_at=row.created_at)  # fmt: skip
+
+
+# --- The multi-agent desk (Stage 5.3) ---------------------------------------------------------
+
+
+def desk_tools_factory() -> desk_graph.DeskToolsFactory:
+    """desk-mcp's tools for one analyst, limited to its groups (tests swap in their own)."""
+    return chat.desk_tools
+
+
+def prepared_desk(body: DeskRequest, request: Request, user: UserDep,
+                  session: SessionDep) -> desk_graph.DeskPrepared:  # fmt: skip
+    """Validate the run and save its question before the stream starts: 400 (no key, bad
+    model), 402 (server budget used up), 404 (unknown coin), 422, 429 (hourly limits)."""
+    key: SecretStr | None = getattr(request.state, "llm_key", None)
+    try:
+        return desk_graph.prepare(session, deps._sessions(), user_id=user.id,
+                                  is_admin=user.is_admin, coin=body.coin, as_of=body.as_of,
+                                  provider=body.provider, model=body.model, key=key)  # fmt: skip
+    except chat.ChatError as e:
+        headers = {"Retry-After": str(e.retry_after)} if e.retry_after else None
+        raise HTTPException(e.status, e.message, headers=headers) from None
+
+
+DESK_DOC = (
+    "Server-Sent Events: "
+    + ", ".join(DESK_EVENTS)
+    + (
+        ". `desk` comes first. Each node (technical, context, bull_open, bear_open, bull_rebut, "
+        "bear_rebut, head, validator) sends `node_start` then `node_end`; the analysts' tool "
+        "calls send `tool_start` and `tool_end` with their node and snapshot id. The head and "
+        "validator can run twice (one retry). `signal` carries the final signal and verdict. "
+        "The stream ends with `done` (with the `desk_run` snapshot id) or `error`; both save "
+        "the full state."
+    )
+)
+
+
+@router.post("/desk", response_class=EventSourceResponse, operation_id="askDesk",
+             description=DESK_DOC)  # fmt: skip
+async def desk_stream(
+    prepared: Annotated[desk_graph.DeskPrepared, Depends(prepared_desk)],
+    factory: Annotated[desk_graph.DeskToolsFactory, Depends(desk_tools_factory)],
+) -> AsyncIterable[ServerSentEvent]:
+    """Ask the desk about one coin: two analysts, a bull and bear debate, and the head's
+    Decision 8 signal. Same keys as chat; an admin without a key uses the capped server key."""
+    async for name, payload in desk_graph.run(prepared, factory):
+        yield ServerSentEvent(event=name, data=payload.model_dump(mode="json"))
+
+
+@router.get("/desk/estimate", response_model=Envelope[DeskEstimate],
+            operation_id="deskEstimate")  # fmt: skip
+def desk_estimate(
+    user: UserDep,
+    provider: Provider | None = None,
+    model: Annotated[str | None, Query(pattern=MODEL_ID)] = None,
+) -> Envelope[DeskEstimate]:
+    """Typical tokens for one desk run and, when the model has a known price, its USD. With no
+    provider, the server key's model (admins)."""
+    cfg = load_models_config()
+    if provider is None:
+        name = (cfg.get("server") or {}).get("agent")
+        if not user.is_admin or not name:
+            raise HTTPException(400, "choose the provider your key is for")
+        estimate = desk_graph.estimate("server", name)
+    else:
+        name = model or (cfg.get("byo_defaults") or {}).get(provider)
+        if not name:
+            raise HTTPException(400, "choose a model")
+        estimate = desk_graph.estimate(provider, name)
+    src = Source(name="config", detail="settings.yaml desk.estimate_tokens; models.yaml prices")
+    return Envelope(as_of=dt.datetime.now(dt.UTC).date(), sources=[src],
+                    data=DeskEstimate(**estimate))  # fmt: skip
