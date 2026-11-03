@@ -99,6 +99,15 @@ def test_service_env_without_regex_or_admins() -> None:
     )
     assert "CORS_ORIGIN_REGEX" not in env
     assert env["ADMIN_CLERK_IDS"] == "[]"
+    assert "LANGSMITH_TRACING" not in env  # tracing stays off without a workspace
+
+
+def test_service_env_with_langsmith_workspace() -> None:
+    ws = "84da3455-e2eb-4b0e-8a56-1870ec544c5e"
+    env = service_env(cors_origins=[PAGES], cors_origin_regex=None, clerk_publishable_key=PK,
+                      admin_clerk_ids=[], langsmith_workspace_id=ws)  # fmt: skip
+    assert env["LANGSMITH_TRACING"] == "true" and env["LANGSMITH_WORKSPACE_ID"] == ws
+    assert "LANGSMITH_API_KEY" not in env  # a secret, from Secret Manager
 
 
 @pytest.mark.parametrize(
@@ -112,6 +121,7 @@ def test_service_env_without_regex_or_admins() -> None:
         {"cors_origin_regex": "^https://(unclosed$"},
         {"clerk_publishable_key": "sk_test_abc"},
         {"admin_clerk_ids": ["robert"]},
+        {"langsmith_workspace_id": "Workspace 1"},
     ],
 )
 def test_service_env_rejects_bad_settings(overrides: dict) -> None:

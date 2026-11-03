@@ -60,11 +60,24 @@ SAMPLES: dict[tuple[str, str], tuple[str, dict | None]] = {
     ("GET", "/api/admin/watchlist/check/{symbol}"): ("/api/admin/watchlist/check/LINK", None),
     ("GET", "/api/agent/models"): ("/api/agent/models", None),
     ("POST", "/api/agent/test-key"): ("/api/agent/test-key", {"provider": "openrouter"}),
+    ("POST", "/api/agent/chat"): ("/api/agent/chat", {"message": "hi", "provider": "openrouter"}),
+    ("GET", "/api/agent/conversations"): ("/api/agent/conversations", None),
+    ("GET", "/api/agent/conversations/{conversation_id}"): ("/api/agent/conversations/1", None),
+    ("GET", "/api/agent/snapshots/{snapshot_id}"): ("/api/agent/snapshots/1", None),
+    ("DELETE", "/api/agent/conversations/{conversation_id}"):
+        ("/api/agent/conversations/1", None),
     ("PATCH", "/api/admin/users/{user_id}"): ("/api/admin/users/1", {"role": "admin"}),
 }  # fmt: skip
 PUBLIC = {("GET", "/api/health")}
 # The key test needs a key; the providers are faked in the `api` fixture.
-HEADERS = {("POST", "/api/agent/test-key"): {"X-LLM-Key": CANARY}}
+HEADERS = {("POST", "/api/agent/test-key"): {"X-LLM-Key": CANARY},
+           ("POST", "/api/agent/chat"): {"X-LLM-Key": CANARY}}  # fmt: skip
+# Conversations are private: the member's chat (sample POST) made conversation and snapshot 1,
+# which the member then deletes, so the admin's run uses the ones its own chat made.
+ADMIN_URLS = {("GET", "/api/agent/conversations/{conversation_id}"): "/api/agent/conversations/2",
+              ("GET", "/api/agent/snapshots/{snapshot_id}"): "/api/agent/snapshots/2",
+              ("DELETE", "/api/agent/conversations/{conversation_id}"):
+                  "/api/agent/conversations/2"}  # fmt: skip
 
 
 def api_routes() -> list[tuple[str, str]]:
@@ -112,14 +125,18 @@ def test_roles_on_every_route(api, clerk) -> None:
             assert r.is_success, (method, path, r.status_code, r.text[:300])
     for (method, path), (url, body) in SAMPLES.items():  # dict order: POST before DELETE
         extra = HEADERS.get((method, path), {})
+        url = ADMIN_URLS.get((method, path), url)
         r = api.request(method, url, json=body, headers={**auth(ADMIN), **extra})
         assert r.is_success, (method, path, r.status_code, r.text[:300])
 
 
 # --- Envelope and as_of on the read routes ----------------------------------------------------
 
+# Data reads carry provenance; the agent's own records (conversations, snapshots) don't.
 READS = [url for (m, p), (url, _) in SAMPLES.items()
-         if m == "GET" and not p.startswith(("/api/admin", "/api/me", "/api/data"))]  # fmt: skip
+         if m == "GET" and not p.startswith(("/api/admin", "/api/me", "/api/data",
+                                             "/api/agent/conversations", "/api/agent/snapshots"))
+         ]  # fmt: skip
 
 
 @pytest.mark.parametrize("url", READS)

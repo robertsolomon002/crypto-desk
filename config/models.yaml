@@ -13,7 +13,7 @@ server:
 byo_defaults:
   openrouter: anthropic/claude-haiku-5.5
   anthropic: claude-haiku-5-5
-  openai: null # chosen in Stage 5.1 from OpenAI's own model docs
+  openai: gpt-6-luna # cheapest current OpenAI model with tool calling (Stage 5.1, D45)
 
 # The model picker in Settings (Stage 3.4). Cheap first; anyone can also type another id their
 # key allows. OpenRouter ids and prices from GET https://openrouter.ai/api/v1/models (Stage 0.3).
@@ -26,10 +26,23 @@ byo_choices:
   anthropic:
     - claude-haiku-5-5
     - claude-sonnet-5-5
-  openai: [] # Stage 5.1
+  openai: # https://developers.openai.com/api/docs/pricing and /models (checked 2026-11-03)
+    - gpt-6-luna
+    - gpt-5.6-luna
+    - gpt-5-mini
+
+# Extra request parameters per model id (Stage 5.1). On Chat Completions gpt-6-luna supports
+# function calling only with reasoning_effort none (its model page, checked 2026-11-03);
+# langchain-openai 1.7.3 sends gpt-6 requests with tools to the Responses API, where none is
+# also valid and keeps answers fast. OpenRouter always uses Chat Completions (D45).
+byo_params:
+  openai:
+    gpt-6-luna: { reasoning_effort: none }
+    gpt-5.6-luna: { reasoning_effort: low }
 
 prices: # input, output per MTok; Anthropic https://platform.claude.com/docs/en/about-claude/pricing
-  claude-haiku-5-5: { input: 0.10, output: 0.50 } # prompts <= 100K tokens; 0.50 / 2.50 above
+  claude-haiku-5-5: # prompts <= 100K input tokens; the long-prompt rate above that
+    { input: 0.10, output: 0.50, long_above: 100000, long_input: 0.50, long_output: 2.50 }
   claude-haiku-4-5: { input: 1.00, output: 5.00 }
   claude-sonnet-5-5: { input: 2.00, output: 10.00 }
   # Gemini runs on the free tier ($0). Paid-tier prices, for the D9 cap if that changes:

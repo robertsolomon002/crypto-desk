@@ -10,6 +10,7 @@ features: # Decision 1: switch features off per deployment
 budget: # Decision 9. The cap itself is enforced in backend/src/desk/agents/cost.py
   server_llm_cap_usd_per_month: 8.0
   degrade_order: [chat_model, mco_low_priority, brief_writer_haiku]
+  degrade_at_fraction: 0.8 # step 1 starts at 80% of the cap
 
 api: # Stage 2.1 (D37). In memory, per Cloud Run instance
   rate_limit_per_minute: 120
@@ -17,7 +18,11 @@ api: # Stage 2.1 (D37). In memory, per Cloud Run instance
 agent: # Section 3.2
   max_tool_calls: 10
   timeout_seconds: 90
-  messages_per_user_per_hour: 30
+  messages_per_user_per_hour: 30 # counted in the database, so it holds across instances
+  history_messages: 20 # earlier user/assistant messages sent with each question
+  max_message_chars: 4000
+  max_output_tokens: 4000 # Haiku 5.5's adaptive thinking counts here; 2000 cut answers off
+  degraded_max_output_tokens: 1500
 
 signals: # Decision 8 and Section 3.5
   version: v1

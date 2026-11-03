@@ -1,5 +1,5 @@
-"""`/api/agent` routes. Stage 3.4: the model list and the key test behind the Settings wizard.
-The chat routes come in Stage 5.1.
+"""`/api/agent` routes: the model list and the key test behind the Settings wizard (Stage 3.4),
+and the chat agent with its conversations and data snapshots (Stage 5.1, D45).
 
 The user's key arrives only as the `X-LLM-Key` header, which `LlmKeyRedaction` removes before
 any route runs and keeps as a `SecretStr` in the request state (D37). It is sent to the chosen
@@ -7,17 +7,28 @@ provider in one request header and is never stored, logged or returned.
 """
 
 import datetime as dt
-from collections.abc import Iterator
+from collections.abc import AsyncIterable, Iterator
 from typing import Annotated
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.sse import EventSourceResponse, ServerSentEvent
 from pydantic import BaseModel, Field, SecretStr
 
+from desk.agents import chat
 from desk.agents.keycheck import Provider, check_key
-from desk.api.deps import require_role
+from desk.agents.schemas import (
+    EVENTS,
+    ChatRequest,
+    ConversationDetail,
+    ConversationSummary,
+    Snapshot,
+)
+from desk.api import deps
+from desk.api.deps import SessionDep, UserDep, require_role
 from desk.api.schemas import Envelope, Source
 from desk.config import load_models_config
+from desk.models import AgentSnapshot
 
 router = APIRouter(prefix="/agent", tags=["agent"], dependencies=[Depends(require_role("member"))])
 
@@ -91,3 +102,87 @@ def test_key(
     result = check_key(client, body.provider, key.get_secret_value().strip(), model)
     return KeyTestResult(ok=result.ok, provider=result.provider, model=result.model,
                          message=result.message)  # fmt: skip
+
+
+# --- Chat (Stage 5.1) -------------------------------------------------------------------------
+
+
+def tools_factory() -> chat.ToolsFactory:
+    """desk-mcp's tools for one answer (tests swap in their own)."""
+    return chat.desk_tools
+
+
+def prepared_chat(body: ChatRequest, request: Request, user: UserDep,
+                  session: SessionDep) -> chat.Prepared:  # fmt: skip
+    """Validate and save the question before the stream starts, so refusals are plain HTTP
+    errors: 400 (no key, bad model), 402 (server budget used up), 404, 429 (hourly limit)."""
+    key: SecretStr | None = getattr(request.state, "llm_key", None)
+    try:
+        return chat.prepare(session, deps._sessions(), user_id=user.id, is_admin=user.is_admin,
+                            message=body.message, conversation_id=body.conversation_id,
+                            provider=body.provider, model=body.model, key=key)  # fmt: skip
+    except chat.ChatError as e:
+        headers = {"Retry-After": str(e.retry_after)} if e.retry_after else None
+        raise HTTPException(e.status, e.message, headers=headers) from None
+
+
+SSE_DOC = (
+    "Server-Sent Events, in order: "
+    + ", ".join(EVENTS)
+    + (
+        ". `token` events carry the answer text; each tool call sends `tool_start` then `tool_end` "
+        "(with its snapshot id). The stream ends with `done`, or with `error` (timeout, provider, "
+        "budget, internal), after which the partial answer is saved."
+    )
+)
+
+
+@router.post("/chat", response_class=EventSourceResponse, operation_id="chat",
+             description=SSE_DOC)  # fmt: skip
+async def chat_stream(
+    prepared: Annotated[chat.Prepared, Depends(prepared_chat)],
+    factory: Annotated[chat.ToolsFactory, Depends(tools_factory)],
+) -> AsyncIterable[ServerSentEvent]:
+    """Ask the agent. Send your own key in `X-LLM-Key` with `provider` (and optionally
+    `model`); an admin without a key uses the capped server key."""
+    async for name, payload in chat.run(prepared, factory):
+        yield ServerSentEvent(event=name, data=payload.model_dump(mode="json"))
+
+
+@router.get("/conversations", response_model=list[ConversationSummary],
+            operation_id="listConversations")  # fmt: skip
+def list_conversations(user: UserDep, session: SessionDep) -> list[ConversationSummary]:
+    """Your conversations, most recently active first."""
+    return [ConversationSummary(**c) for c in chat.list_conversations(session, user.id)]
+
+
+@router.get("/conversations/{conversation_id}", response_model=ConversationDetail,
+            operation_id="getConversation")  # fmt: skip
+def get_conversation(
+    conversation_id: int, user: UserDep, session: SessionDep
+) -> ConversationDetail:
+    """One of your conversations with its messages and, per answer, its tool snapshots."""
+    detail = chat.conversation_detail(session, user.id, conversation_id)
+    if detail is None:
+        raise HTTPException(404, "conversation not found")
+    return ConversationDetail(**detail)
+
+
+@router.delete("/conversations/{conversation_id}", status_code=204,
+               operation_id="deleteConversation")  # fmt: skip
+def delete_conversation(conversation_id: int, user: UserDep, session: SessionDep) -> Response:
+    """Delete one of your conversations with its messages and snapshots."""
+    if not chat.delete_conversation(session, user.id, conversation_id):
+        raise HTTPException(404, "conversation not found")
+    return Response(status_code=204)
+
+
+@router.get("/snapshots/{snapshot_id}", response_model=Snapshot, operation_id="getSnapshot")
+def get_snapshot(snapshot_id: int, user: UserDep, session: SessionDep) -> Snapshot:
+    """The exact arguments and result of one agent tool call (yours; admins can open any)."""
+    row = session.get(AgentSnapshot, snapshot_id)
+    if row is None or (row.user_id != user.id and not user.is_admin):
+        raise HTTPException(404, "snapshot not found")
+    return Snapshot(id=row.id, conversation_id=row.conversation_id, tool=row.tool,
+                    args=row.args or {}, result=row.result, as_of=row.as_of,
+                    created_at=row.created_at)  # fmt: skip

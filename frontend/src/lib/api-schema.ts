@@ -158,6 +158,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Chat Stream
+         * @description Server-Sent Events, in order: conversation, token, tool_start, tool_end, done, error. `token` events carry the answer text; each tool call sends `tool_start` then `tool_end` (with its snapshot id). The stream ends with `done`, or with `error` (timeout, provider, budget, internal), after which the partial answer is saved.
+         */
+        post: operations["chat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Conversations
+         * @description Your conversations, most recently active first.
+         */
+        get: operations["listConversations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/conversations/{conversation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Conversation
+         * @description One of your conversations with its messages and, per answer, its tool snapshots.
+         */
+        get: operations["getConversation"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Conversation
+         * @description Delete one of your conversations with its messages and snapshots.
+         */
+        delete: operations["deleteConversation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent/models": {
         parameters: {
             query?: never;
@@ -171,6 +235,26 @@ export interface paths {
          *     (`config/models.yaml`). OpenRouter is the recommended path (Decision 2).
          */
         get: operations["listModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/snapshots/{snapshot_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Snapshot
+         * @description The exact arguments and result of one agent tool call (yours; admins can open any).
+         */
+        get: operations["getSnapshot"];
         put?: never;
         post?: never;
         delete?: never;
@@ -807,6 +891,44 @@ export interface components {
             /** Volume */
             volume: number | null;
         };
+        /** ChatMessage */
+        ChatMessage: {
+            /** Content */
+            content: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            /** Model */
+            model: string | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant";
+            /**
+             * Snapshots
+             * @description Tool calls made for this answer (assistant only)
+             */
+            snapshots?: components["schemas"]["SnapshotRef"][];
+        };
+        /** ChatRequest */
+        ChatRequest: {
+            /** Conversation Id */
+            conversation_id?: number | null;
+            /** Message */
+            message: string;
+            /** Model */
+            model?: string | null;
+            /**
+             * Provider
+             * @description Required with an X-LLM-Key header; omitted for the server key
+             */
+            provider?: ("openrouter" | "anthropic" | "openai") | null;
+        };
         /** CoinCard */
         CoinCard: {
             /** Ath */
@@ -862,12 +984,87 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** ConversationDetail */
+        ConversationDetail: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            /** Messages */
+            messages: components["schemas"]["ChatMessage"][];
+            /** Title */
+            title: string | null;
+        };
+        /**
+         * ConversationEvent
+         * @description First event: the conversation the answer belongs to (new or continued).
+         */
+        ConversationEvent: {
+            /** Id */
+            id: number;
+            /** Model */
+            model: string;
+            /** Server Key */
+            server_key: boolean;
+            /** Title */
+            title: string | null;
+        };
+        /** ConversationSummary */
+        ConversationSummary: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            /** Messages */
+            messages: number;
+            /** Title */
+            title: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** DominanceData */
         DominanceData: {
             /** Rows */
             rows: {
                 [key: string]: unknown;
             }[];
+        };
+        /** DoneEvent */
+        DoneEvent: {
+            /**
+             * Cost Usd
+             * @description Server-key spend for this answer; null for keys
+             */
+            cost_usd: number | null;
+            /**
+             * Limited
+             * @description True when the tool-call limit cut the research short
+             */
+            limited: boolean;
+            /** Message Id */
+            message_id: number;
+            /** Model */
+            model: string;
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
+            /** Tool Calls */
+            tool_calls: number;
+            /**
+             * Truncated
+             * @description True when the model hit its output-token limit
+             */
+            truncated: boolean;
         };
         /** Eligibility */
         Eligibility: {
@@ -1020,6 +1217,16 @@ export interface components {
             data: components["schemas"]["TableInfo"][];
             /** Sources */
             sources: components["schemas"]["Source"][];
+        };
+        /** ErrorEvent */
+        ErrorEvent: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "timeout" | "provider" | "budget" | "internal";
+            /** Message */
+            message: string;
         };
         /** Event */
         Event: {
@@ -1237,6 +1444,40 @@ export interface components {
             /** Value */
             value: number | null;
         };
+        /** Snapshot */
+        Snapshot: {
+            /** Args */
+            args: {
+                [key: string]: unknown;
+            };
+            /** As Of */
+            as_of: string | null;
+            /** Conversation Id */
+            conversation_id: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            /** Result */
+            result: unknown;
+            /** Tool */
+            tool: string;
+        };
+        /** SnapshotRef */
+        SnapshotRef: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            /** Tool */
+            tool: string;
+        };
         /** Source */
         Source: {
             /** Detail */
@@ -1299,6 +1540,38 @@ export interface components {
          * @enum {string}
          */
         Timeframe: "1d" | "1w" | "4h";
+        /** TokenEvent */
+        TokenEvent: {
+            /** Text */
+            text: string;
+        };
+        /** ToolEndEvent */
+        ToolEndEvent: {
+            /** Call Id */
+            call_id: string;
+            /** Name */
+            name: string;
+            /** Ok */
+            ok: boolean;
+            /**
+             * Preview
+             * @description The first 300 characters of the tool's JSON result
+             */
+            preview: string;
+            /** Snapshot Id */
+            snapshot_id: number;
+        };
+        /** ToolStartEvent */
+        ToolStartEvent: {
+            /** Args */
+            args: {
+                [key: string]: unknown;
+            };
+            /** Call Id */
+            call_id: string;
+            /** Name */
+            name: string;
+        };
         /** Usage */
         Usage: {
             /** By Model */
@@ -1700,6 +1973,128 @@ export interface operations {
             };
         };
     };
+    chat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listConversations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listModels: {
         parameters: {
             query?: never;
@@ -1716,6 +2111,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_list_ProviderModels__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getSnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snapshot_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Snapshot"];
                 };
             };
             /** @description Validation Error */

@@ -95,11 +95,30 @@ jobs:
         env:
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
           ADMIN_CLERK_IDS: ${{ vars.ADMIN_CLERK_IDS }} # repo variable, set in Stage 3.1
+          LANGSMITH_WORKSPACE_ID: ${{ vars.LANGSMITH_WORKSPACE_ID }} # repo variable, Stage 5.1
         run: >-
           uv run desk deploy env-file --out "$RUNNER_TEMP/env.yaml"
           --cors-origins "[\"$PAGES_URL\"]" --cors-origin-regex "$CORS_ORIGIN_REGEX"
           --clerk-publishable-key "$VITE_CLERK_PUBLISHABLE_KEY"
           --admin-clerk-ids "${ADMIN_CLERK_IDS:-[]}"
+          --langsmith-workspace-id "${LANGSMITH_WORKSPACE_ID:-}"
+      - name: Pick the service secrets
+        if: env.SKIP != 'true'
+        # The agent's secrets (Stage 5.1) are mounted only once Rob has created them in Secret
+        # Manager, so deploys keep working before that: without the Anthropic key the admin's
+        # server-key chat says it isn't configured, and without the LangSmith key nothing is
+        # traced. Friends' own keys never need either.
+        run: |
+          SECRETS="DATABASE_URL=database-url:latest,CLERK_SECRET_KEY=clerk-secret-key:latest"
+          for pair in ANTHROPIC_API_KEY=anthropic-api-key LANGSMITH_API_KEY=langsmith-api-key; do
+            name="${pair#*=}"
+            if gcloud secrets describe "$name" --project "$PROJECT" >/dev/null 2>&1; then
+              SECRETS="$SECRETS,${pair}:latest"
+            else
+              echo "secret $name not created yet; skipping"
+            fi
+          done
+          echo "SERVICE_SECRETS=$SECRETS" >> "$GITHUB_ENV"
       - name: Deploy a revision without traffic
         if: env.SKIP != 'true'
         # Request-based billing (CPU only during requests), scale to zero, at most 2 instances:
@@ -108,7 +127,7 @@ jobs:
           gcloud run deploy "$SERVICE" --project "$PROJECT" --region "$REGION"
           --image "$IMAGE:$SHA" --service-account "$RUNTIME_SA"
           --env-vars-file "$RUNNER_TEMP/env.yaml"
-          --set-secrets DATABASE_URL=database-url:latest,CLERK_SECRET_KEY=clerk-secret-key:latest
+          --set-secrets "$SERVICE_SECRETS"
           --cpu 1 --memory 512Mi --cpu-throttling --cpu-boost
           --min-instances 0 --max-instances 2 --concurrency 40 --timeout 900
           --no-traffic --tag candidate --quiet

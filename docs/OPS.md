@@ -83,10 +83,26 @@ gcloud run services describe desk-api --region us-central1 --project crypto-desk
 | `DATABASE_URL`, `CLERK_SECRET_KEY` (what the service reads) | Google Secret Manager: `database-url`, `clerk-secret-key` |
 | The same values plus every job secret | GitHub Actions secrets (the deploy, daily and future jobs read these) |
 | `ADMIN_CLERK_IDS` | GitHub repo **variable** (not a secret), JSON list, plus `.env` for local runs |
+| `ANTHROPIC_API_KEY`, `LANGSMITH_API_KEY` (agent, Stage 5.1) | Secret Manager `anthropic-api-key`, `langsmith-api-key`; mounted only once they exist (D45) |
+| `LANGSMITH_WORKSPACE_ID` | GitHub repo **variable** (a UUID, not a secret), plus `.env`; without it the service doesn't trace |
 | CORS origins, Pages URL, Cloud Run sizing | `env:` blocks and flags in the two deploy workflows |
 | CSP | `frontend/src/lib/security-headers.ts` |
 
 **Set the admin ids (Stage 3.1):** in Invite-only mode, create the user in the Clerk Dashboard (Users → Create user) or invite the email first, sign in once, and copy the `user_…` id from the Dashboard. Then run `gh variable set ADMIN_CLERK_IDS --body '["user_..."]'`, add the same list to `.env`, and run "Deploy backend" by hand.
+
+**Add the agent's secrets (Stage 5.1, [Rob]):** the admin's server-key chat needs the Anthropic key, and tracing needs the LangSmith key. Run each line from Claude Code with `!` (or Git Bash). The values come from `.env` and are never echoed; `tr` strips the newline that would otherwise be stored.
+
+```
+gcloud secrets create anthropic-api-key --project crypto-desk-513023 --replication-policy=automatic
+gcloud secrets create langsmith-api-key --project crypto-desk-513023 --replication-policy=automatic
+grep '^ANTHROPIC_API_KEY=' .env | cut -d= -f2- | sed 's/#.*//' | tr -d ' \t\r\n' | gcloud secrets versions add anthropic-api-key --project crypto-desk-513023 --data-file=-
+grep '^LANGSMITH_API_KEY=' .env | cut -d= -f2- | sed 's/#.*//' | tr -d ' \t\r\n' | gcloud secrets versions add langsmith-api-key --project crypto-desk-513023 --data-file=-
+for s in anthropic-api-key langsmith-api-key; do gcloud secrets add-iam-policy-binding $s --project crypto-desk-513023 --member=serviceAccount:desk-api@crypto-desk-513023.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor; gcloud secrets add-iam-policy-binding $s --project crypto-desk-513023 --member=serviceAccount:desk-deployer@crypto-desk-513023.iam.gserviceaccount.com --role=roles/secretmanager.viewer; done
+gh variable set LANGSMITH_WORKSPACE_ID --body 84da3455-e2eb-4b0e-8a56-1870ec544c5e --repo robertsolomon002/crypto-desk
+gh workflow run deploy-backend.yml --repo robertsolomon002/crypto-desk
+```
+
+The runtime account (`desk-api`) gets read access to the values. The deployer gets `secretmanager.viewer`, which shows only that a secret exists, so the deploy can decide what to mount. The deploy log lists any secret it skipped.
 
 **Rotate a service secret** (for example after a Neon password reset):
 

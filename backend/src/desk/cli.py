@@ -423,6 +423,9 @@ def deploy_env_file(
     clerk_publishable_key: Annotated[str, typer.Option(help="pk_test_... or pk_live_...")],
     cors_origin_regex: Annotated[str, typer.Option(help="Anchored regex; empty for none.")] = "",
     admin_clerk_ids: Annotated[str, typer.Option(help="JSON list of Clerk user ids.")] = "[]",
+    langsmith_workspace_id: Annotated[
+        str, typer.Option(help="LangSmith workspace UUID; empty leaves tracing off.")
+    ] = "",
 ) -> None:
     """Write the Cloud Run service's non-secret env vars for `gcloud run deploy --env-vars-file`."""
     import json
@@ -435,6 +438,7 @@ def deploy_env_file(
             cors_origin_regex=cors_origin_regex or None,
             clerk_publishable_key=clerk_publishable_key.strip(),
             admin_clerk_ids=json.loads(admin_clerk_ids or "[]"),
+            langsmith_workspace_id=langsmith_workspace_id.strip() or None,
         )
     except (EnvError, json.JSONDecodeError) as e:
         typer.echo(f"bad deploy setting: {e}", err=True)

@@ -6,8 +6,11 @@ protocol.
 """
 
 import argparse
-from collections.abc import Iterable
+import functools
+from collections.abc import Awaitable, Callable, Iterable
+from typing import Any
 
+import anyio
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
@@ -34,12 +37,26 @@ def parse_groups(raw: str | Iterable[str] | None) -> list[str]:
     return [g for g in GROUPS if g in groups]
 
 
-def build_server(groups: str | Iterable[str] | None = None) -> FastMCP:
+def _in_thread(fn: Callable[..., str]) -> Callable[..., Awaitable[str]]:
+    """The same tool as a coroutine that runs `fn` in a worker thread (same signature, so the
+    MCP schema is unchanged). FastMCP calls sync tools on the event loop, which is fine for one
+    stdio client but would stall the API's other requests (D45)."""
+
+    @functools.wraps(fn)
+    async def run(*args: Any, **kwargs: Any) -> str:
+        return await anyio.to_thread.run_sync(functools.partial(fn, *args, **kwargs))
+
+    return run
+
+
+def build_server(groups: str | Iterable[str] | None = None, *, threaded: bool = False) -> FastMCP:
+    """`threaded=True` is for the in-app agent, which talks to this server in-process."""
     allowed = set(parse_groups(groups))
     server = FastMCP("desk-mcp", instructions=INSTRUCTIONS)
     for t in TOOLS:
         if t.group in allowed:
-            server.add_tool(t.fn, name=t.name, description=t.description,
+            fn = _in_thread(t.fn) if threaded else t.fn
+            server.add_tool(fn, name=t.name, description=t.description,
                             annotations=READ_ONLY, structured_output=False)  # fmt: skip
     return server
 

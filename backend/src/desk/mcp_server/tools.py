@@ -12,6 +12,7 @@ import json
 import math
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from functools import cache
 from typing import Annotated, Any, Literal
@@ -59,9 +60,18 @@ def _sessions():
     return session_factory(get_engine())  # DATABASE_URL from the env or the repo's .env
 
 
+# The in-app agent sets this to the API's session factory, so tools share the API's pool (and
+# its test database) instead of opening a second engine. Context variables reach the in-memory
+# MCP server's task and the worker threads its tools run in (D45).
+session_override: ContextVar[Callable[[], Session] | None] = ContextVar(
+    "desk_mcp_sessions", default=None
+)
+
+
 @contextmanager
 def _session() -> Iterator[Session]:
-    with _sessions()() as session:
+    factory = session_override.get() or _sessions()
+    with factory() as session:
         yield session
 
 

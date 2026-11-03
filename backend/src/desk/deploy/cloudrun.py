@@ -32,6 +32,7 @@ def service_env(
     clerk_publishable_key: str,
     admin_clerk_ids: list[str],
     mco_enabled: bool = True,
+    langsmith_workspace_id: str | None = None,
 ) -> dict[str, str]:
     origins = [_origin(o) for o in cors_origins]
     if not origins:
@@ -48,6 +49,9 @@ def service_env(
     for clerk_id in admin_clerk_ids:
         if not re.fullmatch(r"user_[A-Za-z0-9]+", clerk_id):
             raise EnvError(f"not a Clerk user id: {clerk_id!r}")
+    uuid = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+    if langsmith_workspace_id and not re.fullmatch(uuid, langsmith_workspace_id):
+        raise EnvError("the LangSmith workspace id must be a UUID")
     env = {
         "APP_ENV": "prod",
         "CORS_ORIGINS": json.dumps(origins),
@@ -57,6 +61,12 @@ def service_env(
     }
     if cors_origin_regex:
         env["CORS_ORIGIN_REGEX"] = cors_origin_regex
+    if langsmith_workspace_id:
+        # Tracing (server-key agent runs only, D45) also needs the `langsmith-api-key` secret;
+        # without it the app leaves tracing off.
+        env["LANGSMITH_TRACING"] = "true"
+        env["LANGSMITH_PROJECT"] = "crypto-desk"
+        env["LANGSMITH_WORKSPACE_ID"] = langsmith_workspace_id
     return env
 
 

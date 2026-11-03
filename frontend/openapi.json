@@ -101,6 +101,114 @@
         "title": "Candle",
         "type": "object"
       },
+      "ChatMessage": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "snapshots": {
+            "description": "Tool calls made for this answer (assistant only)",
+            "items": {
+              "$ref": "#/components/schemas/SnapshotRef"
+            },
+            "title": "Snapshots",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "content",
+          "model",
+          "created_at"
+        ],
+        "title": "ChatMessage",
+        "type": "object"
+      },
+      "ChatRequest": {
+        "properties": {
+          "conversation_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "message": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,99}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "enum": [
+                  "openrouter",
+                  "anthropic",
+                  "openai"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required with an X-LLM-Key header; omitted for the server key",
+            "title": "Provider"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ChatRequest",
+        "type": "object"
+      },
       "CoinCard": {
         "properties": {
           "ath": {
@@ -319,6 +427,123 @@
         "title": "ColumnInfo",
         "type": "object"
       },
+      "ConversationDetail": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMessage"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "created_at",
+          "messages"
+        ],
+        "title": "ConversationDetail",
+        "type": "object"
+      },
+      "ConversationEvent": {
+        "description": "First event: the conversation the answer belongs to (new or continued).",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "server_key": {
+            "title": "Server Key",
+            "type": "boolean"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "model",
+          "server_key"
+        ],
+        "title": "ConversationEvent",
+        "type": "object"
+      },
+      "ConversationSummary": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "messages": {
+            "title": "Messages",
+            "type": "integer"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "created_at",
+          "updated_at",
+          "messages"
+        ],
+        "title": "ConversationSummary",
+        "type": "object"
+      },
       "DominanceData": {
         "properties": {
           "rows": {
@@ -334,6 +559,64 @@
           "rows"
         ],
         "title": "DominanceData",
+        "type": "object"
+      },
+      "DoneEvent": {
+        "properties": {
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Server-key spend for this answer; null for keys",
+            "title": "Cost Usd"
+          },
+          "limited": {
+            "description": "True when the tool-call limit cut the research short",
+            "title": "Limited",
+            "type": "boolean"
+          },
+          "message_id": {
+            "title": "Message Id",
+            "type": "integer"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "tokens_in": {
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "title": "Tokens Out",
+            "type": "integer"
+          },
+          "tool_calls": {
+            "title": "Tool Calls",
+            "type": "integer"
+          },
+          "truncated": {
+            "description": "True when the model hit its output-token limit",
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "message_id",
+          "model",
+          "tokens_in",
+          "tokens_out",
+          "cost_usd",
+          "tool_calls",
+          "limited",
+          "truncated"
+        ],
+        "title": "DoneEvent",
         "type": "object"
       },
       "Eligibility": {
@@ -813,6 +1096,30 @@
           "data"
         ],
         "title": "Envelope[list[TableInfo]]",
+        "type": "object"
+      },
+      "ErrorEvent": {
+        "properties": {
+          "code": {
+            "enum": [
+              "timeout",
+              "provider",
+              "budget",
+              "internal"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorEvent",
         "type": "object"
       },
       "Event": {
@@ -1424,6 +1731,89 @@
         "title": "SeriesPoint",
         "type": "object"
       },
+      "Snapshot": {
+        "properties": {
+          "args": {
+            "additionalProperties": true,
+            "title": "Args",
+            "type": "object"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "result": {
+            "title": "Result"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "conversation_id",
+          "tool",
+          "args",
+          "result",
+          "as_of",
+          "created_at"
+        ],
+        "title": "Snapshot",
+        "type": "object"
+      },
+      "SnapshotRef": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tool",
+          "created_at"
+        ],
+        "title": "SnapshotRef",
+        "type": "object"
+      },
       "Source": {
         "properties": {
           "detail": {
@@ -1605,6 +1995,77 @@
         ],
         "title": "Timeframe",
         "type": "string"
+      },
+      "TokenEvent": {
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "TokenEvent",
+        "type": "object"
+      },
+      "ToolEndEvent": {
+        "properties": {
+          "call_id": {
+            "title": "Call Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "preview": {
+            "description": "The first 300 characters of the tool's JSON result",
+            "title": "Preview",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "title": "Snapshot Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "call_id",
+          "name",
+          "snapshot_id",
+          "ok",
+          "preview"
+        ],
+        "title": "ToolEndEvent",
+        "type": "object"
+      },
+      "ToolStartEvent": {
+        "properties": {
+          "args": {
+            "additionalProperties": true,
+            "title": "Args",
+            "type": "object"
+          },
+          "call_id": {
+            "title": "Call Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "call_id",
+          "name",
+          "args"
+        ],
+        "title": "ToolStartEvent",
+        "type": "object"
       },
       "Usage": {
         "properties": {
@@ -2255,6 +2716,196 @@
         ]
       }
     },
+    "/api/agent/chat": {
+      "post": {
+        "description": "Server-Sent Events, in order: conversation, token, tool_start, tool_end, done, error. `token` events carry the answer text; each tool call sends `tool_start` then `tool_end` (with its snapshot id). The stream ends with `done`, or with `error` (timeout, provider, budget, internal), after which the partial answer is saved.",
+        "operationId": "chat",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "type": "string"
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Chat Stream",
+        "tags": [
+          "agent"
+        ],
+        "x-sse-events": {
+          "conversation": {
+            "$ref": "#/components/schemas/ConversationEvent"
+          },
+          "done": {
+            "$ref": "#/components/schemas/DoneEvent"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ErrorEvent"
+          },
+          "token": {
+            "$ref": "#/components/schemas/TokenEvent"
+          },
+          "tool_end": {
+            "$ref": "#/components/schemas/ToolEndEvent"
+          },
+          "tool_start": {
+            "$ref": "#/components/schemas/ToolStartEvent"
+          }
+        }
+      }
+    },
+    "/api/agent/conversations": {
+      "get": {
+        "description": "Your conversations, most recently active first.",
+        "operationId": "listConversations",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConversationSummary"
+                  },
+                  "title": "Response Listconversations",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Conversations",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/agent/conversations/{conversation_id}": {
+      "delete": {
+        "description": "Delete one of your conversations with its messages and snapshots.",
+        "operationId": "deleteConversation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "title": "Conversation Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Conversation",
+        "tags": [
+          "agent"
+        ]
+      },
+      "get": {
+        "description": "One of your conversations with its messages and, per answer, its tool snapshots.",
+        "operationId": "getConversation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "title": "Conversation Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Conversation",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
     "/api/agent/models": {
       "get": {
         "description": "Providers a friend can bring a key for, with a default and suggested models\n(`config/models.yaml`). OpenRouter is the recommended path (Decision 2).",
@@ -2282,6 +2933,49 @@
           }
         },
         "summary": "List Models",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/agent/snapshots/{snapshot_id}": {
+      "get": {
+        "description": "The exact arguments and result of one agent tool call (yours; admins can open any).",
+        "operationId": "getSnapshot",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "title": "Snapshot Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Snapshot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Snapshot",
         "tags": [
           "agent"
         ]

@@ -32,7 +32,7 @@ def test_models_lists_providers_with_openrouter_recommended(api) -> None:
     openrouter = out[0]
     assert openrouter["recommended"] and openrouter["default"] == "anthropic/claude-haiku-5.5"
     assert openrouter["default"] in openrouter["choices"]
-    assert out[2]["default"] is None and out[2]["choices"] == []
+    assert out[2]["default"] == "gpt-6-luna" and out[2]["default"] in out[2]["choices"]
 
 
 @pytest.mark.parametrize(

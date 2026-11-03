@@ -73,6 +73,9 @@ class Settings(BaseSettings):
     langsmith_api_key: SecretStr | None = None
     langsmith_project: str = "crypto-desk"
     langsmith_tracing: bool = False
+    # Service keys (lsv2_sk_...) are organization-scoped: LangSmith answers 403 on workspace
+    # calls (runs, projects) unless the workspace id comes with them (Stage 5.1, D45).
+    langsmith_workspace_id: str | None = None
 
     # Feature flags (Decision 1, Decision 6)
     mco_enabled: bool = True

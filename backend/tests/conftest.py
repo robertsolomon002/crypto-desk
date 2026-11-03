@@ -11,6 +11,7 @@ from alembic.config import Config
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
+from desk.agents.llm import make_chat_model as REAL_MAKE_CHAT_MODEL
 from desk.db import normalize_url
 from desk.models import Base
 
@@ -114,8 +115,15 @@ def api(api_sessions: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(deps, "_user_cache", {})
     monkeypatch.setattr(deps, "rate_limiter", lambda: deps.RateLimiter(10_000))
     app.dependency_overrides[deps.get_verifier] = api_fakes.verifier
-    # No network: Coinbase and the LLM providers are fakes unless a test swaps them.
+    # No network: Coinbase and the LLM providers are fakes unless a test swaps them. The chat
+    # model is a scripted fake too, so no test can reach a provider (or the server key in
+    # `.env`) by accident; `real_llm` puts the real factory back for tests that mock HTTP.
+    from desk.agents import llm
     from desk.api.routes import admin, agent
+    from tests.agent_fakes import ScriptedModel, answer, ask
+
+    script = [ask("list_coins"), answer]  # one tool call, so each answer leaves a snapshot
+    monkeypatch.setattr(llm, "make_chat_model", lambda choice, key: ScriptedModel(script=script))
 
     app.dependency_overrides[admin.exchange_dep] = api_fakes.FakeExchange
     app.dependency_overrides[agent.provider_client] = lambda: httpx.Client(
@@ -125,3 +133,11 @@ def api(api_sessions: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch):
         yield TestClient(app)
     finally:
         app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def real_llm(api, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The real model factory (after `api` swapped in a fake); the test must mock HTTP."""
+    from desk.agents import llm
+
+    monkeypatch.setattr(llm, "make_chat_model", REAL_MAKE_CHAT_MODEL)
