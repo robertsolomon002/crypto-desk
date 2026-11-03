@@ -6,6 +6,7 @@ and time; its error text stays in `job_runs` (admin-only).
 """
 
 import datetime as dt
+from typing import Literal
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -24,6 +25,13 @@ from desk.models import CandleDaily, JobRun, News, SeriesPoint
 router = APIRouter(tags=["overview"], dependencies=[Depends(require_role("member"))])
 
 
+class McoBias(BaseModel):
+    bias: Literal["bullish", "bearish", "neutral"]
+    published_at: dt.datetime
+    confidence: Literal["high", "medium", "low"] | None
+    url: str | None
+
+
 class CoinCard(BaseModel):
     symbol: str
     name: str
@@ -38,7 +46,7 @@ class CoinCard(BaseModel):
     ath_distance: float | None
     regime: str
     signal: None = None  # v1.3 (Signals)
-    mco_bias: None = None  # v1.2 (MCO)
+    mco_bias: McoBias | None = None  # latest MCO view (Stage 6.2); null when off or none
 
 
 class Freshness(BaseModel):
@@ -109,6 +117,15 @@ def _daily_job(session: Session) -> JobStatus | None:
     return JobStatus(status=run.status, started_at=run.started_at, ended_at=run.ended_at)
 
 
+def _mco_bias(session: Session, coin: str, as_of: dt.date | None) -> McoBias | None:
+    from desk.api.routes.views import latest_mco_bias
+
+    v = latest_mco_bias(session, coin, as_of)
+    if v is None:
+        return None
+    return McoBias(bias=v.bias, published_at=v.published_at, confidence=v.confidence, url=v.url)
+
+
 @router.get("/overview", response_model=Envelope[OverviewData], operation_id="getOverview")
 def get_overview(session: SessionDep, as_of: AsOfDep) -> Envelope[OverviewData]:
     """Coin cards (core first, then the watchlist), source freshness and the daily job status."""
@@ -117,11 +134,23 @@ def get_overview(session: SessionDep, as_of: AsOfDep) -> Envelope[OverviewData]:
     cards = []
     for coin in coins:
         s = registry.run("summary", inputs, coin.symbol, as_of)
-        cards.append(CoinCard(symbol=coin.symbol, name=coin.name, is_watchlist=coin.is_watchlist,
-                              date=s.date, close=s.close, change_1d=s.change_1d,
-                              change_7d=s.change_7d, change_30d=s.change_30d, ath=s.ath,
-                              ath_date=s.ath_date, ath_distance=s.ath_distance,
-                              regime=s.regime))  # fmt: skip
+        cards.append(
+            CoinCard(
+                symbol=coin.symbol,
+                name=coin.name,
+                is_watchlist=coin.is_watchlist,
+                date=s.date,
+                close=s.close,
+                change_1d=s.change_1d,
+                change_7d=s.change_7d,
+                change_30d=s.change_30d,
+                ath=s.ath,
+                ath_date=s.ath_date,
+                ath_distance=s.ath_distance,
+                regime=s.regime,
+                mco_bias=_mco_bias(session, coin.symbol, as_of),
+            )
+        )
     freshness = _freshness(session, as_of)
     sources = [Source(name="coinbase", detail="candles_daily", last_date=freshness[0].last_date),
                Source(name=ANALYTICS_SOURCE, detail="summary"),

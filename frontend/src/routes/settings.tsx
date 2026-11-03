@@ -8,6 +8,7 @@ import {
   WatchlistPanel,
 } from '@/components/settings/AdminPanels'
 import { KeyWizard } from '@/components/settings/KeyWizard'
+import { ViewsPanel } from '@/components/settings/ViewsPanel'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { useMe } from '@/lib/queries'
@@ -86,6 +87,9 @@ export function SettingsPage() {
             badge={<Badge variant="outline">admin</Badge>}
           >
             <UsersPanel me={me.clerk_id} />
+          </Section>
+          <Section id="views" title="Outside views" badge={<Badge variant="outline">admin</Badge>}>
+            <ViewsPanel />
           </Section>
           <Section id="usage" title="Usage and cost" badge={<Badge variant="outline">admin</Badge>}>
             <UsagePanel />

@@ -20,6 +20,8 @@ export const OVERLAYS = [
   'volume',
   'levels',
   'pivots',
+  'mco', // MCO primary scenario (Stage 6.2; needs the MCO feature)
+  'mcoAlt', // MCO alternative scenario
 ] as const
 export type Overlay = (typeof OVERLAYS)[number]
 
@@ -51,6 +53,8 @@ export const DEFAULT_SETTINGS: ChartSettings = {
     volume: true,
     levels: true,
     pivots: false,
+    mco: true,
+    mcoAlt: true,
   },
   panes: { rsi: true, macd: false },
 }

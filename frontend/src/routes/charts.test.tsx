@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { CandleChartProps } from '@/components/charts/CandleChart'
+import { FAKE_VIDEO } from '@/lib/__fixtures__/mco'
 import { envelope, renderWithProviders, stubApi } from '@/test/render'
 
 import { ChartsPage } from './charts'
@@ -45,6 +46,7 @@ function setup(mco = false) {
     '/api/ohlcv/ETH': envelope(candles([10, 11, 12])),
     '/api/ohlcv/BTC': envelope(candles([100, 100, 100])),
     '/api/levels/ETH': analytics([{ name: 'ath', value: 20, date: '2025-08-24', distance: 0.6 }]),
+    '/api/mco/videos': envelope([FAKE_VIDEO]),
   })
 }
 
@@ -92,17 +94,33 @@ describe('ChartsPage', () => {
     expect(screen.getByRole('heading', { name: /ETH \/ BTC/ })).toBeInTheDocument()
   })
 
-  it('shows MCO toggles only when the feature is on, and disabled until v1.2', async () => {
+  it('draws MCO scenario lines when the feature is on, and toggles each scenario', async () => {
     setup(true)
+    renderWithProviders(<ChartsPage />, { route: '/charts?coin=ETH' })
+    await waitFor(() =>
+      expect(chartProps.last?.levels.some((l) => l.label.startsWith('MCO P'))).toBe(true),
+    )
+    const labels = () => chartProps.last?.levels.map((l) => l.label) ?? []
+    expect(labels()).toContain('MCO P target · Oct 2')
+    expect(labels()).toContain('MCO Alt resistance · Oct 2')
+    expect(screen.getByText(/MCO lines AI-extracted from the video of Oct 2/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Overlays' }))
+    const menu = await screen.findByRole('menu')
+    await userEvent.click(within(menu).getByRole('menuitemcheckbox', { name: 'Primary scenario' }))
+    await waitFor(() => expect(labels().some((l) => l.startsWith('MCO P'))).toBe(false))
+    expect(labels().some((l) => l.startsWith('MCO Alt'))).toBe(true)
+  })
+
+  it('shows no MCO toggles or lines when the feature is off', async () => {
+    setup(false)
     renderWithProviders(<ChartsPage />, { route: '/charts?coin=ETH' })
     await waitFor(() =>
       expect(screen.getByTestId('candle-chart')).toHaveAttribute('data-bars', '3'),
     )
     await userEvent.click(screen.getByRole('button', { name: 'Overlays' }))
     const menu = await screen.findByRole('menu')
-    expect(within(menu).getByRole('menuitemcheckbox', { name: 'MCO levels' })).toHaveAttribute(
-      'data-disabled',
-    )
+    expect(within(menu).queryByRole('menuitemcheckbox', { name: 'Primary scenario' })).toBeNull()
+    expect(chartProps.last?.levels.some((l) => l.label.startsWith('MCO'))).toBe(false)
   })
 
   it('offers a retry when candles fail to load', async () => {

@@ -454,3 +454,33 @@ export async function apiAction<T>(
         : `Request failed (${response.status})`
   throw new ApiError(response.status, message)
 }
+
+// --- MCO and outside views (Stage 6.2) ----------------------------------------------------------
+
+export type McoVideo = Schemas['McoVideoItem']
+export type McoCoinView = Schemas['McoCoinView']
+export type McoScenario = Schemas['McoScenario']
+export type ExternalView = Schemas['View']
+export type ManualViewIn = Schemas['ManualViewIn']
+
+/** Summarized MCO videos, newest first; `coin` keeps only videos that discuss it. */
+export function useMcoVideos(coin: string | null, limit = 30, enabled = true) {
+  return useQuery({
+    queryKey: ['mco', 'videos', coin, limit],
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/mco/videos', { params: { query: { coin: coin ?? undefined, limit } } }),
+      ),
+    enabled,
+  })
+}
+
+/** Outside views (MCO extracts and Rob's manual views), newest first. */
+export function useViews(coin: string | null, limit = 20, enabled = true) {
+  return useQuery({
+    queryKey: ['views', coin, limit],
+    queryFn: () =>
+      unwrap(api.GET('/api/views', { params: { query: { coin: coin ?? undefined, limit } } })),
+    enabled,
+  })
+}

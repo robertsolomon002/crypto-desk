@@ -44,7 +44,8 @@ export function contentSecurityPolicy(env: HeaderEnv): string {
     'default-src': ["'self'"],
     'script-src': ["'self'", ...clerk, challenges, protect],
     'connect-src': ["'self'", ...api, ...clerk, `${protect}:*`],
-    'img-src': ["'self'", 'data:', 'https://img.clerk.com'],
+    // i.ytimg.com: MCO video thumbnails on the MCO tab (Stage 6.2), loaded without a referrer.
+    'img-src': ["'self'", 'data:', 'https://img.clerk.com', 'https://i.ytimg.com'],
     'style-src': ["'self'", "'unsafe-inline'"],
     'font-src': ["'self'"],
     'worker-src': ["'self'", 'blob:'],

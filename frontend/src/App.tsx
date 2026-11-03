@@ -18,6 +18,7 @@ const CyclesPage = lazy(() => import('@/routes/cycles').then((m) => ({ default: 
 const StatsPage = lazy(() => import('@/routes/stats').then((m) => ({ default: m.StatsPage })))
 const OnchainPage = lazy(() => import('@/routes/onchain').then((m) => ({ default: m.OnchainPage })))
 const AgentPage = lazy(() => import('@/routes/agent').then((m) => ({ default: m.AgentPage })))
+const McoPage = lazy(() => import('@/routes/mco').then((m) => ({ default: m.McoPage })))
 const DataPage = lazy(() => import('@/routes/data').then((m) => ({ default: m.DataPage })))
 const SettingsPage = lazy(() =>
   import('@/routes/settings').then((m) => ({ default: m.SettingsPage })),
@@ -51,6 +52,11 @@ const BUILT: Record<string, ReactElement> = {
   '/onchain': (
     <TabPage label="The On-chain & Macro tab">
       <OnchainPage />
+    </TabPage>
+  ),
+  '/mco': (
+    <TabPage label="The MCO tab">
+      <McoPage />
     </TabPage>
   ),
   '/agent': (

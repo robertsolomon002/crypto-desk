@@ -71,6 +71,10 @@ SAMPLES: dict[tuple[str, str], tuple[str, dict | None]] = {
     ("PATCH", "/api/admin/users/{user_id}"): ("/api/admin/users/1", {"role": "admin"}),
     ("GET", "/api/mco/videos"): ("/api/mco/videos", None),
     ("GET", "/api/mco/videos/{video_id}"): ("/api/mco/videos/fakeVideo01", None),
+    ("GET", "/api/views"): ("/api/views?coin=BTC", None),
+    ("POST", "/api/admin/views"): ("/api/admin/views", {"source": "Analyst", "coin": "BTC",
+                                                        "bias": "bullish"}),
+    ("DELETE", "/api/admin/views/{view_id}"): ("/api/admin/views/1", None),
 }  # fmt: skip
 PUBLIC = {("GET", "/api/health")}
 # The key test needs a key; the providers are faked in the `api` fixture.
@@ -274,7 +278,8 @@ def test_overview_cards_and_freshness(api, api_sessions) -> None:
     btc = cards[0]
     for key in ("close", "change_1d", "change_7d", "change_30d", "ath", "ath_distance"):
         assert btc[key] == pytest.approx(ref[key]), key
-    assert btc["regime"] == ref["regime"] and btc["signal"] is None and btc["mco_bias"] is None
+    assert btc["regime"] == ref["regime"] and btc["signal"] is None
+    assert btc["mco_bias"]["bias"] == "bearish" and cards[1]["mco_bias"] is None  # seeded MCO video
     assert btc["ath_distance"] <= 0
     fresh = {f["source"]: f for f in body["data"]["freshness"]}
     assert fresh["Prices"]["last_date"] == LAST_DAY.isoformat()

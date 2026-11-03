@@ -90,7 +90,7 @@ def test_every_tool_honours_as_of(seeded, name) -> None:
     assert set(cut) == {"as_of", "sources", "data"}
     if name == "get_calendar":
         assert cut["as_of"] == AS_OF  # the window is centred on as_of
-    elif name != "get_external_views":
+    else:
         assert cut["as_of"] is not None and cut["as_of"] <= AS_OF, cut["as_of"]
         assert full["as_of"] >= cut["as_of"]
     # No date anywhere in the cut answer is after as_of (calendar looks ahead on purpose).

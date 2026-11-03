@@ -1,3 +1,5 @@
+import { Link } from 'react-router'
+
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { ViewDataLink } from '@/components/ViewDataLink'
@@ -78,8 +80,28 @@ function CoinCardView({ card, selected }: { card: CoinCard; selected: boolean })
         </dd>
         <dt className="text-muted-foreground">Signal</dt>
         <dd className="text-muted-foreground">Arrives with Signals (v1.3)</dd>
-        <dt className="text-muted-foreground">MCO bias</dt>
-        <dd className="text-muted-foreground">Arrives with MCO (v1.2)</dd>
+        {card.mco_bias && (
+          <>
+            <dt className="text-muted-foreground">MCO bias</dt>
+            <dd>
+              <span
+                className={cn(
+                  'font-mono',
+                  card.mco_bias.bias === 'bullish' && 'text-positive',
+                  card.mco_bias.bias === 'bearish' && 'text-negative',
+                )}
+              >
+                {card.mco_bias.bias}
+              </span>{' '}
+              <Link
+                to={`/mco?mco_coin=${encodeURIComponent(card.symbol)}`}
+                className="text-muted-foreground underline"
+              >
+                video of {formatDate(card.mco_bias.published_at.slice(0, 10))}
+              </Link>
+            </dd>
+          </>
+        )}
       </dl>
       <ViewDataLink table="candles_daily" params={{ coin: card.symbol }} />
     </Card>

@@ -97,6 +97,46 @@ export interface paths {
         patch: operations["updateUserRole"];
         trace?: never;
     };
+    "/api/admin/views": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add View
+         * @description Add a manual view from any analyst (admin). It is visible to members right away.
+         */
+        post: operations["addView"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/views/{view_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete View
+         * @description Delete a manual view (admin). MCO views come from extracts and cannot be deleted here.
+         */
+        delete: operations["deleteView"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/watchlist": {
         parameters: {
             query?: never;
@@ -935,6 +975,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/views": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Views
+         * @description Outside analysts' views (MCO extracts and Rob's manual views), newest first.
+         */
+        get: operations["listViews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1030,8 +1090,7 @@ export interface components {
             date: string | null;
             /** Is Watchlist */
             is_watchlist: boolean;
-            /** Mco Bias */
-            mco_bias?: null;
+            mco_bias?: components["schemas"]["McoBias"] | null;
             /** Name */
             name: string;
             /** Regime */
@@ -1594,6 +1653,18 @@ export interface components {
             /** Sources */
             sources: components["schemas"]["Source"][];
         };
+        /** Envelope[list[View]] */
+        Envelope_list_View__: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            /** Data */
+            data: components["schemas"]["View"][];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
         /** ErrorEvent */
         ErrorEvent: {
             /**
@@ -1789,6 +1860,51 @@ export interface components {
             release_lag_days: number;
             /** Units */
             units: string;
+        };
+        /** ManualLevel */
+        ManualLevel: {
+            /** Label */
+            label: string;
+            /** Price */
+            price: number;
+        };
+        /** ManualViewIn */
+        ManualViewIn: {
+            /**
+             * Bias
+             * @enum {string}
+             */
+            bias: "bullish" | "bearish" | "neutral";
+            /** Coin */
+            coin: string;
+            /** Invalidation */
+            invalidation?: number | null;
+            /** Levels */
+            levels?: components["schemas"]["ManualLevel"][];
+            /**
+             * Source
+             * @description Analyst or channel name
+             */
+            source: string;
+            /** Url */
+            url?: string | null;
+        };
+        /** McoBias */
+        McoBias: {
+            /**
+             * Bias
+             * @enum {string}
+             */
+            bias: "bullish" | "bearish" | "neutral";
+            /** Confidence */
+            confidence: ("high" | "medium" | "low") | null;
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /** Url */
+            url: string | null;
         };
         /** McoCoinView */
         McoCoinView: {
@@ -2205,6 +2321,46 @@ export interface components {
             /** Error Type */
             type: string;
         };
+        /** View */
+        View: {
+            /**
+             * Bias
+             * @enum {string}
+             */
+            bias: "bullish" | "bearish" | "neutral";
+            /** Coin */
+            coin: string;
+            /** Confidence */
+            confidence: ("high" | "medium" | "low") | null;
+            /** Id */
+            id: string;
+            /** Invalidation */
+            invalidation: number | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "mco" | "manual";
+            /** Levels */
+            levels: components["schemas"]["McoLevel"][];
+            /** Low Detail */
+            low_detail: boolean;
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /** Scenarios */
+            scenarios: components["schemas"]["McoScenario"][];
+            /** Source */
+            source: string;
+            /** Targets */
+            targets: number[];
+            /** Url */
+            url: string | null;
+            /** Wave Position */
+            wave_position: string | null;
+        };
         /** WatchlistAdd */
         WatchlistAdd: {
             /** Aliases */
@@ -2417,6 +2573,68 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["UserOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    addView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualViewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["View"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                view_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -3871,6 +4089,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listViews: {
+        parameters: {
+            query?: {
+                coin?: string | null;
+                limit?: number;
+                /** @description UTC date; data after it is excluded. Default: the latest data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_View__"];
                 };
             };
             /** @description Validation Error */

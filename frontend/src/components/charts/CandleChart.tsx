@@ -19,7 +19,7 @@ import {
 import { memo, useEffect, useMemo, useRef } from 'react'
 
 import type { Bar, IndicatorLine } from '@/lib/chart-data'
-import { withAlpha, type ChartColors } from '@/lib/chart-colors'
+import { withAlpha, type ChartColors, type ColorToken } from '@/lib/chart-colors'
 
 // One Lightweight Charts instance per mount. Series are synced by id on every change, so
 // toggling an indicator adds or removes one series instead of rebuilding the chart, and data is
@@ -30,7 +30,12 @@ import { withAlpha, type ChartColors } from '@/lib/chart-colors'
 export interface LevelLine {
   label: string
   value: number
+  /** Theme token for the line (default series-2, the key-level colour). */
+  color?: ColorToken
+  style?: 'dotted' | 'dashed' | 'solid'
 }
+
+const LINE_STYLE = { dotted: LineStyle.Dotted, dashed: LineStyle.Dashed, solid: LineStyle.Solid }
 
 export interface PivotMark {
   time: number
@@ -368,9 +373,9 @@ function CandleChartImpl(props: CandleChartProps) {
       const lines = props.levels.map((l) =>
         main.api.createPriceLine({
           price: l.value,
-          color: c['series-2'],
+          color: c[l.color ?? 'series-2'],
           lineWidth: 1,
-          lineStyle: LineStyle.Dotted,
+          lineStyle: LINE_STYLE[l.style ?? 'dotted'],
           axisLabelVisible: true,
           title: l.label,
         }),

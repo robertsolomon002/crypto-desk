@@ -25,7 +25,17 @@ const card = (symbol: string, close: number, extra = {}) => ({
 })
 
 const OVERVIEW = envelope({
-  coins: [card('BTC', 90123.45), card('ETH', 3210.5)],
+  coins: [
+    card('BTC', 90123.45, {
+      mco_bias: {
+        bias: 'bearish',
+        published_at: '2026-10-28T13:00:00Z',
+        confidence: 'high',
+        url: 'https://www.youtube.com/watch?v=fakeVideo01',
+      },
+    }),
+    card('ETH', 3210.5),
+  ],
   freshness: [
     {
       source: 'Prices',
@@ -125,5 +135,14 @@ describe('OverviewPage', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Retry' }))
     expect(fetch.mock.calls.filter(([r]) => r.url.includes('/api/news'))).toHaveLength(2)
     expect(screen.getByTestId('coin-card-BTC')).toBeInTheDocument()
+  })
+
+  it('shows the MCO bias with a link to the MCO tab, only where there is one', async () => {
+    stubApi({ '/api/overview': OVERVIEW })
+    renderWithProviders(<OverviewPage />)
+    const link = await screen.findByRole('link', { name: /video of/ })
+    expect(link).toHaveAttribute('href', '/mco?mco_coin=BTC')
+    expect(screen.getByText('bearish')).toBeInTheDocument()
+    expect(screen.getAllByText('MCO bias')).toHaveLength(1)
   })
 })

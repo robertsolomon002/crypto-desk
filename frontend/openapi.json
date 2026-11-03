@@ -306,8 +306,14 @@
             "type": "boolean"
           },
           "mco_bias": {
-            "title": "Mco Bias",
-            "type": "null"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/McoBias"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "name": {
             "title": "Name",
@@ -1916,6 +1922,44 @@
         "title": "Envelope[list[TableInfo]]",
         "type": "object"
       },
+      "Envelope_list_View__": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/View"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[list[View]]",
+        "type": "object"
+      },
       "ErrorEvent": {
         "properties": {
           "code": {
@@ -2442,6 +2486,145 @@
           "release_lag_days"
         ],
         "title": "MacroSeries",
+        "type": "object"
+      },
+      "ManualLevel": {
+        "properties": {
+          "label": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "price": {
+            "exclusiveMinimum": 0.0,
+            "title": "Price",
+            "type": "number"
+          }
+        },
+        "required": [
+          "price",
+          "label"
+        ],
+        "title": "ManualLevel",
+        "type": "object"
+      },
+      "ManualViewIn": {
+        "properties": {
+          "bias": {
+            "enum": [
+              "bullish",
+              "bearish",
+              "neutral"
+            ],
+            "title": "Bias",
+            "type": "string"
+          },
+          "coin": {
+            "title": "Coin",
+            "type": "string"
+          },
+          "invalidation": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invalidation"
+          },
+          "levels": {
+            "items": {
+              "$ref": "#/components/schemas/ManualLevel"
+            },
+            "maxItems": 20,
+            "title": "Levels",
+            "type": "array"
+          },
+          "source": {
+            "description": "Analyst or channel name",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "format": "uri",
+                "maxLength": 2083,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "source",
+          "coin",
+          "bias"
+        ],
+        "title": "ManualViewIn",
+        "type": "object"
+      },
+      "McoBias": {
+        "properties": {
+          "bias": {
+            "enum": [
+              "bullish",
+              "bearish",
+              "neutral"
+            ],
+            "title": "Bias",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "bias",
+          "published_at",
+          "confidence",
+          "url"
+        ],
+        "title": "McoBias",
         "type": "object"
       },
       "McoCoinView": {
@@ -3569,6 +3752,136 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "View": {
+        "properties": {
+          "bias": {
+            "enum": [
+              "bullish",
+              "bearish",
+              "neutral"
+            ],
+            "title": "Bias",
+            "type": "string"
+          },
+          "coin": {
+            "title": "Coin",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "invalidation": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invalidation"
+          },
+          "kind": {
+            "enum": [
+              "mco",
+              "manual"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "levels": {
+            "items": {
+              "$ref": "#/components/schemas/McoLevel"
+            },
+            "title": "Levels",
+            "type": "array"
+          },
+          "low_detail": {
+            "title": "Low Detail",
+            "type": "boolean"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "scenarios": {
+            "items": {
+              "$ref": "#/components/schemas/McoScenario"
+            },
+            "title": "Scenarios",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "targets": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Targets",
+            "type": "array"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "wave_position": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wave Position"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "source",
+          "coin",
+          "published_at",
+          "bias",
+          "wave_position",
+          "levels",
+          "invalidation",
+          "targets",
+          "scenarios",
+          "confidence",
+          "low_detail",
+          "url"
+        ],
+        "title": "View",
+        "type": "object"
+      },
       "WatchlistAdd": {
         "properties": {
           "aliases": {
@@ -3908,6 +4221,84 @@
         "summary": "Update Role",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/admin/views": {
+      "post": {
+        "description": "Add a manual view from any analyst (admin). It is visible to members right away.",
+        "operationId": "addView",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualViewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/View"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add View",
+        "tags": [
+          "views"
+        ]
+      }
+    },
+    "/api/admin/views/{view_id}": {
+      "delete": {
+        "description": "Delete a manual view (admin). MCO views come from extracts and cannot be deleted here.",
+        "operationId": "deleteView",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "view_id",
+            "required": true,
+            "schema": {
+              "title": "View Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete View",
+        "tags": [
+          "views"
         ]
       }
     },
@@ -6838,6 +7229,87 @@
         "summary": "Volatility",
         "tags": [
           "stats"
+        ]
+      }
+    },
+    "/api/views": {
+      "get": {
+        "description": "Outside analysts' views (MCO extracts and Rob's manual views), newest first.",
+        "operationId": "listViews",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "coin",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Coin"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "UTC date; data after it is excluded. Default: the latest data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UTC date; data after it is excluded. Default: the latest data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_View__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Views",
+        "tags": [
+          "views"
         ]
       }
     }

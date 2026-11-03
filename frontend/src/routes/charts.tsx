@@ -25,7 +25,8 @@ import {
   type Timeframe,
 } from '@/lib/chart-settings'
 import { useSelectedCoin } from '@/lib/coin'
-import { useCoins, useLevels, useMe, useOhlcv, usePivots } from '@/lib/queries'
+import { mcoLines, shortDate } from '@/lib/mco'
+import { useCoins, useLevels, useMcoVideos, useMe, useOhlcv, usePivots } from '@/lib/queries'
 import { cn } from '@/lib/utils'
 
 const TF_LABEL: Record<Timeframe, string> = { '1d': '1D', '1w': '1W', '4h': '4H' }
@@ -149,11 +150,32 @@ export function ChartsPage() {
 
   const lines = useMemo(() => computeIndicators(bars, settings), [bars, settings])
 
+  // MCO: the newest summarized video that discusses this coin (Stage 6.2).
+  const mcoOn = !!me?.features.mco && !isRatio
+  const showMco = { primary: settings.overlays.mco, alternative: settings.overlays.mcoAlt }
+  const mcoQ = useMcoVideos(coin, 1, mcoOn && (showMco.primary || showMco.alternative))
+  const mcoVideo = mcoOn ? mcoQ.data?.data[0] : undefined
+
   const levels = useMemo<LevelLine[]>(() => {
-    if (isRatio || !settings.overlays.levels) return []
-    const rows = (levelsQ.data?.data.result ?? []) as LevelRow[]
-    return rows.map((r) => ({ label: LEVEL_LABEL[r.name] ?? r.name, value: r.value }))
-  }, [levelsQ.data, isRatio, settings.overlays.levels])
+    if (isRatio) return []
+    const rows = settings.overlays.levels ? ((levelsQ.data?.data.result ?? []) as LevelRow[]) : []
+    const keyLevels = rows.map((r) => ({ label: LEVEL_LABEL[r.name] ?? r.name, value: r.value }))
+    const mco = mcoVideo
+      ? mcoLines(mcoVideo, coin, {
+          primary: settings.overlays.mco,
+          alternative: settings.overlays.mcoAlt,
+        })
+      : []
+    return [...keyLevels, ...mco]
+  }, [
+    levelsQ.data,
+    isRatio,
+    settings.overlays.levels,
+    settings.overlays.mco,
+    settings.overlays.mcoAlt,
+    mcoVideo,
+    coin,
+  ])
 
   const pivots = useMemo<PivotMark[]>(() => {
     if (isRatio || !settings.overlays.pivots || !pivotTf) return []
@@ -276,12 +298,22 @@ export function ChartsPage() {
           {me?.features.mco && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuLabel>MCO (coming in v1.2)</DropdownMenuLabel>
-              <Check checked={false} disabled>
-                MCO levels
+              <DropdownMenuLabel>
+                MCO levels{mcoVideo ? ` · video of ${shortDate(mcoVideo.published_at)}` : ''}
+              </DropdownMenuLabel>
+              <Check
+                checked={settings.overlays.mco}
+                disabled={isRatio}
+                onCheckedChange={() => toggleOverlay('mco')}
+              >
+                Primary scenario
               </Check>
-              <Check checked={false} disabled>
-                MCO wave labels
+              <Check
+                checked={settings.overlays.mcoAlt}
+                disabled={isRatio}
+                onCheckedChange={() => toggleOverlay('mcoAlt')}
+              >
+                Alternative scenario
               </Check>
             </>
           )}
@@ -294,6 +326,9 @@ export function ChartsPage() {
             {title}{' '}
             <span className="font-normal text-muted-foreground">
               · {TF_NAME[tf]} · {isRatio ? 'ratio' : 'USD'} · {settings.log ? 'log' : 'linear'}
+              {mcoVideo && (showMco.primary || showMco.alternative) && (
+                <> · MCO lines AI-extracted from the video of {shortDate(mcoVideo.published_at)}</>
+              )}
             </span>
           </h2>
           <div className="flex gap-3">

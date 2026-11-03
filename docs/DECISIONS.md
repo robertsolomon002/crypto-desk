@@ -553,3 +553,30 @@ The function returns the label series, the current label, and the values that pr
   - v1 payloads are read as v2 (`schemas.load_payload`): the primary takes v1's targets and invalidation, the alternative's bias is unknown (neutral), and labels are dropped.
 - **API:** `/api/mco/videos[/{id}]` return scenarios and never any label, from rows or from stored payloads.
 - Today's 3 videos were re-extracted with v2 (Neon, alerts off).
+
+## D50. MCO tab, chart overlays and outside views
+
+*2026-11-03, Stage 6.2.*
+
+- **Outside views** (`api/routes/views.py`, `list_views`):
+  - MCO's views are read live from `mco_extracts` (newest extract per video, v1 read as v2), not copied into `external_views`, so they never go stale when a video is re-extracted. `external_views` holds only Rob's manual views (`extract_id` stays null).
+  - `as_of`: MCO views count from the video's publication time, manual ones from their creation, both up to the end of that UTC day.
+  - MCO views are left out when MCO is switched off. Manual views stay.
+  - The same function backs `GET /api/views` (member), desk-mcp's `get_external_views` (the `views` group the desk's context analyst already has; the tool says the text is untrusted and AI-extracted) and the Overview's `mco_bias`.
+  - `POST /api/admin/views` and `DELETE /api/admin/views/{id}` (admin) take source, coin, bias, levels (price and label, at most 20), invalidation and an http(s) link.
+- **MCO tab** (`features.mco_tab` on):
+  - The AI-extracted notice with the channel link.
+  - A coin filter in the URL (`mco_coin`).
+  - A bias timeline: one marker per video, coloured by bias, on the daily close of the chosen coin (log axis).
+  - Video cards: thumbnail, title linking to YouTube, date, per-coin bias chips, a low-detail badge, the summary, failed D25 checks, and per coin the primary and alternative scenarios with targets, invalidation, trigger and levels, plus shared levels.
+  - Everything is plain text; links go through `safeHttpUrl`.
+  - **Rob's choice:** his own chart colours are not shown, because the model reads them unreliably (D49).
+  - Thumbnails come from `i.ytimg.com`, which is added to the CSP `img-src` only, and load without a referrer.
+  - The timeline's "View data" link (`mco_extracts`) is shown to the admin only, since MCO tables are admin-only in the Data tab (Decision 6).
+- **Charts tab:**
+  - The "MCO waves" placeholder is gone.
+  - "Primary scenario" and "Alternative scenario" toggles draw the newest video's lines for the coin: levels dashed, targets solid, invalidation dotted. The primary is in `series-1` and the alternative in `series-4`; the shared levels (muted) go with the primary.
+  - The chart title says the lines are AI-extracted from the video of that date.
+  - The toggles appear only when the MCO feature is on. They are saved with the other chart settings and are on by default.
+- **Overview:** each coin card shows MCO's latest bias with a link to the MCO tab filtered on that coin, or nothing when there is none.
+- **Settings:** an admin "Outside views" panel adds and deletes manual views. Levels are one per line, price then label.
