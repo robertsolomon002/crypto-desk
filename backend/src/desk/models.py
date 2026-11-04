@@ -340,6 +340,20 @@ class JobRun(Base):
     error: Mapped[str | None] = mapped_column(Text)
 
 
+class AppError(Base):
+    """One API or agent error, for the admin Health page's counts (Stage 8.1, D53). Only a
+    place (route template or `agent.chat`/`agent.desk`) and a kind (exception type or error
+    code), never a message: messages can quote keys, prompts or MCO text."""
+
+    __tablename__ = "app_errors"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    created_at: Mapped[dt.datetime] = _created_at()
+    where: Mapped[str] = mapped_column(String(128), index=True)
+    kind: Mapped[str] = mapped_column(String(64))
+    status: Mapped[int | None] = mapped_column(Integer)
+
+
 class LlmSpend(Base):
     """Server-key spend only (Decision 9). User keys are never recorded."""
 

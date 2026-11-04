@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router'
 
 import { Segmented } from '@/components/charts/ChartCard'
 import {
@@ -93,6 +94,14 @@ export function SettingsPage() {
           </Section>
           <Section id="usage" title="Usage and cost" badge={<Badge variant="outline">admin</Badge>}>
             <UsagePanel />
+            <p className="text-sm">
+              <Link to="/health" className="underline">
+                Open the Health page
+              </Link>{' '}
+              <span className="text-muted-foreground">
+                for jobs, data freshness, errors and free-tier usage.
+              </span>
+            </p>
           </Section>
         </>
       )}

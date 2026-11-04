@@ -751,6 +751,29 @@
         "title": "DebatePoint",
         "type": "object"
       },
+      "Degradation": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "step": {
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "label",
+          "active"
+        ],
+        "title": "Degradation",
+        "type": "object"
+      },
       "DeskCase": {
         "properties": {
           "phase": {
@@ -2306,6 +2329,35 @@
         "title": "Envelope[list[View]]",
         "type": "object"
       },
+      "ErrorCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_at": {
+            "format": "date-time",
+            "title": "Last At",
+            "type": "string"
+          },
+          "where": {
+            "title": "Where",
+            "type": "string"
+          }
+        },
+        "required": [
+          "where",
+          "kind",
+          "count",
+          "last_at"
+        ],
+        "title": "ErrorCount",
+        "type": "object"
+      },
       "ErrorEvent": {
         "properties": {
           "code": {
@@ -2328,6 +2380,42 @@
           "message"
         ],
         "title": "ErrorEvent",
+        "type": "object"
+      },
+      "ErrorHealth": {
+        "properties": {
+          "app": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorCount"
+            },
+            "title": "App",
+            "type": "array"
+          },
+          "job_failures": {
+            "title": "Job Failures",
+            "type": "integer"
+          },
+          "mco_failures": {
+            "title": "Mco Failures",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "window_days": {
+            "title": "Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "window_days",
+          "total",
+          "app",
+          "job_failures",
+          "mco_failures"
+        ],
+        "title": "ErrorHealth",
         "type": "object"
       },
       "Event": {
@@ -2542,6 +2630,61 @@
         "title": "Headline",
         "type": "object"
       },
+      "HealthReport": {
+        "properties": {
+          "errors": {
+            "$ref": "#/components/schemas/ErrorHealth"
+          },
+          "freshness": {
+            "items": {
+              "$ref": "#/components/schemas/SourceFreshness"
+            },
+            "title": "Freshness",
+            "type": "array"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/JobHealth"
+            },
+            "title": "Jobs",
+            "type": "array"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "problems": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "spend": {
+            "$ref": "#/components/schemas/SpendHealth"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageHealth"
+          }
+        },
+        "required": [
+          "generated_at",
+          "ok",
+          "problems",
+          "jobs",
+          "freshness",
+          "spend",
+          "errors",
+          "usage"
+        ],
+        "title": "HealthReport",
+        "type": "object"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -2628,6 +2771,114 @@
           "email"
         ],
         "title": "InviteCreate",
+        "type": "object"
+      },
+      "JobHealth": {
+        "properties": {
+          "failures": {
+            "title": "Failures",
+            "type": "integer"
+          },
+          "job": {
+            "title": "Job",
+            "type": "string"
+          },
+          "last_ended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Ended At"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seconds"
+          },
+          "last_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Started At"
+          },
+          "last_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Status"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "max_age_hours": {
+            "title": "Max Age Hours",
+            "type": "integer"
+          },
+          "overdue": {
+            "title": "Overdue",
+            "type": "boolean"
+          },
+          "runs": {
+            "title": "Runs",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job",
+          "last_status",
+          "last_started_at",
+          "last_ended_at",
+          "last_seconds",
+          "last_success_at",
+          "max_age_hours",
+          "overdue",
+          "runs",
+          "failures",
+          "last_error"
+        ],
+        "title": "JobHealth",
         "type": "object"
       },
       "JobLine": {
@@ -2779,6 +3030,24 @@
           "message"
         ],
         "title": "KeyTestResult",
+        "type": "object"
+      },
+      "Link": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "url"
+        ],
+        "title": "Link",
         "type": "object"
       },
       "MacroData": {
@@ -4012,6 +4281,59 @@
         "title": "Source",
         "type": "object"
       },
+      "SourceFreshness": {
+        "properties": {
+          "age_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Days"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "last_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Date"
+          },
+          "max_age_days": {
+            "title": "Max Age Days",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "source",
+          "detail",
+          "last_date",
+          "age_days",
+          "max_age_days",
+          "stale"
+        ],
+        "title": "SourceFreshness",
+        "type": "object"
+      },
       "SourceScore": {
         "properties": {
           "coins": {
@@ -4051,6 +4373,65 @@
         "title": "SourceScore",
         "type": "object"
       },
+      "SpendHealth": {
+        "properties": {
+          "by_source": {
+            "items": {
+              "$ref": "#/components/schemas/SpendSource"
+            },
+            "title": "By Source",
+            "type": "array"
+          },
+          "cap_usd": {
+            "title": "Cap Usd",
+            "type": "number"
+          },
+          "degradations": {
+            "items": {
+              "$ref": "#/components/schemas/Degradation"
+            },
+            "title": "Degradations",
+            "type": "array"
+          },
+          "degrade_at_usd": {
+            "title": "Degrade At Usd",
+            "type": "number"
+          },
+          "degraded": {
+            "title": "Degraded",
+            "type": "boolean"
+          },
+          "exhausted": {
+            "title": "Exhausted",
+            "type": "boolean"
+          },
+          "month": {
+            "title": "Month",
+            "type": "string"
+          },
+          "projected_usd": {
+            "title": "Projected Usd",
+            "type": "number"
+          },
+          "spent_usd": {
+            "title": "Spent Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "month",
+          "spent_usd",
+          "cap_usd",
+          "degrade_at_usd",
+          "projected_usd",
+          "degraded",
+          "exhausted",
+          "by_source",
+          "degradations"
+        ],
+        "title": "SpendHealth",
+        "type": "object"
+      },
       "SpendLine": {
         "properties": {
           "cost": {
@@ -4077,6 +4458,24 @@
           "tokens_out"
         ],
         "title": "SpendLine",
+        "type": "object"
+      },
+      "SpendSource": {
+        "properties": {
+          "cost": {
+            "title": "Cost",
+            "type": "number"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "cost"
+        ],
+        "title": "SpendSource",
         "type": "object"
       },
       "StatsOut": {
@@ -4271,6 +4670,24 @@
         "title": "TablePage",
         "type": "object"
       },
+      "TableSize": {
+        "properties": {
+          "bytes": {
+            "title": "Bytes",
+            "type": "integer"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          }
+        },
+        "required": [
+          "table",
+          "bytes"
+        ],
+        "title": "TableSize",
+        "type": "object"
+      },
       "Timeframe": {
         "enum": [
           "1d",
@@ -4404,6 +4821,48 @@
           "jobs"
         ],
         "title": "Usage",
+        "type": "object"
+      },
+      "UsageHealth": {
+        "properties": {
+          "database_bytes": {
+            "title": "Database Bytes",
+            "type": "integer"
+          },
+          "free_tier": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Free Tier",
+            "type": "array"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/Link"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "storage_limit_bytes": {
+            "title": "Storage Limit Bytes",
+            "type": "integer"
+          },
+          "tables": {
+            "items": {
+              "$ref": "#/components/schemas/TableSize"
+            },
+            "title": "Tables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "database_bytes",
+          "storage_limit_bytes",
+          "tables",
+          "links",
+          "free_tier"
+        ],
+        "title": "UsageHealth",
         "type": "object"
       },
       "UserOut": {
@@ -4855,6 +5314,38 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/admin/health": {
+      "get": {
+        "description": "The admin Health page: last run per job, data freshness per source, server-key spend\nagainst the cap with the degradations applied, error counts, and database size against\nNeon's limit with links for Cloud Run and Neon usage (D53).",
+        "operationId": "getOpsHealth",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ops Health",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/admin/invites": {
       "get": {
         "operationId": "listInvites",

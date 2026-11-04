@@ -439,6 +439,19 @@ export function useUsage(enabled: boolean) {
   })
 }
 
+// --- Health (Stage 8.1) -------------------------------------------------------------------------
+
+export type HealthReport = Schemas['HealthReport']
+
+export function useOpsHealth(enabled: boolean) {
+  return useQuery({
+    queryKey: ['admin', 'health'],
+    queryFn: () => unwrap(api.GET('/api/admin/health')),
+    enabled,
+    refetchInterval: 5 * 60_000,
+  })
+}
+
 /** The API's error text (`detail`) for a failed admin action, shown to the admin as text. */
 export async function apiAction<T>(
   call: Promise<{ data?: T; error?: unknown; response: Response }>,

@@ -11,6 +11,7 @@ import datetime as dt
 from collections.abc import AsyncIterable, Iterator
 from typing import Annotated
 
+import anyio
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.sse import EventSourceResponse, ServerSentEvent
@@ -30,6 +31,7 @@ from desk.agents.schemas import (
 )
 from desk.api import deps
 from desk.api.deps import SessionDep, UserDep, require_role
+from desk.api.middleware import count_error
 from desk.api.schemas import Envelope, Source
 from desk.config import load_models_config
 from desk.models import AgentSnapshot
@@ -111,6 +113,11 @@ def test_key(
 # --- Chat (Stage 5.1) -------------------------------------------------------------------------
 
 
+async def _count(where: str, payload: object) -> None:
+    """Count a failed run on the Health page by its error code only (Stage 8.1)."""
+    await anyio.to_thread.run_sync(count_error, where, str(getattr(payload, "code", "error")))
+
+
 def tools_factory() -> chat.ToolsFactory:
     """desk-mcp's tools for one answer (tests swap in their own)."""
     return chat.desk_tools
@@ -150,6 +157,8 @@ async def chat_stream(
     """Ask the agent. Send your own key in `X-LLM-Key` with `provider` (and optionally
     `model`); an admin without a key uses the capped server key."""
     async for name, payload in chat.run(prepared, factory):
+        if name == "error":
+            await _count("agent.chat", payload)
         yield ServerSentEvent(event=name, data=payload.model_dump(mode="json"))
 
 
@@ -237,6 +246,8 @@ async def desk_stream(
     """Ask the desk about one coin: two analysts, a bull and bear debate, and the head's
     Decision 8 signal. Same keys as chat; an admin without a key uses the capped server key."""
     async for name, payload in desk_graph.run(prepared, factory):
+        if name == "error":
+            await _count("agent.desk", payload)
         yield ServerSentEvent(event=name, data=payload.model_dump(mode="json"))
 
 

@@ -1,6 +1,6 @@
 # Operations
 
-First version: Stage 2.2 (2026-10-30). Why it is set up this way: D38 in `DECISIONS.md`.
+First version: Stage 2.2 (2026-10-30); monitoring, backups and runbooks added in Stage 8.1 (2026-11-04). Why it is set up this way: D38 and D53 in `DECISIONS.md`.
 
 ## URLs
 
@@ -60,7 +60,7 @@ The next successful deploy moves traffic to the newest revision again, so revert
 
 **Frontend:** Cloudflare dashboard → Workers & Pages → `crypto-desk` → Deployments → ⋯ on an older production deployment → "Rollback to this deployment". It takes effect instantly. Preview deployments can't be rollback targets.
 
-**Database:** for a bad migration, `uv run alembic downgrade -1` from `backend/` (it needs the direct host: set `DATABASE_URL` to the URL without `-pooler`). For bad data, Neon can restore to any point in the last 6 hours (free plan history window) from the console (Branches → Restore).
+**Database:** for a bad migration, `uv run alembic downgrade -1` from `backend/` (it needs the direct host: set `DATABASE_URL` to the URL without `-pooler`). For bad data, Neon can restore to any point in the last 6 hours (free plan history window) from the console (Branches → Restore). Anything older comes from the weekly backup ("Restore a backup" below).
 
 ## Read logs
 
@@ -136,6 +136,130 @@ The runtime account (`desk-api`) gets read access to the values. The deployer ge
 - **Level watch:** `.github/workflows/levelwatch.yml`, daily at 01:00 UTC, no LLM. One `level_cross` alert lists yesterday's crossings of this week's desk and MCO levels and of the key levels. A second run for the same day sends nothing (`-f force=true` to resend).
 - **Privacy:** both logs hide MCO-derived rows and the brief text (Decision 6).
 - **Never edit `signals`:** a trigger refuses UPDATE and DELETE. A change to the signal definition means a new `signals.version` in `config/settings.yaml`.
+
+## Health page and the weekly summary (Stage 8.1, D53)
+
+- **Health page:** https://crypto-desk-a9f.pages.dev/health (also linked from Settings → Usage and cost). Everyone sees the backend status. Admins also get:
+  - a box at the top listing what needs a look;
+  - **Jobs:** the last run, the last success, runs and failures over 7 days, and an **overdue** badge when no success came in time (daily, levelwatch and mco 26 h; weekly and backup 170 h; set in `ops.jobs` in `config/settings.yaml`);
+  - **Data freshness** per source;
+  - **Server-key LLM spend** against the $8 cap, with the month-end pace and which Decision 9 degradations are on;
+  - **Errors** in the last 7 days;
+  - **Free-tier usage:** database size against Neon's 1 GB, plus links to Cloud Run metrics, logs, Error Reporting, billing, Neon, the backups bucket and Actions.
+  It refreshes every 5 minutes while open.
+- **Weekly summary:** `.github/workflows/ops.yml`, Monday 07:00 UTC, sends the `ops_summary` alert to Telegram (Rob only). It has counts and dates only. Locally, `uv run desk ops health` prints the same text without sending it.
+- **By hand:** `gh workflow run ops.yml` (backup, then summary); `gh workflow run ops.yml -f backup=false` (summary only).
+
+## Backups (Stage 8.1, D53)
+
+Neon Free keeps only 6 hours of restore history and one manual snapshot, so every Monday `ops.yml` dumps the tables nothing can rebuild, encrypts the dump and uploads it to a private bucket. Those tables are listed in `ops.backup.tables`: users, conversations, messages, agent snapshots, MCO videos and extracts, outside views, signals and outcomes, briefs, job runs, LLM spend and coins (the watchlist). Prices, series, news and the analytics cache are refetched by the daily job instead.
+
+- File: `gs://crypto-desk-513023-backups/weekly/desk-YYYY-MM-DD-r<revision>.dump.gpg`. `<revision>` is the schema revision it was taken at.
+- The workflow can only **create** objects. It can't read, overwrite or delete them, so old backups survive a bad run. Objects are deleted after 180 days.
+- **The dump holds MCO-derived rows (Decision 6).** Never download it to a shared machine, attach it anywhere, or add a step that uploads it as an artifact.
+- A failed backup sends `ops_failure` and shows on the Health page (the `backup` job).
+
+### One-time setup [Rob]
+
+Run these from Claude Code with `!` (Git Bash), from the repo root:
+
+```bash
+gcloud storage buckets create gs://crypto-desk-513023-backups --project crypto-desk-513023 --location us-central1 --default-storage-class STANDARD --uniform-bucket-level-access --public-access-prevention --lifecycle-file config/gcs-backup-lifecycle.json
+gcloud storage buckets add-iam-policy-binding gs://crypto-desk-513023-backups --member=serviceAccount:desk-deployer@crypto-desk-513023.iam.gserviceaccount.com --role=roles/storage.objectCreator
+echo "BACKUP_PASSPHRASE=$(openssl rand -base64 32)" >> .env
+grep '^BACKUP_PASSPHRASE=' .env | cut -d= -f2- | tr -d ' \t\r\n' | gh secret set BACKUP_PASSPHRASE --repo robertsolomon002/crypto-desk
+gh workflow run ops.yml --repo robertsolomon002/crypto-desk
+```
+
+Then **copy `BACKUP_PASSPHRASE` from `.env` into your password manager**. Without it the backups can't be opened: GitHub secrets can't be read back.
+
+### Restore a backup
+
+Restore into a **new Neon branch** (Neon console → Branches → Create branch, empty or from an old point), check it, then switch over. Never restore straight into `main`. You need `gpg` (Git Bash has it) and the Postgres 18 client (`pg_restore`). On Windows the simplest client is Docker's `postgres:18` image.
+
+```bash
+# 1. Download (needs your own gcloud login; the workflow can't read the bucket)
+gcloud storage cp gs://crypto-desk-513023-backups/weekly/desk-2026-11-09-r0004.dump.gpg .
+# 2. Decrypt (asks for BACKUP_PASSPHRASE)
+gpg --output desk.dump --decrypt desk-2026-11-09-r0004.dump.gpg
+# 3. Create the schema at the backup's revision on the new branch (direct host, no -pooler)
+export DATABASE_URL='postgresql://...new-branch...'
+(cd backend && uv run desk db upgrade 0004)
+# 4. Load the data (pg_dump orders tables by their foreign keys; sequences come back too)
+docker run --rm -v "$PWD:/w" postgres:18 pg_restore --data-only --no-owner --no-privileges --single-transaction --exit-on-error --dbname="$DATABASE_URL" /w/desk.dump
+# 5. Bring the schema up to date, refill market data, then check the signals chain
+(cd backend && uv run desk db upgrade && uv run desk jobs daily && uv run desk signals verify)
+# 6. Delete the plain dump
+rm desk.dump
+```
+
+To switch over, point `DATABASE_URL` at the new branch: in Secret Manager `database-url` (see "Rotate a service secret"), the GitHub secret and `.env`, then run "Deploy backend". This was tested end to end on local databases on 2026-11-04 (D53).
+
+## Errors and logs (Stage 8.1, D53)
+
+- On Cloud Run the API writes one JSON line per log record (`severity`, `message`, `logger`). Tracebacks stay inside `message`, so each error is one entry and shows up in **Error Reporting**: https://console.cloud.google.com/errors?project=crypto-desk-513023.
+- Each unhandled API error also adds a row to `app_errors`, as does each agent or desk run that ends in an error. A row records where it happened and what kind of error, never the message. These rows are the counts on the Health page and in the weekly summary. Rows older than 90 days are pruned.
+- To find the traceback for a count, open the Cloud Run logs at the time of `last_at`, filter by severity ERROR, and search for the route.
+- No Sentry: see D53.
+
+## Runbooks
+
+### A job failed
+
+You get `ops_failure` in Telegram and the Discord ops channel with the job's summary and the run link, and the job shows as failed (later overdue) on the Health page.
+
+1. Open the run link (or Actions → the workflow → the failed run) and read the summary step. The `Problems:` lines say what failed.
+2. If it's a source, see the next runbook.
+3. If it was a one-off (a timeout, a 5xx), re-run it: `gh workflow run daily.yml` (or `mco.yml`, `weekly.yml`, `levelwatch.yml -f force=true`, `ops.yml`). Every job is safe to re-run. Daily re-fetches idempotently. Weekly fills gaps only and never duplicates a signal. MCO retries failed videos up to 3 times. The level watch sends nothing twice unless forced.
+4. If it fails the same way twice, reproduce it locally: `cd backend; uv run desk jobs daily` (or `desk jobs weekly --dry-run --no-refresh`), which uses `.env`.
+5. Weekly specifics: a missing Sunday candle means the daily job failed first, so fix that, then re-run weekly. "Invalid" desk runs were rejected twice by the validator. They are reported, never replaced, and the week's row for that coin stays missing.
+
+### A source is broken
+
+The daily summary says `<source> FAILED: …`, or Health → Data freshness shows it stale.
+
+1. Check whether it's down or changed: run `uv run desk data update --<source>` locally (`--market`, `--onchain`, `--sentiment`, `--macro`, `--dominance`, `--news`). `uv run desk data status` shows the last date per coin and series.
+2. If it is temporarily down (5xx, timeouts), do nothing: the next run catches up. Candles and series are filled for every missing day.
+3. If the API changed (HTTP 4xx, a new field, a moved feed), check its docs, fix the client in `backend/src/desk/data/`, record what changed in `docs/DATA_SOURCES.md`, and add a test with a recorded fixture.
+4. A key expired or was revoked (401/403): rotate it (next runbook).
+5. Lags that are normal: Coin Metrics can be a day behind at 00:20 UTC (a note, not a failure); FRED publishes monthly with release lags (stale only after 62 days); ETH has no hash rate.
+6. If Coinbase drops a coin, the coin goes stale. Deactivate it in Settings → Watchlist.
+
+### Rotate a key
+
+| Key | Where it lives | How |
+|---|---|---|
+| `DATABASE_URL` (Neon password reset) | Secret Manager `database-url`, GitHub secret, `.env` | "Rotate a service secret" above, then set the GitHub secret from `.env` |
+| `CLERK_SECRET_KEY` | Secret Manager `clerk-secret-key`, GitHub secret, `.env` | Clerk Dashboard → API keys → create a new one, then the same steps; revoke the old key after the redeploy |
+| `ANTHROPIC_API_KEY`, `LANGSMITH_API_KEY` | Secret Manager, GitHub secret (weekly job), `.env` | New key in the provider console, the same steps, then delete the old key in the console |
+| `GOOGLE_API_KEY`, `YOUTUBE_API_KEY`, `FRED_API_KEY`, `COINGECKO_DEMO_KEY` | GitHub secrets, `.env` | New key in the provider console, then pipe it from `.env`: `grep '^NAME=' .env`, `cut -d= -f2-`, `tr -d ' \t\r\n'`, `gh secret set NAME` |
+| `TELEGRAM_BOT_TOKEN` | GitHub secret, `.env` | @BotFather → `/revoke`, set the new token, then `gh workflow run daily.yml -f notify_test=true` |
+| Discord webhooks | GitHub secrets, `.env` | Channel settings → Integrations → delete and recreate, set the new URL, then test as above |
+| `BACKUP_PASSPHRASE` | GitHub secret, `.env`, password manager | Set a new one as in "One-time setup". **Keep the old one**: older backups still need it |
+| Cloudflare token | GitHub secret `CLOUDFLARE_API_TOKEN` | Cloudflare → My Profile → API Tokens → roll, set the secret, then run "Deploy frontend" |
+
+After any rotation, run the job that uses the key once by hand and check the Health page.
+
+### A free-tier limit is hit
+
+What to check first is on the Health page: Free-tier usage and the console links.
+
+- **LLM cap ($8 server key):** from 80% the app degrades by itself (Decision 9). At 100% server-key chats and desk runs are refused (402) until the 1st of next month (UTC). The weekly signals job still runs: it is never skipped. To lower spend, look at Spend → by job. Raising the cap is Rob's call (`budget.server_llm_cap_usd_per_month`). Friends' own keys are unaffected.
+- **Neon storage (1 GB):** see the largest tables on the Health page. `agent_snapshots` and `analytics_cache` grow fastest. The cache can be emptied (`TRUNCATE analytics_cache`; the daily job rebuilds it). Old snapshots go when their owners delete their conversations.
+- **Neon compute (100 CU-hours a month):** the console shows usage. The database suspends after 5 idle minutes. Frequent jobs or a stuck client keep it awake, so check that no local process holds a connection open.
+- **Cloud Run (2M requests, 180,000 vCPU-s, 360,000 GiB-s):** Cloud Run metrics. A spike means a loop in the frontend or abuse. Rate limits are 120 requests a minute per user and 30 agent messages an hour. Max instances is 2, so the cost is bounded.
+- **GCP billing:** the $1 budget alert emails you. It does not cap spending, so check Billing → Reports for the service.
+- **Gemini free tier:** the MCO job falls back to low detail and retries later; see the MCO job section.
+- **GitHub Actions:** free on a public repo. If the repo ever goes private, scheduled jobs count against 2,000 minutes a month.
+
+### Onboard a friend
+
+1. Settings → Invite friends (admin): enter their email and send. Clerk emails an invitation link (the app is invite-only).
+2. Send them `docs/FRIENDS_SETUP.md` (logging in, the tabs, and setting up an OpenRouter key with a spending limit).
+3. After their first sign-in they appear in Settings → Users and roles as a `member`. Make someone admin only on purpose: admins use your server key.
+4. They can use everything without a key except the Agent tab, which needs their own key (Settings → Your AI key and default model, with the "test key" button).
+5. If they hit a problem, Health → Errors shows agent errors by code (`provider` usually means a key or credit problem on their side). Settings → Usage shows their message count.
+6. To remove someone: revoke a pending invite in Settings, or delete the user in the Clerk Dashboard. Their conversations stay until deleted.
 
 ## Free-tier guard rails (Section 7)
 

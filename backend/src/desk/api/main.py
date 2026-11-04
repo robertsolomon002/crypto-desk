@@ -9,7 +9,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 
 from desk import __version__
 from desk.agents.schemas import DESK_EVENTS, EVENTS, DeskRunState
-from desk.api.middleware import ETag, LlmKeyRedaction
+from desk.api.middleware import ErrorCounter, ETag, LlmKeyRedaction
 from desk.api.routes import (
     admin,
     agent,
@@ -30,6 +30,7 @@ from desk.api.routes import (
     views,
 )
 from desk.config import get_settings
+from desk.ops import logs
 
 ROUTERS = [health, coins, overview, ohlcv, indicators, cycles, stats, onchain, macro, news,
            calendar, data, agent, mco, views, signals, admin]  # fmt: skip
@@ -37,9 +38,12 @@ ROUTERS = [health, coins, overview, ohlcv, indicators, cycles, stats, onchain, m
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    logs.configure()  # JSON lines on Cloud Run only (Stage 8.1)
     app = FastAPI(title="Crypto Desk API", version=__version__)
     # Added inner to outer: the key is stripped before CORS, gzip or any route sees the request,
-    # and ETags are computed on the uncompressed body.
+    # and ETags are computed on the uncompressed body. Unhandled errors are counted innermost,
+    # where the matched route is known.
+    app.add_middleware(ErrorCounter)
     app.add_middleware(ETag)
     app.add_middleware(GZipMiddleware, minimum_size=1000)
     app.add_middleware(

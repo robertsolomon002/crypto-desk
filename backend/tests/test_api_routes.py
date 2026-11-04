@@ -57,6 +57,7 @@ SAMPLES: dict[tuple[str, str], tuple[str, dict | None]] = {
     ("DELETE", "/api/admin/invites/{invite_id}"): ("/api/admin/invites/inv_1", None),
     ("GET", "/api/admin/users"): ("/api/admin/users", None),
     ("GET", "/api/admin/usage"): ("/api/admin/usage", None),
+    ("GET", "/api/admin/health"): ("/api/admin/health", None),
     ("GET", "/api/admin/watchlist/check/{symbol}"): ("/api/admin/watchlist/check/LINK", None),
     ("GET", "/api/agent/models"): ("/api/agent/models", None),
     ("POST", "/api/agent/test-key"): ("/api/agent/test-key", {"provider": "openrouter"}),

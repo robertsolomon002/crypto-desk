@@ -78,9 +78,30 @@ brief: # the weekly brief writer (Stage 7.1, D51); model in models.yaml `server.
 app:
   url: https://crypto-desk-a9f.pages.dev # links in alerts
 
+ops: # Stage 8.1 (D53): the admin Health page, the weekly ops summary and backups
+  jobs: # job -> hours since its last successful run before the Health page calls it overdue
+    daily: 26 # 00:20 UTC
+    levelwatch: 26 # 01:00 UTC
+    mco: 26 # 06:30 UTC
+    weekly: 170 # Monday 00:15 UTC
+    backup: 170 # Monday 07:00 UTC (ops.yml)
+  error_window_days: 7 # error counts on the Health page and in the summary
+  error_retention_days: 90 # older app_errors rows are pruned by the weekly summary
+  neon_storage_limit_gb: 1 # Neon Free: 1 GB per project (neon.com/docs/introduction/plans, 2026-11-04)
+  backup:
+    bucket: crypto-desk-513023-backups # private GCS bucket, us-central1 (free tier: 5 GB-months)
+    prefix: weekly/
+    # The tables nothing can rebuild (Section 5), data only. Market data, series, news, the
+    # calendar and the analytics cache are refetched or recomputed, so they stay out. The schema
+    # revision goes in the file name instead of alembic_version (docs/OPS.md, Restore a backup).
+    tables: [coins, users, conversations, messages, agent_snapshots, mco_videos,
+             mco_extracts, mco_wave_labels, external_views, signals, signal_outcomes, briefs,
+             job_runs, llm_spend]
+
 alerts: # Decision 11: which channels get each event
   brief_ready: [telegram, discord]
   level_cross: [telegram, discord]
   new_mco_summary: [telegram, discord]
   mco_review_pending: [telegram]
   ops_failure: [telegram, discord_ops] # admin channels only
+  ops_summary: [telegram] # weekly, Rob only (Stage 8.1)

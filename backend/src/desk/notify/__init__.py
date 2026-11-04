@@ -19,8 +19,15 @@ from desk.config import Settings, get_settings
 
 log = logging.getLogger(__name__)
 
-EVENTS = ("brief_ready", "level_cross", "new_mco_summary", "mco_review_pending", "ops_failure")
-ADMIN_ONLY = {"ops_failure", "mco_review_pending"}
+EVENTS = (
+    "brief_ready",
+    "level_cross",
+    "new_mco_summary",
+    "mco_review_pending",
+    "ops_failure",
+    "ops_summary",
+)
+ADMIN_ONLY = {"ops_failure", "mco_review_pending", "ops_summary"}
 CHANNELS = ("telegram", "discord", "discord_ops")
 PUBLIC = {"discord"}
 RETRIES = 3

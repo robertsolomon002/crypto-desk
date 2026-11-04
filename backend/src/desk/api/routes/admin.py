@@ -23,6 +23,8 @@ from desk.config import get_settings, load_app_settings
 from desk.data.coins import load_coins_yaml, max_watchlist
 from desk.data.market import make_exchange, utc_now
 from desk.models import Coin, JobRun, LlmSpend, Message, User
+from desk.ops.health import HealthReport
+from desk.ops.health import report as health_report
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_role("admin"))])
 
@@ -372,3 +374,14 @@ def usage(session: SessionDep) -> Usage:
         users=users,
         jobs=jobs,
     )
+
+
+# --- Health (Stage 8.1) -----------------------------------------------------------------------
+
+
+@router.get("/health", response_model=HealthReport, operation_id="getOpsHealth")
+def ops_health(session: SessionDep) -> HealthReport:
+    """The admin Health page: last run per job, data freshness per source, server-key spend
+    against the cap with the degradations applied, error counts, and database size against
+    Neon's limit with links for Cloud Run and Neon usage (D53)."""
+    return health_report(session)

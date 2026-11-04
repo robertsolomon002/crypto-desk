@@ -18,6 +18,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 LLM_KEY_HEADER = b"x-llm-key"
 REDACTED = "[redacted]"
 
+_log = logging.getLogger(__name__)
 _current_key: contextvars.ContextVar[str | None] = contextvars.ContextVar("llm_key", default=None)
 _factory_installed = False
 
@@ -122,3 +123,52 @@ class ETag:
 def _if_none_match(scope: Scope) -> set[str]:
     value = Headers(scope=scope).get("if-none-match", "")
     return {v.strip() for v in value.split(",") if v.strip()}
+
+
+class ErrorCounter:
+    """Unhandled exceptions (Stage 8.1, D53): log the traceback (one structured entry on Cloud
+    Run) and count it in `app_errors` by route template and exception type, then re-raise so
+    Starlette still answers 500. Messages are not stored (see `ops/errors.py`)."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        try:
+            await self.app(scope, receive, send)
+        except Exception as exc:
+            import anyio
+
+            where = f"{scope.get('method', '?')} {route_template(scope)}"
+            _log.exception("unhandled error on %s", where)
+            await anyio.to_thread.run_sync(count_error, where, type(exc).__name__, 500)
+            raise
+
+
+def route_template(scope: Scope) -> str:
+    """The matched route's template with its router prefixes, e.g. `/api/admin/users/{user_id}`.
+
+    FastAPI 0.162 nests included routers, so `scope["route"].path` is relative to the innermost
+    router. Templates have one segment per path segment (no `:path` converters here), so the
+    prefix is the request path's leading segments."""
+    template = getattr(scope.get("route"), "path", None)
+    if not template:
+        return "unmatched"
+    parts = str(scope.get("path", "")).split("/")
+    extra = len(parts) - len(template.split("/"))
+    return ("/".join(parts[: extra + 1]) if extra > 0 else "") + template
+
+
+def count_error(where: str, kind: str, status: int | None = None) -> None:
+    """One `app_errors` row on the API's database; never raises."""
+    from desk.api import deps
+    from desk.ops import errors
+
+    try:
+        sessions = deps._sessions()
+    except Exception:  # no database configured
+        return
+    errors.record(sessions, where, kind, status)

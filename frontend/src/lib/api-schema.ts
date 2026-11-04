@@ -4,6 +4,28 @@
  */
 
 export interface paths {
+    "/api/admin/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ops Health
+         * @description The admin Health page: last run per job, data freshness per source, server-key spend
+         *     against the cap with the degradations applied, error counts, and database size against
+         *     Neon's limit with links for Cloud Run and Neon usage (D53).
+         */
+        get: operations["getOpsHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/invites": {
         parameters: {
             query?: never;
@@ -1357,6 +1379,15 @@ export interface components {
              */
             unknown_cites?: string[];
         };
+        /** Degradation */
+        Degradation: {
+            /** Active */
+            active: boolean;
+            /** Label */
+            label: string;
+            /** Step */
+            step: string;
+        };
         /** DeskCase */
         DeskCase: {
             /**
@@ -1895,6 +1926,20 @@ export interface components {
             /** Sources */
             sources: components["schemas"]["Source"][];
         };
+        /** ErrorCount */
+        ErrorCount: {
+            /** Count */
+            count: number;
+            /** Kind */
+            kind: string;
+            /**
+             * Last At
+             * Format: date-time
+             */
+            last_at: string;
+            /** Where */
+            where: string;
+        };
         /** ErrorEvent */
         ErrorEvent: {
             /**
@@ -1904,6 +1949,19 @@ export interface components {
             code: "timeout" | "provider" | "budget" | "internal";
             /** Message */
             message: string;
+        };
+        /** ErrorHealth */
+        ErrorHealth: {
+            /** App */
+            app: components["schemas"]["ErrorCount"][];
+            /** Job Failures */
+            job_failures: number;
+            /** Mco Failures */
+            mco_failures: number;
+            /** Total */
+            total: number;
+            /** Window Days */
+            window_days: number;
         };
         /** Event */
         Event: {
@@ -1989,6 +2047,25 @@ export interface components {
             /** Url */
             url: string;
         };
+        /** HealthReport */
+        HealthReport: {
+            errors: components["schemas"]["ErrorHealth"];
+            /** Freshness */
+            freshness: components["schemas"]["SourceFreshness"][];
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Jobs */
+            jobs: components["schemas"]["JobHealth"][];
+            /** Ok */
+            ok: boolean;
+            /** Problems */
+            problems: string[];
+            spend: components["schemas"]["SpendHealth"];
+            usage: components["schemas"]["UsageHealth"];
+        };
         /** HealthResponse */
         HealthResponse: {
             /** Status */
@@ -2018,6 +2095,31 @@ export interface components {
             email: string;
             /** Redirect Url */
             redirect_url?: string | null;
+        };
+        /** JobHealth */
+        JobHealth: {
+            /** Failures */
+            failures: number;
+            /** Job */
+            job: string;
+            /** Last Ended At */
+            last_ended_at: string | null;
+            /** Last Error */
+            last_error: string | null;
+            /** Last Seconds */
+            last_seconds: number | null;
+            /** Last Started At */
+            last_started_at: string | null;
+            /** Last Status */
+            last_status: string | null;
+            /** Last Success At */
+            last_success_at: string | null;
+            /** Max Age Hours */
+            max_age_hours: number;
+            /** Overdue */
+            overdue: boolean;
+            /** Runs */
+            runs: number;
         };
         /** JobLine */
         JobLine: {
@@ -2070,6 +2172,13 @@ export interface components {
              * @enum {string}
              */
             provider: "openrouter" | "anthropic" | "openai";
+        };
+        /** Link */
+        Link: {
+            /** Label */
+            label: string;
+            /** Url */
+            url: string;
         };
         /** MacroData */
         MacroData: {
@@ -2496,6 +2605,21 @@ export interface components {
             /** Url */
             url?: string | null;
         };
+        /** SourceFreshness */
+        SourceFreshness: {
+            /** Age Days */
+            age_days: number | null;
+            /** Detail */
+            detail: string;
+            /** Last Date */
+            last_date: string | null;
+            /** Max Age Days */
+            max_age_days: number;
+            /** Source */
+            source: string;
+            /** Stale */
+            stale: boolean;
+        };
         /** SourceScore */
         SourceScore: {
             /** Coins */
@@ -2509,6 +2633,27 @@ export interface components {
             source: "desk" | "coinflip" | "trend" | "mco";
             stats: components["schemas"]["StatsOut"];
         };
+        /** SpendHealth */
+        SpendHealth: {
+            /** By Source */
+            by_source: components["schemas"]["SpendSource"][];
+            /** Cap Usd */
+            cap_usd: number;
+            /** Degradations */
+            degradations: components["schemas"]["Degradation"][];
+            /** Degrade At Usd */
+            degrade_at_usd: number;
+            /** Degraded */
+            degraded: boolean;
+            /** Exhausted */
+            exhausted: boolean;
+            /** Month */
+            month: string;
+            /** Projected Usd */
+            projected_usd: number;
+            /** Spent Usd */
+            spent_usd: number;
+        };
         /** SpendLine */
         SpendLine: {
             /** Cost */
@@ -2519,6 +2664,13 @@ export interface components {
             tokens_in: number;
             /** Tokens Out */
             tokens_out: number;
+        };
+        /** SpendSource */
+        SpendSource: {
+            /** Cost */
+            cost: number;
+            /** Source */
+            source: string;
         };
         /** StatsOut */
         StatsOut: {
@@ -2584,6 +2736,13 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** TableSize */
+        TableSize: {
+            /** Bytes */
+            bytes: number;
+            /** Table */
+            table: string;
+        };
         /**
          * Timeframe
          * @enum {string}
@@ -2637,6 +2796,19 @@ export interface components {
             spend_usd: number;
             /** Users */
             users: components["schemas"]["UserUsage"][];
+        };
+        /** UsageHealth */
+        UsageHealth: {
+            /** Database Bytes */
+            database_bytes: number;
+            /** Free Tier */
+            free_tier: string[];
+            /** Links */
+            links: components["schemas"]["Link"][];
+            /** Storage Limit Bytes */
+            storage_limit_bytes: number;
+            /** Tables */
+            tables: components["schemas"]["TableSize"][];
         };
         /** UserOut */
         UserOut: {
@@ -2807,6 +2979,35 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getOpsHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listInvites: {
         parameters: {
             query?: {

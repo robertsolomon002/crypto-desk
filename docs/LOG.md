@@ -43,3 +43,10 @@ One line per substage: date, stage, what was done.
   - Overview cards show the desk's latest signal.
   - Signals tab: brief, coin × source grid, desk debates on demand, scorecard with early-days badges and a cumulative chart, history filters, the notice and View data links; `features.signals` on.
   - Backend 549 passed; frontend 206 unit and 89 Playwright passed. D52.
+- 2026-11-04 · Stage 8.1 · Ops, monitoring and cost.
+  - Admin Health page (`/health`, from `GET /api/admin/health`): jobs with last run, last success, 7-day failures and overdue flags; freshness per source; spend against the $8 cap with pace and the Decision 9 degradations; error counts; database size against Neon's 1 GB, the largest tables, and console links for Cloud Run, Error Reporting, billing, Neon and the bucket. Linked from Settings.
+  - Errors: JSON logs on Cloud Run (`ops/logs.py`), the `ErrorCounter` middleware and agent and desk error events write `app_errors` rows (place and kind only; migration `0004`). No Sentry.
+  - `ops.yml` (Monday 07:00 UTC): `desk ops backup` (pg_dump 18 data-only of 14 tables, `pg_restore --list` check, gpg AES256, upload to `gs://crypto-desk-513023-backups` with create-only rights, `job_runs` row), then `desk ops summary` (the new admin-only `ops_summary` alert to Telegram, and a prune of `app_errors`). The backup round trip was checked on local databases.
+  - `docs/OPS.md`: Health, backups with setup and restore, errors and logs, and runbooks for a failed job, a broken source, rotating keys, hitting a free-tier limit and onboarding a friend.
+  - Load check: 3 concurrent chats took 1.76 s against 1.39 s for one, with 3.3 MiB peak allocations. It found that the hourly limit let concurrent questions through; fixed with a row lock on the user.
+  - Backend 576 passed; frontend 208 unit and 91 Playwright passed. D53. Pending [Rob]: create the bucket, set `BACKUP_PASSPHRASE`, run `ops.yml` once.

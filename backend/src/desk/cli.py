@@ -571,6 +571,99 @@ def notify_test() -> None:
         raise typer.Exit(1)
 
 
+ops_app = typer.Typer(help="Operations: health, weekly summary, backups (Stage 8.1).",
+                      no_args_is_help=True)  # fmt: skip
+app.add_typer(ops_app, name="ops")
+
+
+@ops_app.command("health")
+def ops_health() -> None:
+    """Print the Health report's problems and the weekly summary text (sends nothing)."""
+    from desk.db import get_engine, session_factory
+    from desk.ops.health import report
+    from desk.ops.summary import format_summary
+
+    with session_factory(get_engine())() as session:
+        title, body = format_summary(report(session))
+    typer.echo(title)
+    typer.echo(body)
+
+
+@ops_app.command("summary")
+def ops_summary(
+    send: Annotated[bool, typer.Option(help="Send it to the ops_summary channels.")] = True,
+) -> None:
+    """Weekly ops summary to the admin Telegram; also prunes old app_errors rows. Exit 1 if a
+    channel failed (the report itself never fails the command)."""
+    import datetime as dt
+
+    from desk.db import get_engine, session_factory
+    from desk.notify import Alert
+    from desk.notify import send as deliver
+    from desk.ops import errors, ops_settings
+    from desk.ops.health import report
+    from desk.ops.summary import format_summary
+
+    sessions = session_factory(get_engine())
+    now = dt.datetime.now(dt.UTC)
+    keep = int(ops_settings().get("error_retention_days", 90))
+    with sessions.begin() as session:
+        pruned = errors.prune(session, now - dt.timedelta(days=keep))
+    with sessions() as session:
+        title, body = format_summary(report(session, now))
+    typer.echo(title)
+    typer.echo(body)
+    typer.echo(f"(pruned {pruned} app_errors rows older than {keep} days)")
+    if not send:
+        return
+    from desk.config import load_app_settings
+
+    url = ((load_app_settings().get("app") or {}).get("url") or "").rstrip("/") + "/health"
+    status = deliver(Alert("ops_summary", title, body, url if url.startswith("http") else None))
+    for channel, state in status.items():
+        typer.echo(f"{channel}: {state}")
+    if any(state.startswith("failed") for state in status.values()):
+        raise typer.Exit(1)
+
+
+@ops_app.command("backup")
+def ops_backup(
+    workdir: Annotated[Path, typer.Option(help="Where the dump is written (then deleted).")],
+    upload: Annotated[
+        bool, typer.Option(help="Upload to the bucket with the token in GCS_ACCESS_TOKEN.")
+    ] = True,
+    summary_file: Annotated[
+        Path | None, typer.Option(help="Also write the summary here (read by the alert step).")
+    ] = None,
+) -> None:
+    """Weekly encrypted backup of the non-reproducible tables (needs pg_dump 18 and gpg, and
+    BACKUP_PASSPHRASE). Without --upload the encrypted file stays in --workdir. Exit 1 on
+    failure."""
+    import os
+
+    from desk.config import get_settings
+    from desk.db import get_engine, session_factory
+    from desk.ops.backup import passphrase_from_env, run_backup
+
+    url = get_settings().database_url
+    if url is None:
+        typer.echo("DATABASE_URL is not set", err=True)
+        raise typer.Exit(1)
+    token = os.environ.get("GCS_ACCESS_TOKEN") or None
+    if upload and not token:
+        typer.echo("GCS_ACCESS_TOKEN is not set (or pass --no-upload)", err=True)
+        raise typer.Exit(1)
+    workdir.mkdir(parents=True, exist_ok=True)
+    result = run_backup(session_factory(get_engine()), url.get_secret_value(), workdir,
+                        passphrase_from_env(), token if upload else None)  # fmt: skip
+    summary = result.summary()
+    typer.echo(summary)
+    if summary_file:
+        summary_file.write_text(summary + "\n", encoding="utf-8")
+    if result.status != "success":
+        raise typer.Exit(1)
+
+
 @admin_app.callback()
 def _admin() -> None: ...
 

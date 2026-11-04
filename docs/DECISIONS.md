@@ -635,3 +635,39 @@ The function returns the label series, the current label, and the values that pr
   - history with source and coin filters;
   - the not-advice notice, and "View data" links to `briefs`, `signals` and `signal_outcomes`.
   `features.signals` is now on. Until the first weekly run (Monday 2026-11-09, 00:15 UTC) the tab says there are no signals yet.
+
+## D53. Ops, monitoring and cost
+
+*Stage 8.1, 2026-11-04.*
+
+- **Health page:** `/health` keeps the public backend status, and for admins adds the ops view from `GET /api/admin/health` (`ops/health.py`):
+  - **Jobs:** the last run of each scheduled job with its status, duration and error, the last success, runs and failures in the last 7 days, and an **overdue** flag when no success came within `ops.jobs.<job>` hours (daily, levelwatch and mco 26 h; weekly and backup 170 h).
+  - **Freshness:** the newest date per source (prices per coin, on-chain per coin, Fear & Greed, dominance, FRED, headlines, MCO's newest summarized video, the newest desk signal week and brief).
+  - **Spend:** month to date against the $8 cap, the month-end pace, and the three Decision 9 degradations shown as on or off (they share one flag at 80% of the cap).
+  - **Errors:** counts (see the next point).
+  - **Usage:** `pg_database_size` against Neon Free's 1 GB and the largest tables. Cloud Run and Neon compute have no API we can call without new credentials (Neon Free can't export metrics), so they are console links, with the free-tier numbers alongside.
+  Settings → Usage links to the page. MCO appears there only as dates and counts.
+- **Error tracking: structured logs plus counts, no Sentry.**
+  - Sentry's free Developer plan (5k errors, 1 user, 30-day lookback, sentry.io/pricing, 2026-11-04) would be $0, but it would send exception data to a third party, and messages here can quote prompts, MCO text or a fragment of a provider's key. It would also need one more secret and a client in the API.
+  - Instead, on Cloud Run (`K_SERVICE` set) the API logs JSON lines with `severity` and `message`. Cloud Run moves `severity` to the entry, and a traceback inside `message` stays one entry that Error Reporting picks up (docs.cloud.google.com/run/docs/logging). uvicorn's access log is turned down because Cloud Run writes its own request log.
+  - The `ErrorCounter` middleware writes one `app_errors` row per unhandled exception: the route template (FastAPI 0.162 nests included routers, so the prefix is rebuilt from the request path), the exception type and 500, never a message.
+  - Agent and desk streams that end in `error` add a row with their code (`agent.chat` / `agent.desk`, `provider`, `timeout`, `budget` or `internal`).
+  - Rows older than 90 days are pruned by the weekly summary. Migration `0004`.
+- **Weekly ops summary:** `desk ops summary`, from `ops.yml` on Monday at 07:00 UTC, after the weekly and MCO jobs. It sends a new admin-only event, `ops_summary`, to Telegram only. The summary lists problems, each job, how many sources are fresh, spend and pace, error counts and database size. It carries counts and dates only, so the workflow log is safe too. `desk ops health` prints the same text locally without sending.
+- **Backups.** Neon Free keeps 6 hours of restore history, 1 manual snapshot and no scheduled backups (neon.com/docs/introduction/plans, 2026-11-04), so `desk ops backup` runs weekly in `ops.yml` before the summary:
+  - `pg_dump --format=custom --data-only` of the 14 tables nothing can rebuild (`ops.backup.tables`: coins for the watchlist, users, conversations, messages, agent snapshots, the three MCO tables, external views, signals, outcomes, briefs, job runs, LLM spend), over the direct host.
+  - Neon runs **Postgres 18.6** (`SHOW server_version`), and pg_dump must not be older, so the workflow installs `postgresql-client-18` from PGDG. `apt.postgresql.org.sh -y` skips its prompt (checked in its source).
+  - `pg_restore --list` must show one TABLE DATA entry per table.
+  - `gpg --symmetric --cipher-algo AES256`, with `BACKUP_PASSPHRASE` on stdin. The database password goes in `PGPASSWORD`, never argv (a test caught `URL.set(password=None)` meaning "unchanged" in SQLAlchemy).
+  - Upload to the private bucket `crypto-desk-513023-backups` (us-central1, 5 GB-months free) through the JSON API with `ifGenerationMatch=0`. The deployer gets only `roles/storage.objectCreator` on that bucket, which "does not give permission to view, delete, or overwrite objects", so a leaked workflow token can't read or destroy old backups. It authenticates with Workload Identity (`token_format: access_token`).
+  - Objects are deleted after 180 days (`config/gcs-backup-lifecycle.json`).
+  - Never a CI artifact (Decision 6; a public repo's artifacts are downloadable). The plain dump is deleted in all cases.
+  - `alembic_version` is left out. The schema revision goes in the file name (`desk-YYYY-MM-DD-r0004.dump.gpg`): restore into a database migrated to that revision, then upgrade.
+  - **Round trip checked locally (2026-11-04):** two scratch databases migrated to 0004 and FK-linked rows in every table. The Postgres 18 client produced 14 TABLE DATA entries. gpg encrypt and decrypt matched byte for byte. `pg_restore --data-only --single-transaction --exit-on-error` into the fresh database succeeded, with pg_dump ordering the tables by their foreign keys and sequences restored (the next user id continued). Restore steps are in `docs/OPS.md`.
+- **Load check (3 concurrent users, `tests/test_agent_load.py`):** three chats (the admin's server key and two members' keys) against one API process, as one Cloud Run instance would serve them. The model is a fake with a 0.6 s wait before each of its two turns; the desk-mcp tools are real, on the seeded test database. Measured on Rob's machine:
+  - one chat took 1.39 s and three at once took 1.76 s, so they overlap: model waits are awaited, and the tools and database writes run in worker threads;
+  - peak Python allocations during the three were 3.3 MiB, small against the instance's 512 MiB;
+  - each chat ended with `done` and its own snapshot.
+  The test keeps a bound of 1.6× one chat.
+- **A bug the load check found:** the hourly message limit counted, then inserted, with no lock, so three questions sent at once by a member with one question left all got through. `chat.check_rate` now locks the user's row (`SELECT … FOR UPDATE`) until the question is committed, which also covers the desk's per-run limit checked in the same transaction. The test now asserts `[200, 429, 429]`.
+- **Real-model latency** (time to first token, provider rate limits) is outside this check. Friends use their own providers, and Cloud Run's metrics page (linked on the Health page) shows instance count and memory under real use.

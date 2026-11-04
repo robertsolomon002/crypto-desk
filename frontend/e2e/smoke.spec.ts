@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 
+import { HEALTH } from '../src/lib/__fixtures__/health.ts'
 import { mockApi, ME } from './fixtures.ts'
 
 // Runs at 1440 px (desktop) and 390 px (phone); see playwright.config.ts.
@@ -173,4 +174,16 @@ test('the health page still works', async ({ page }) => {
   await mockApi(page)
   await page.goto('/health')
   await expect(page.getByTestId('health-status')).toHaveText('ok')
+})
+
+test('admins get the ops Health page without a sideways scroll', async ({ page }) => {
+  await mockApi(page, { '/api/me': { ...ME, role: 'admin' }, '/api/admin/health': HEALTH })
+  await page.goto('/health')
+  await expect(page.getByTestId('ops-overall')).toContainText('2 to look at')
+  await expect(page.getByTestId('job-mco')).toContainText('overdue')
+  await expect(page.getByTestId('ops-spend')).toHaveText('$6.80')
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  )
+  expect(overflow).toBe(false)
 })

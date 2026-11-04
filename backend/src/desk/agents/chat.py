@@ -62,7 +62,7 @@ from desk.agents.schemas import (
 from desk.config import get_settings, load_app_settings
 from desk.mcp_server import tools as mcp_tools
 from desk.mcp_server.server import build_server
-from desk.models import AgentSnapshot, Conversation, Message
+from desk.models import AgentSnapshot, Conversation, Message, User
 
 log = logging.getLogger(__name__)
 
@@ -130,6 +130,11 @@ def check_rate(session: Session, user_id: int, now: dt.datetime | None = None) -
     """At most `agent.messages_per_user_per_hour` questions per user per rolling hour, counted
     in the database so the limit holds across Cloud Run instances."""
     limit = int(agent_settings().get("messages_per_user_per_hour", 30))
+    # Lock the user's row until the caller commits the new question, so concurrent requests by
+    # one user are counted in turn. Without it, three questions sent at once all passed a limit
+    # with one question left (the Stage 8.1 load check, D53). The desk's own limit runs after
+    # this in the same transaction, so it is covered too.
+    session.execute(select(User.id).where(User.id == user_id).with_for_update())
     now = now or dt.datetime.now(dt.UTC)
     since = now - dt.timedelta(hours=1)
     recent = select(Message.created_at).where(
