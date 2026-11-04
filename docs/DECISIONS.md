@@ -580,3 +580,31 @@ The function returns the label series, the current label, and the values that pr
   - The toggles appear only when the MCO feature is on. They are saved with the other chart settings and are on by default.
 - **Overview:** each coin card shows MCO's latest bias with a link to the MCO tab filtered on that coin, or nothing when there is none.
 - **Settings:** an admin "Outside views" panel adds and deletes manual views. Levels are one per line, price then label.
+
+## D51. Weekly signals job, brief writer and level watch
+
+*2026-11-04, Stage 7.1.*
+
+- **Week and as_of:** the signal week is the Monday of the run's UTC week. Every input is as of the Sunday before (the desk's tools get it forced, the baselines truncate at it), and a coin without that Sunday's candle gets no signals that week (reported as stale).
+- **Signal version:** `config/settings.yaml` says `v1`; the `signals.version` column is an integer, so `v1` is stored as 1 (`chain.version_number`).
+- **Confidence means "the stance is right"**, 0.5 to 0.95 (the table's check constraint). The chance of a higher close is `confidence` for `lean_long` and `1 - confidence` for `flat`. So the trend rule's "flat with 0.4" in Section 3.5 is stored as flat at 0.6 (a 0.4 chance of a higher close).
+- **Desk:** run on the server key with the per-user hourly limits off (`prepare(rate_limited=False)`), one coin at a time, as Ask the desk conversations of the first admin. Only a valid signal becomes a `desk` row; `transcript_ref` is `snapshot:<id>` (the `desk_run` snapshot). An error, a refusal (for example the cap) or a signal invalid twice writes no desk row, and the run fails so the admins hear about it; the other sources are still written. At the cap itself there is no desk row, since the $8 cap is hard; "never skipped" (Decision 9) means degradation never drops signals, only the watchlist.
+- **MCO as a source:** the newest view published by the end of the Sunday and at most 14 days old. `lean_long` if bullish, else `flat`. Confidence comes from the extraction's label (high 0.7, medium 0.6, low 0.55), or 0.6 without one. His primary invalidation and nearest target above the close become the row's levels only when they bracket the close. `transcript_ref` is `mco:<video id>`.
+- **Chain:** SHA-256 over the row's canonical JSON (version, week, coin, source, stance, confidence, levels, rationale, transcript_ref) plus the previous row's hash. One global chain, written under a transaction-scoped advisory lock. Migration 0003 adds a trigger that refuses UPDATE and DELETE. TRUNCATE isn't blocked, because the tests reset with it. `desk signals verify` runs after each weekly job. Re-runs skip (coin, source) pairs the week already has.
+- **Resolving (`signals/resolve.py`):** one `signal_outcomes` row per signal once all seven daily candles of its week have closed (new column `reference_close`, the Sunday close before the week).
+  - "up" means the week's last close is above the reference;
+  - `direction_hit`: lean_long and up, or flat and not up;
+  - `brier`: (P(up) − up)²;
+  - `first_hit` (only when a signal has both an invalidation and a target): from daily lows and highs, and a day touching both counts as invalidation;
+  - `paper_pnl`: lean_long bought at the reference close and sold at the level hit first, else at the week's close, with 0.2% per side (flat weeks are 0). The entry zone isn't used for fills.
+  - Stage 7.2 aggregates these rows.
+- **Brief writer (`agents/brief_writer.py`, `prompts/brief_v1.md`):** one call, no tools, server key only. Sonnet 5.5, or Haiku 5.5 from 80% of the cap (Decision 9, step 3). Structured output uses `method="json_schema"`, because Sonnet 5.5 refuses forced tool choice. It gets per coin the compact desk state (reports, debate, signal, validation), every source's signal and the key levels, all as untrusted data. It returns a 5-line summary and per coin setup, bull case, bear case, what would change the view and levels to watch. That is rendered to Markdown in `briefs.content`, with the structure in the new `briefs.payload`. Spend source `brief`. Max output tokens 16,000, because adaptive thinking counts toward it.
+- **Alerts:** `brief_ready` carries the 5 summary lines and each coin's desk signal, linking to the app (`app.url`). `level_cross` sends one message per level-watch run.
+- **Level watch (`jobs/levelwatch.py`):** for yesterday's close D, a level L is crossed when close(D−1) < L ≤ close(D), or the reverse. The levels are this week's `desk` and `mco` rows (entry low and high, invalidation, target) plus the key levels as of D−1, so the crossing close doesn't move them. It is de-duplicated by a successful `levelwatch` run in `job_runs` for the same day. It runs at 01:00 UTC, after the daily job.
+- **Privacy (Decision 6):** the Actions logs are public, so the weekly and level-watch summaries hide MCO-derived rows and the brief text, and errors print only the exception type (the full message goes to `job_runs`). `--show-private` shows them locally.
+- **Dry run, 2026-11-04 (week of 2026-11-02, data to 2026-11-01, Neon, server key):** 90 s wall time and **$0.106** (target at most $0.50 a week):
+  - three desk runs took 16 to 20 s each and about $0.02 in all; every signal was valid: BTC, ETH and SOL flat at 0.55, ETH with invalidation 2,170.03 and target 2,389.59, SOL with invalidation 92.14;
+  - the trend rule leaned long on all three, and MCO had a view on BTC only (lean long 0.70; ETH and SOL had none within 14 days);
+  - the brief on Sonnet 5.5 took 15,029 input and 5,626 output tokens ($0.086). A second brief from the same snapshots took 4,784 output tokens ($0.078), used only numbers from the data, and said where MCO had no view.
+  - About $0.45 a month, in line with Section 7.
+

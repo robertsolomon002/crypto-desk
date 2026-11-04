@@ -1,0 +1,58 @@
+name: Level watch
+
+# Stage 7.1: daily, no LLM. Yesterday's close crossing this week's signal levels (desk, MCO) or a
+# key level sends one level_cross alert. 01:00 UTC, after the Daily job (00:20) has stored the
+# close. A second run for the same day sends nothing. MCO-derived crossings go to the alert
+# channels only, never to this public log (Decision 6).
+on:
+  schedule:
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Run even if today's run already happened"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: levelwatch
+  cancel-in-progress: false
+
+jobs:
+  levelwatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      PYTHONUTF8: "1"
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      DISCORD_OPS_WEBHOOK_URL: ${{ secrets.DISCORD_OPS_WEBHOOK_URL }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      FORCE: ${{ inputs.force }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3 (no floating major tag)
+        with:
+          version: "0.11.7"
+          python-version: "3.12"
+          working-directory: backend
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Level watch
+        run: |
+          args=(--summary-file "$RUNNER_TEMP/levelwatch_summary.txt")
+          if [ "$FORCE" = "true" ]; then args+=(--force); fi
+          uv run desk jobs levelwatch "${args[@]}"
+      - name: Alert admins on failure
+        if: failure()
+        run: >-
+          uv run desk notify send ops_failure --title "Level watch failed"
+          --body-file "$RUNNER_TEMP/levelwatch_summary.txt" --url "$RUN_URL"

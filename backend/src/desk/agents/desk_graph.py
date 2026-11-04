@@ -267,8 +267,10 @@ def prepare(
     provider: Provider | None,
     model: str | None,
     key: SecretStr | None,
+    rate_limited: bool = True,
 ) -> DeskPrepared:
-    """Validate a desk run and save its question. Raises `ChatError`."""
+    """Validate a desk run and save its question. Raises `ChatError`. The weekly signals job
+    passes `rate_limited=False`: the per-user hourly limits protect the API, not the job."""
     row = session.get(Coin, coin.upper())
     if row is None or not row.active:
         raise ChatError(404, f"unknown coin {coin.upper()!r}")
@@ -277,8 +279,9 @@ def prepare(
     choice, chat_model = chat.resolve_model(
         session, is_admin=is_admin, provider=provider, model=model, key=key
     )
-    chat.check_rate(session, user_id)
-    check_desk_rate(session, user_id)
+    if rate_limited:
+        chat.check_rate(session, user_id)
+        check_desk_rate(session, user_id)
     close, close_date = reference_close(session, row.symbol, as_of)
     title = f"{TITLE_PREFIX} {row.symbol}" + (f" as of {as_of.isoformat()}" if as_of else "")
     conv = Conversation(user_id=user_id, title=title)

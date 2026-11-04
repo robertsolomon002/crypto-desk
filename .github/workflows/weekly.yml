@@ -1,0 +1,71 @@
+name: Weekly
+
+# Stage 7.1: the weekly signals job, Monday 00:15 UTC (Sunday evening in Toronto). Refresh data,
+# resolve last week, run the desk per coin on the server key (capped in agents/cost.py),
+# baselines, MCO's bias, append hash-chained signals, write the brief, send brief_ready.
+# The log is public: the job prints no MCO-derived rows and no brief text (Decision 6).
+# Untrusted text (the summary) only travels through files and env vars.
+on:
+  schedule:
+    - cron: "15 0 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: run the desk and brief (costs money), write nothing, no alerts"
+        type: boolean
+        default: false
+      alert:
+        description: "Send the brief_ready alert"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly
+  cancel-in-progress: false # never kill a run mid-write; queue the next one
+
+jobs:
+  weekly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45 # up to 6 desk runs of at most 180 s, the brief, and the data refresh
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      PYTHONUTF8: "1"
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+      COINGECKO_DEMO_KEY: ${{ secrets.COINGECKO_DEMO_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      DISCORD_OPS_WEBHOOK_URL: ${{ secrets.DISCORD_OPS_WEBHOOK_URL }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      ALERT: ${{ inputs.alert }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3 (no floating major tag)
+        with:
+          version: "0.11.7"
+          python-version: "3.12"
+          working-directory: backend
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Weekly signals
+        run: |
+          args=(--summary-file "$RUNNER_TEMP/weekly_summary.txt")
+          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          if [ "$ALERT" = "false" ]; then args+=(--no-alert); fi
+          uv run desk jobs weekly "${args[@]}"
+      - name: Check the signals chain
+        if: env.DRY_RUN != 'true'
+        run: uv run desk signals verify
+      - name: Alert admins on failure
+        if: failure()
+        run: >-
+          uv run desk notify send ops_failure --title "Weekly job failed"
+          --body-file "$RUNNER_TEMP/weekly_summary.txt" --url "$RUN_URL"

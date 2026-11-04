@@ -60,6 +60,23 @@ signals: # Decision 8 and Section 3.5
   confidence_max: 0.95
   max_watchlist_coins_in_desk: 3
   paper_cost_per_side: 0.002
+  trend: # Stage 7.1 (D51): P(higher close) 0.6 when long, 0.4 when flat
+    sma_weeks: 20
+    long_confidence: 0.6
+    flat_confidence: 0.6 # stored as the confidence that flat is right (1 - 0.4)
+  mco_max_age_days: 14 # an older MCO view gives no MCO signal for the coin
+  mco_confidence: { high: 0.7, medium: 0.6, low: 0.55 } # from the extraction's confidence
+  mco_default_confidence: 0.6
+
+brief: # the weekly brief writer (Stage 7.1, D51); model in models.yaml `server.brief_writer`
+  max_output_tokens: 16000 # adaptive thinking counts here: 5,626 for 3 coins (2026-11-04)
+  timeout_seconds: 180
+  estimate_tokens: # input, output: a fixed part plus each coin; the 3-coin dry run 2026-11-04
+    base: [1800, 300] # gave 15,029 in and 5,626 out ($0.086 on Sonnet 5.5)
+    per_coin: [4400, 1800]
+
+app:
+  url: https://crypto-desk-a9f.pages.dev # links in alerts
 
 alerts: # Decision 11: which channels get each event
   brief_ready: [telegram, discord]

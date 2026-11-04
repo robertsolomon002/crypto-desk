@@ -126,6 +126,17 @@ The runtime account (`desk-api`) gets read access to the values. The deployer ge
 - **Re-run a video:** `uv run desk jobs mco --video <id> --no-alert`. A failed video is retried automatically on later runs, up to 3 attempts. `mco_videos.error` holds the last error code (for example `gemini-3.8-flash:fallback:503`).
 - **Switch off:** `features.mco: false` in `config/settings.yaml`, or `MCO_ENABLED=false`. The job exits at once and every `/api/mco` route answers 404.
 
+## Weekly signals and level watch (Stage 7.1, D51)
+
+- **Weekly:** `.github/workflows/weekly.yml`, Monday 00:15 UTC, or by hand: `gh workflow run weekly.yml -f dry_run=true` (runs the desk and brief, costs about $0.10, writes nothing, no alerts). Secrets: `DATABASE_URL`, `FRED_API_KEY`, `COINGECKO_DEMO_KEY`, `ANTHROPIC_API_KEY`, plus the alert secrets.
+- **What it does:** refreshes every source, resolves finished weeks into `signal_outcomes`, runs the desk per coin on the server key (core coins plus up to 3 watchlist coins; the watchlist is skipped from 80% of the $8 cap), adds the coin-flip, trend-rule and MCO rows, appends them hash-chained to `signals`, writes the brief (Sonnet 5.5; Haiku 5.5 from 80% of the cap) into `briefs`, and sends `brief_ready`. Then `desk signals verify` checks the chain.
+- **Re-runs fill gaps only:** a coin and source that already have a row for the week keep it, and its desk run is not repeated; the brief is written once per week.
+- **A failed run** (a source failed, a coin had no Sunday candle, a desk run errored or stayed invalid, the brief failed) exits 1 and sends `ops_failure`. Rows already written stay. Re-run it by hand.
+- **Locally:** `uv run desk jobs weekly --dry-run --no-refresh --show-private` also prints the MCO rows and the brief (never in CI).
+- **Level watch:** `.github/workflows/levelwatch.yml`, daily at 01:00 UTC, no LLM. One `level_cross` alert lists yesterday's crossings of this week's desk and MCO levels and of the key levels. A second run for the same day sends nothing (`-f force=true` to resend).
+- **Privacy:** both logs hide MCO-derived rows and the brief text (Decision 6).
+- **Never edit `signals`:** a trigger refuses UPDATE and DELETE. A change to the signal definition means a new `signals.version` in `config/settings.yaml`.
+
 ## Free-tier guard rails (Section 7)
 
 - Cloud Run: max 2 instances, 1 vCPU / 512 MiB, request-based billing (CPU only while serving), min 0 instances.

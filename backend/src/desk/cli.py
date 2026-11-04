@@ -370,6 +370,115 @@ def jobs_mco(
         raise typer.Exit(1)
 
 
+@jobs_app.command("weekly")
+def jobs_weekly(
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Run the desk and brief, write nothing, no alerts.")
+    ] = False,
+    summary_file: Annotated[
+        Path | None, typer.Option(help="Also write the summary here (read by the alert step).")
+    ] = None,
+    refresh: Annotated[bool, typer.Option(help="Refresh every data source first.")] = True,
+    alert: Annotated[bool, typer.Option(help="Send the brief_ready alert.")] = True,
+    show_private: Annotated[
+        bool, typer.Option("--show-private", help="Show MCO-derived rows (local runs only).")
+    ] = False,
+) -> None:
+    """Weekly signals job: refresh, resolve last week, desk per coin, baselines, MCO, append
+    hash-chained signals, write the brief, alert. Exit code 1 if anything failed."""
+    import asyncio
+
+    from desk.agents import brief_writer, desk_graph
+    from desk.config import load_models_config
+    from desk.db import get_engine, session_factory
+    from desk.jobs.weekly import run_weekly
+    from desk.signals.run import signal_coins, signal_settings
+
+    sessions = session_factory(get_engine())
+    models = load_models_config().get("server") or {}
+    with sessions() as session:
+        from desk.agents import cost
+
+        degraded = cost.budget(session).degraded
+        coins, _ = signal_coins(
+            session, degraded, int(signal_settings().get("max_watchlist_coins_in_desk", 3))
+        )
+    est = desk_graph.estimate("server", models.get("agent", "?"))
+    brief = brief_writer.estimate(len(coins), brief_writer.choose_model(degraded))
+    total = (est["cost_usd"] or 0) * len(coins) + (brief["cost_usd"] or 0)
+    typer.echo(
+        f"Projected: {len(coins)} desk runs (about {est['model_calls'] * len(coins)} model "
+        f"calls, ${(est['cost_usd'] or 0) * len(coins):.4f}) and one brief on "
+        f"{brief['model']} (${brief['cost_usd'] or 0:.4f}): about ${total:.4f}."
+    )
+    result = asyncio.run(
+        run_weekly(
+            sessions,
+            dry_run=dry_run,
+            refresh=refresh,
+            alerts=alert,
+            echo=lambda line, err: typer.echo(line, err=err),
+        )
+    )
+    summary = result.summary(private=show_private)
+    typer.echo("")
+    typer.echo(summary)
+    if summary_file:
+        summary_file.write_text(result.summary() + "\n", encoding="utf-8")
+    if result.status != "success":
+        raise typer.Exit(1)
+
+
+@jobs_app.command("levelwatch")
+def jobs_levelwatch(
+    summary_file: Annotated[
+        Path | None, typer.Option(help="Also write the summary here (read by the alert step).")
+    ] = None,
+    alert: Annotated[bool, typer.Option(help="Send the level_cross alert.")] = True,
+    force: Annotated[bool, typer.Option(help="Run even if today's run already happened.")] = False,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Find crossings only.")] = False,
+    show_private: Annotated[
+        bool, typer.Option("--show-private", help="Show MCO-derived crossings (local only).")
+    ] = False,
+) -> None:
+    """Daily level watch (no LLM): yesterday's close crossing a signal or key level. Exit code
+    1 on failure."""
+    from desk.db import get_engine, session_factory
+    from desk.jobs.levelwatch import run_levelwatch
+
+    result = run_levelwatch(
+        session_factory(get_engine()), alerts=alert, force=force, dry_run=dry_run
+    )
+    typer.echo(result.summary(private=show_private))
+    if summary_file:
+        summary_file.write_text(result.summary() + "\n", encoding="utf-8")
+    if result.status != "success":
+        raise typer.Exit(1)
+
+
+signals_app = typer.Typer(help="Weekly signals (Stage 7).", no_args_is_help=True)
+app.add_typer(signals_app, name="signals")
+
+
+@signals_app.command("verify")
+def signals_verify() -> None:
+    """Check the signals hash chain. Exit code 1 if any row doesn't match."""
+    from sqlalchemy import func, select
+
+    from desk.db import get_engine, session_factory
+    from desk.models import Signal
+    from desk.signals.chain import verify
+
+    with session_factory(get_engine())() as session:
+        problems = verify(session)
+        n = session.scalar(select(func.count()).select_from(Signal))
+    for p in problems:
+        typer.echo(p, err=True)
+    typer.echo(f"{n} signal rows, chain {'intact' if not problems else 'BROKEN'}")
+    if problems:
+        raise typer.Exit(1)
+
+
 mco_app = typer.Typer(help="Inspect MCO extracts locally (private; never in CI).",
                       no_args_is_help=True)  # fmt: skip
 app.add_typer(mco_app, name="mco")

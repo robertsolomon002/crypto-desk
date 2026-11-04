@@ -274,7 +274,8 @@ class ExternalView(Base):
 
 
 class Signal(Base):
-    """Append-only, hash-chained (Decision 8). Never updated; definition changes bump `version`."""
+    """Append-only, hash-chained (Decision 8). Never updated; definition changes bump `version`.
+    A database trigger refuses UPDATE and DELETE (migration 0003); `signals.chain` writes rows."""
 
     __tablename__ = "signals"
     __table_args__ = (
@@ -306,6 +307,7 @@ class SignalOutcome(Base):
 
     signal_id: Mapped[int] = mapped_column(ForeignKey("signals.id"), primary_key=True)
     resolved_at: Mapped[dt.datetime] = _created_at()
+    reference_close: Mapped[float | None] = mapped_column(Double)  # close before the week (7.1)
     week_close: Mapped[float] = mapped_column(Double)
     direction_hit: Mapped[bool | None]
     first_hit: Mapped[str | None] = mapped_column(String(16))  # target | invalidation | neither
@@ -320,7 +322,8 @@ class Brief(Base):
     week: Mapped[dt.date] = mapped_column(Date, index=True)
     model: Mapped[str] = mapped_column(String(64))
     prompt_version: Mapped[str] = mapped_column(String(32))
-    content: Mapped[str] = mapped_column(Text)
+    content: Mapped[str] = mapped_column(Text)  # Markdown (untrusted model output)
+    payload: Mapped[Any | None] = mapped_column(JSONB)  # the structured brief (Stage 7.1)
     created_at: Mapped[dt.datetime] = _created_at()
 
 
