@@ -125,6 +125,11 @@ def test_summary_is_counts_only(ops_db) -> None:
     assert title.startswith("Weekly ops:") and "to look at" in title
     assert "- daily: success 7 h ago; 2 runs, 1 failed" in body
     assert "- mco: success 30 h ago; 1 runs, 0 failed OVERDUE" in body
+    with ops_db.begin() as s:
+        s.query(JobRun).filter(JobRun.job == "backup").delete()
+    with ops_db() as s:
+        _, body = format_summary(health.report(s, NOW))
+    assert "- backup: never ran OVERDUE" in body
     assert "LLM spend 2026-11: $6.80 of $8.00" in body and "DEGRADED" in body
     assert "Errors (7 days): 5 (2 app, 2 job runs, 1 MCO videos)" in body
     assert "Private title" not in body and "gemini" not in body  # no MCO text or codes

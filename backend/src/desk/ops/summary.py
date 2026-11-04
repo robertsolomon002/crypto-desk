@@ -27,9 +27,11 @@ def format_summary(r: HealthReport) -> tuple[str, str]:
     lines.append("Jobs (last run; runs and failures in the last "
                  f"{r.errors.window_days} days):")  # fmt: skip
     for j in r.jobs:
-        state = j.last_status or "never ran"
         flag = " OVERDUE" if j.overdue else ""
-        lines.append(f"- {j.job}: {state} {_ago(j.last_started_at, now)}; "
+        if j.last_status is None:
+            lines.append(f"- {j.job}: never ran{flag}")
+            continue
+        lines.append(f"- {j.job}: {j.last_status} {_ago(j.last_started_at, now)}; "
                      f"{j.runs} runs, {j.failures} failed{flag}")  # fmt: skip
     stale = [f for f in r.freshness if f.stale]
     lines += ["", f"Data: {len(r.freshness) - len(stale)} of {len(r.freshness)} sources fresh"]
