@@ -113,6 +113,13 @@ describe('OnchainPage', () => {
     expect(links).toContain('/data?table=series&key=fred%3AM2SL')
     expect(links).toContain('/data?table=series&key=cm%3ABTC%3AHashRate')
     expect(screen.queryByTestId('onchain-coin-note')).not.toBeInTheDocument()
+    // Source terms (Stage 8.2): FRED's required notice and CoinGecko's linked credit.
+    expect(screen.getByTestId('fred-notice')).toHaveTextContent(
+      'This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.',
+    )
+    expect(links).toContain('https://fred.stlouisfed.org/docs/api/terms_of_use.html')
+    expect(screen.getByTestId('coingecko-credit')).toHaveTextContent('Data provided by CoinGecko')
+    expect(links).toContain('https://www.coingecko.com/')
   })
 
   it('notes the missing ETH hash rate instead of drawing it', async () => {

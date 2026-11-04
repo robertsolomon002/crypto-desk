@@ -64,8 +64,9 @@ export function SettingsPage() {
       >
         <p className="text-sm text-muted-foreground">
           The Agent tab answers questions with the desk&apos;s data, using your own key, so you pay
-          the provider directly (usually cents a month) and can cap it. You can set it up now;
-          it&apos;s used once the agent is switched on.
+          the provider directly (usually cents a month) and can cap it.
+          {!me?.features.agent &&
+            " You can set it up now; it's used once the agent is switched on."}
         </p>
         <KeyWizard />
       </Section>

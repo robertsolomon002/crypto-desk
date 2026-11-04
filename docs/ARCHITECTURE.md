@@ -35,12 +35,13 @@ flowchart LR
   end
   DB[("Neon Postgres")]
   subgraph GHA["GitHub Actions cron"]
-    JOBS["desk jobs<br/>daily / weekly / levelwatch / mco"]
+    JOBS["desk jobs<br/>daily / weekly / levelwatch / mco / ops"]
   end
   SRC["Free data<br/>Coinbase (ccxt), Coin Metrics,<br/>FRED, Fear and Greed, CoinGecko, RSS"]
   LLM["LLM providers<br/>Anthropic, OpenRouter, OpenAI, Gemini"]
   ALERTS["Telegram, Discord"]
   CLAUDE["Claude desktop app"]
+  GCS[("Private GCS bucket<br/>encrypted weekly backups")]
 
   UI -- "JWT + X-LLM-Key (HTTPS)" --> API
   KEY -.-> UI
@@ -57,6 +58,7 @@ flowchart LR
   JOBS --> DB
   JOBS --> LLM
   JOBS --> ALERTS
+  JOBS -- "create only" --> GCS
   CLAUDE -- "stdio, local" --> MCP
 ```
 
@@ -64,4 +66,5 @@ flowchart LR
 - **Writes happen in jobs.** GitHub Actions cron runs `desk jobs ...` against Neon. The API is mostly read-only, apart from users, conversations, agent snapshots and admin actions.
 - **User keys never persist.** They live in the browser and arrive per request in `X-LLM-Key`. They are never logged, stored or traced (Section 3.6, canary test).
 - **MCO data is private.** It lives only in the database behind logged-in routes (Decision 6).
+- **Ops (Stage 8.1).** The admin Health page reads `job_runs`, `llm_spend` and `app_errors`. The weekly `ops.yml` writes an encrypted backup of the non-reproducible tables to a bucket it can only add to, then sends the ops summary (D53).
 - **Contract.** FastAPI's OpenAPI schema → `frontend/openapi.json` → `src/lib/api-schema.ts` (generated). CI fails if they drift.

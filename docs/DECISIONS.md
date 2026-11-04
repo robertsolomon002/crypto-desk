@@ -671,3 +671,39 @@ The function returns the label series, the current label, and the values that pr
   The test keeps a bound of 1.6× one chat.
 - **A bug the load check found:** the hourly message limit counted, then inserted, with no lock, so three questions sent at once by a member with one question left all got through. `chat.check_rate` now locks the user's row (`SELECT … FOR UPDATE`) until the question is committed, which also covers the desk's per-run limit checked in the same transaction. The test now asserts `[200, 429, 429]`.
 - **Real-model latency** (time to first token, provider rate limits) is outside this check. Friends use their own providers, and Cloud Run's metrics page (linked on the Health page) shows instance count and memory under real use.
+
+## D54. Public readiness, README and resume notes
+
+*Stage 8.2, 2026-11-04.*
+
+- **`docs/PUBLIC_READINESS.md`** lists the blockers for opening beyond friends:
+  1. MCO off (Decision 6);
+  2. data licenses;
+  3. terms, a privacy policy and a disclaimer;
+  4. open sign-up with abuse limits;
+  5. data retention;
+  6. account deletion;
+  7. cost alarms that can stop spend.
+  It also has costs at 100 and 1,000 users, every source's terms, a design for encrypted server-side keys, and a paid-tier sketch.
+- **Prices for the cost table, checked 2026-11-04:**
+  - Cloud Run's request-based rates came from the Cloud Billing Catalog API, since the pricing page doesn't render for the fetch tool: "Services CPU (Request-based billing)" $0.000024/s, "Services Memory (Request-based billing)" $0.0000025/GiB-s, "Requests" $0.40 per million after 2 million;
+  - Neon Launch: $0.106/CU-hour and $0.35/GB-month, no minimum;
+  - Clerk Hobby: 50,000 MRUs, Pro $25 a month;
+  - CoinGecko Basic: $35 a month with a commercial license.
+- **The estimate rests on the measured week:** 433 requests and 1,281 billable instance-seconds (Cloud Monitoring), 4.4 kB per agent snapshot, and $0.0029 for a 2-tool answer. Assumptions: 800 requests and 30 agent questions per active user a month, with no overlap between users (an upper bound for Cloud Run). Result: about $15 a month at 100 users and $45 to $135 at 1,000, mostly Neon compute once the database stops idling.
+- **Source terms found** (recorded in `DATA_SOURCES.md`):
+  - Coin Metrics community data is CC BY-NC 4.0, so a commercial tier needs a license;
+  - CoinGecko's Demo plan requires a linked attribution and has no commercial license;
+  - FRED requires a specific notice, a link to its terms and a privacy policy, and none of our four series carries a third-party copyright note (checked through the FRED API);
+  - alternative.me allows commercial use with attribution next to the data.
+- **Fixed in the app now** (it already has users other than Rob in mind):
+  - the FRED notice with a link to its terms, under the Macro section and in the footer;
+  - "Data provided by CoinGecko", linked, under the dominance chart.
+  - The Settings key card dropped two lines left over from before the agent shipped ("used once the agent is switched on", "the model list comes with the agent in v1.1"). The first now shows only while the agent flag is off.
+- **README screenshots** (`docs/screenshots/`, 1.6 MB, 11 images at 1440 px plus a 390 px phone view):
+  - taken from the local docker database, refreshed with the daily job, with `MCO_ENABLED=false`, so no MCO content appears;
+  - the Signals week and the Agent answer are real runs on that local copy: the weekly job (about $0.13 on Rob's Anthropic key, recorded in the local `llm_spend`, not Neon's) and one $0.003 question;
+  - production wasn't touched;
+  - a throwaway script in the session scratchpad served the API with a fixed local user. It refused any non-local database, and it was never committed, because an auth bypass doesn't belong in the repo.
+  To retake them, do the same against a local database, or after the first production weekly run.
+- **`docs/RESUME_NOTES.md`:** three bullets, a 60-second summary, and the interview cheat sheet the roadmap asks for. It uses only recorded figures and says plainly that no friends had been invited yet.

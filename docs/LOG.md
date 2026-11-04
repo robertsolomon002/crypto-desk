@@ -50,3 +50,16 @@ One line per substage: date, stage, what was done.
   - `docs/OPS.md`: Health, backups with setup and restore, errors and logs, and runbooks for a failed job, a broken source, rotating keys, hitting a free-tier limit and onboarding a friend.
   - Load check: 3 concurrent chats took 1.76 s against 1.39 s for one, with 3.3 MiB peak allocations. It found that the hourly limit let concurrent questions through; fixed with a row lock on the user.
   - Backend 576 passed; frontend 208 unit and 91 Playwright passed. D53. Pending [Rob]: create the bucket, set `BACKUP_PASSPHRASE`, run `ops.yml` once.
+- 2026-11-04 · Stage 8.2 · Public readiness, README and resume notes.
+  - `docs/PUBLIC_READINESS.md`:
+    - 7 blockers: MCO off, data licenses, terms and privacy policy, open sign-up limits, retention, account deletion, cost alarms;
+    - costs of about $15 a month at 100 users and $45 to $135 at 1,000, from the measured week (433 requests, 1,281 instance-seconds) and prices checked through the Cloud Billing Catalog API, Neon, Clerk and CoinGecko;
+    - every source's terms (Coin Metrics CC BY-NC, CoinGecko Demo attribution and no commercial license, FRED notice and privacy policy, alternative.me attribution);
+    - an encrypted server-side key design and a paid-tier sketch.
+  - App:
+    - the FRED notice and link in the footer and under Macro;
+    - "Data provided by CoinGecko" under the dominance chart;
+    - two lines left over from before the agent removed from the Settings key card.
+  - README: what's in each tab, 11 screenshots (every tab but MCO, Health and phone), the architecture diagram (now with the ops job and backups bucket), local setup and `desk-mcp`. The screenshots come from the local docker database with MCO off: one real weekly run for about $0.13 and one $0.003 agent question, on Rob's key, recorded locally; production wasn't touched.
+  - `docs/RESUME_NOTES.md`: 3 bullets, a 60-second summary, the interview cheat sheet, and facts to have ready.
+  - D54. All roadmap stages are done in code.

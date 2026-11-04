@@ -192,7 +192,7 @@ export function KeyWizard() {
                   ? 'One key for Claude, GPT, Gemini and more, with a spending limit you set.'
                   : p === 'anthropic'
                     ? 'Claude models only.'
-                    : 'GPT models only (the model list comes with the agent in v1.1).'}
+                    : 'GPT models only.'}
               </span>
             </button>
           ))}

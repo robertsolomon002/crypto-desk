@@ -578,6 +578,18 @@ function SentimentSection({
           since {formatDate(domBtc[0]?.[0])} and this chart grows a point each day. The range
           buttons do not apply here.
         </Explainer>
+        {/* CoinGecko's attribution guide: a linked credit next to the data (Stage 8.2). */}
+        <p className="text-xs text-muted-foreground" data-testid="coingecko-credit">
+          Data provided by{' '}
+          <a
+            href="https://www.coingecko.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground"
+          >
+            CoinGecko
+          </a>
+        </p>
       </ChartCard>
     </div>
   )
@@ -826,6 +838,26 @@ export function OnchainPage() {
 
       <SectionTitle>Macro · FRED</SectionTitle>
       <MacroSection span={span} colors={colors} btc={btc} />
+      <FredNotice />
     </div>
+  )
+}
+
+/** The notice the FRED® API Terms of Use require in apps other people use (Stage 8.2). */
+export function FredNotice() {
+  return (
+    <p className="text-xs text-muted-foreground" data-testid="fred-notice">
+      This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank
+      of St. Louis. By using it you are bound by the{' '}
+      <a
+        href="https://fred.stlouisfed.org/docs/api/terms_of_use.html"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline hover:text-foreground"
+      >
+        FRED® API Terms of Use
+      </a>
+      .
+    </p>
   )
 }

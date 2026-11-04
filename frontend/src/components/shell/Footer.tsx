@@ -9,7 +9,17 @@ export function Footer() {
         Data: Coinbase (prices), Coin Metrics Community (BTC history before 2015, on-chain),
         alternative.me (Fear &amp; Greed), FRED (macro), CoinGecko (dominance), and the CoinDesk,
         Cointelegraph, Decrypt and The Block RSS feeds (headlines). Times are shown in your local
-        zone; data dates are UTC.
+        zone; data dates are UTC. This product uses the FRED® API but is not endorsed or certified
+        by the Federal Reserve Bank of St. Louis; see the{' '}
+        <a
+          href="https://fred.stlouisfed.org/docs/api/terms_of_use.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-foreground"
+        >
+          FRED® API Terms of Use
+        </a>
+        .
       </p>
       <p>
         {/* The Lightweight Charts NOTICE text and link (Apache 2.0, DATA_SOURCES.md). */}
