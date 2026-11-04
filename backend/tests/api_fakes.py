@@ -237,3 +237,86 @@ def provider_transport(status: int = 200) -> httpx.MockTransport:
     transport = httpx.MockTransport(handler)
     transport.seen = seen  # type: ignore[attr-defined]
     return transport
+
+
+SIGNAL_WEEK = dt.date(2026, 10, 19)  # resolved
+OPEN_WEEK = dt.date(2026, 10, 26)  # not yet resolved
+DESK_SNAPSHOT = 9001
+BRIEF_CANARY = "brief-canary-3c1f"
+
+
+def desk_state(coin: str = "BTC") -> dict[str, Any]:
+    """A saved `desk_run` result (DeskRunState) with one report, one case and the signal."""
+    return {
+        "coin": coin, "as_of": "2026-10-25", "model": "claude-haiku-5-5", "status": "valid",
+        "error": None, "reference_close": 100.0, "reference_date": "2026-10-25",
+        "reports": {"technical": {"analyst": "technical", "status": "done",
+                                  "summary": "Made-up report.",
+                                  "findings": [{"id": "T1", "claim": "Above the 20W SMA."}]}},
+        "debate": {"bull_open": {"side": "bull", "phase": "opening",
+                                 "points": [{"text": "Trend is up.", "cites": ["T1"]}]}},
+        "signal": {"coin": coin, "stance": "lean_long", "confidence": 0.6, "entry_low": 95.0,
+                   "entry_high": 98.0, "invalidation": 90.0, "target": 110.0,
+                   "rationale": "Made-up rationale.", "cites": ["T1"]},
+        "validation": {"ok": True, "errors": [], "attempts": 1},
+        "usage": [{"node": "technical", "tokens_in": 10, "tokens_out": 5, "model_calls": 1}],
+    }  # fmt: skip
+
+
+def seed_signals(session: Session) -> dict[str, int]:
+    """Two weeks of signals (Stage 7.2): the resolved week with a desk run, baselines, MCO and
+    a brief; the open week with a desk and a coin-flip row. Returns ids by name."""
+    from desk.models import AgentSnapshot, Brief, Conversation, SignalOutcome
+    from desk.signals import chain
+    from desk.signals.chain import Proposed
+
+    jobs = User(clerk_id="user_jobs", role="member")
+    session.add(jobs)
+    session.flush()
+    session.add(Conversation(id=DESK_SNAPSHOT, user_id=jobs.id, title="Ask the desk: BTC"))
+    session.flush()
+    session.add(
+        AgentSnapshot(id=DESK_SNAPSHOT, user_id=jobs.id, conversation_id=DESK_SNAPSHOT,
+                      tool="desk_run", args={"coin": "BTC"}, result=desk_state())
+    )  # fmt: skip
+    session.flush()
+    desk = Proposed(
+        coin="BTC", source="desk", stance="lean_long", confidence=0.6, entry_low=95.0,
+        entry_high=98.0, invalidation=90.0, target=110.0, rationale="Made-up rationale.",
+        transcript_ref=f"snapshot:{DESK_SNAPSHOT}",
+    )  # fmt: skip
+    rows = chain.append(session, 1, SIGNAL_WEEK, [
+        desk,
+        Proposed(coin="BTC", source="coinflip", stance="flat", confidence=0.5),
+        Proposed(coin="BTC", source="trend", stance="lean_long", confidence=0.6),
+        Proposed(coin="BTC", source="mco", stance="lean_long", confidence=0.7, invalidation=80.0,
+                 target=120.0, rationale="MCO's latest video: bullish (AI-extracted)."),
+        Proposed(coin="ETH", source="coinflip", stance="flat", confidence=0.5),
+    ])  # fmt: skip
+    ids = {f"{r.coin}:{r.source}": r.id for r in rows}
+    outcomes = {  # week closed up 100 -> 105, the target 110 never touched
+        "BTC:desk": (True, 0.16, "neither", 0.046),
+        "BTC:coinflip": (False, 0.25, None, 0.0),
+        "BTC:trend": (True, 0.16, None, 0.046),
+        "BTC:mco": (True, 0.09, "neither", 0.046),
+        "ETH:coinflip": (True, 0.25, None, 0.0),
+    }
+    for name, (hit, brier, first, pnl) in outcomes.items():
+        session.add(SignalOutcome(signal_id=ids[name], reference_close=100.0, week_close=105.0,
+                                  direction_hit=hit, brier=brier, first_hit=first,
+                                  paper_pnl=pnl))  # fmt: skip
+    session.add(Brief(week=SIGNAL_WEEK, model="claude-sonnet-5-5", prompt_version="brief_v1",
+                      content=f"# Brief\n\n{BRIEF_CANARY}",
+                      payload={"summary": [f"Line {i} {BRIEF_CANARY}" for i in range(5)],
+                               "coins": [{"coin": "BTC", "setup": "Made-up setup.",
+                                          "bull_case": "Up.", "bear_case": "Down.",
+                                          "what_would_change": "A close below 90.",
+                                          "levels_to_watch": [{"label": "desk invalidation",
+                                                               "price": 90.0}]}]}))  # fmt: skip
+    later = chain.append(session, 1, OPEN_WEEK, [
+        Proposed(coin="BTC", source="desk", stance="flat", confidence=0.55),
+        Proposed(coin="BTC", source="coinflip", stance="flat", confidence=0.5),
+    ])  # fmt: skip
+    ids["open:BTC:desk"] = later[0].id
+    session.flush()
+    return ids

@@ -75,6 +75,11 @@ SAMPLES: dict[tuple[str, str], tuple[str, dict | None]] = {
     ("POST", "/api/admin/views"): ("/api/admin/views", {"source": "Analyst", "coin": "BTC",
                                                         "bias": "bullish"}),
     ("DELETE", "/api/admin/views/{view_id}"): ("/api/admin/views/1", None),
+    ("GET", "/api/signals/weeks"): ("/api/signals/weeks", None),
+    ("GET", "/api/signals/week"): ("/api/signals/week", None),
+    ("GET", "/api/signals/history"): ("/api/signals/history", None),
+    ("GET", "/api/signals/scorecard"): ("/api/signals/scorecard", None),
+    ("GET", "/api/signals/{signal_id}/debate"): ("/api/signals/1/debate", None),
 }  # fmt: skip
 PUBLIC = {("GET", "/api/health")}
 # The key test needs a key; the providers are faked in the `api` fixture.
@@ -133,7 +138,7 @@ def test_anonymous_gets_401(api, route) -> None:
     assert api.request(route[0], url, json=body).status_code == 401
 
 
-def test_roles_on_every_route(api, clerk) -> None:
+def test_roles_on_every_route(api, clerk, signals_data) -> None:
     """Members: 403 on admin routes, success elsewhere. Admins: success everywhere."""
     for (method, path), (url, body) in SAMPLES.items():
         extra = HEADERS.get((method, path), {})
@@ -160,7 +165,7 @@ READS = [url for (m, p), (url, _) in SAMPLES.items()
 
 
 @pytest.mark.parametrize("url", READS)
-def test_envelope_has_provenance(api, url) -> None:
+def test_envelope_has_provenance(api, signals_data, url) -> None:
     body = api.get(url, headers=auth(MEMBER)).json()
     assert set(body) == {"as_of", "sources", "data"}
     assert body["sources"] and all(s["name"] for s in body["sources"])

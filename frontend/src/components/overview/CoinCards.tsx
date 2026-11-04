@@ -79,7 +79,23 @@ function CoinCardView({ card, selected }: { card: CoinCard; selected: boolean })
           </span>
         </dd>
         <dt className="text-muted-foreground">Signal</dt>
-        <dd className="text-muted-foreground">Arrives with Signals (v1.3)</dd>
+        <dd>
+          {card.signal ? (
+            <>
+              <span
+                className={cn('font-mono', card.signal.stance === 'lean_long' && 'text-positive')}
+              >
+                {card.signal.stance === 'lean_long' ? 'lean long' : 'flat'}{' '}
+                {Math.round(card.signal.confidence * 100)}%
+              </span>{' '}
+              <Link to="/signals" className="text-muted-foreground underline">
+                desk, week of {formatDate(card.signal.week)}
+              </Link>
+            </>
+          ) : (
+            <span className="text-muted-foreground">No desk signal yet</span>
+          )}
+        </dd>
         {card.mco_bias && (
           <>
             <dt className="text-muted-foreground">MCO bias</dt>

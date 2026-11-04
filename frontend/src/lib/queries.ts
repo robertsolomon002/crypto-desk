@@ -482,3 +482,60 @@ export function useViews(coin: string | null, limit = 20, enabled = true) {
     enabled,
   })
 }
+
+// --- Signals (Stage 7.2) --------------------------------------------------------------------------
+
+export type SignalOut = Schemas['SignalOut']
+export type SignalSource = SignalOut['source']
+export type SignalWeek = Schemas['WeekView']
+export type SignalWeeks = Schemas['WeeksView']
+export type BriefView = Schemas['BriefView']
+export type Scorecard = Schemas['ScorecardView']
+export type SourceScore = Schemas['SourceScore']
+export type ScoreStats = Schemas['StatsOut']
+
+/** Every signal week, newest first. */
+export function useSignalWeeks() {
+  return useQuery({
+    queryKey: ['signals', 'weeks'],
+    queryFn: () => unwrap(api.GET('/api/signals/weeks')),
+  })
+}
+
+/** One week's signals and brief (`week` null: the latest). A 404 means no signals yet. */
+export function useSignalWeek(week: string | null) {
+  return useQuery({
+    queryKey: ['signals', 'week', week],
+    queryFn: () =>
+      unwrap(api.GET('/api/signals/week', { params: { query: { week: week ?? undefined } } })),
+  })
+}
+
+export function useSignalHistory(coin: string | null, source: SignalSource | null) {
+  return useQuery({
+    queryKey: ['signals', 'history', coin, source],
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/signals/history', {
+          params: { query: { coin: coin ?? undefined, source: source ?? undefined } },
+        }),
+      ),
+  })
+}
+
+export function useScorecard() {
+  return useQuery({
+    queryKey: ['signals', 'scorecard'],
+    queryFn: () => unwrap(api.GET('/api/signals/scorecard')),
+  })
+}
+
+/** The desk run behind one desk signal, fetched when its debate is opened. */
+export function useSignalDebate(id: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ['signals', 'debate', id],
+    queryFn: () =>
+      unwrap(api.GET('/api/signals/{signal_id}/debate', { params: { path: { signal_id: id } } })),
+    enabled,
+  })
+}

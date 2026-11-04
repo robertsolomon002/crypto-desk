@@ -855,6 +855,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/signals/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * History
+         * @description Signals with their outcomes, newest week first.
+         */
+        get: operations["listSignals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/signals/scorecard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Scorecard
+         * @description Hit rate, Brier score, target-before-invalidation and paper P&L per source and coin, with
+         *     cumulative values per week (`signals/score.py`).
+         */
+        get: operations["getScorecard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/signals/week": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Week
+         * @description One week's signals (every source and coin) with outcomes and the brief. Default: the
+         *     latest week. 404 when there are no signals yet.
+         */
+        get: operations["getSignalWeek"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/signals/weeks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Weeks
+         * @description Every signal week of `version` (default: the current one), newest first.
+         */
+        get: operations["listSignalWeeks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/signals/{signal_id}/debate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Debate
+         * @description The desk run behind one desk signal: reports, debate, the head's signal, validation.
+         */
+        get: operations["getSignalDebate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/stats/{coin}/correlation": {
         parameters: {
             query?: never;
@@ -1014,6 +1116,53 @@ export interface components {
             /** Result */
             result: unknown;
         };
+        /** BriefCoin */
+        BriefCoin: {
+            /** Bear Case */
+            bear_case: string;
+            /** Bull Case */
+            bull_case: string;
+            /** Coin */
+            coin: string;
+            /** Levels To Watch */
+            levels_to_watch: components["schemas"]["BriefLevel"][];
+            /** Setup */
+            setup: string;
+            /** What Would Change */
+            what_would_change: string;
+        };
+        /** BriefLevel */
+        BriefLevel: {
+            /** Label */
+            label: string;
+            /** Price */
+            price: number;
+        };
+        /** BriefView */
+        BriefView: {
+            /** Coins */
+            coins: components["schemas"]["BriefCoin"][];
+            /** Content */
+            content: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            /** Model */
+            model: string;
+            /** Prompt Version */
+            prompt_version: string;
+            /** Summary */
+            summary: string[];
+            /**
+             * Week
+             * Format: date
+             */
+            week: string;
+        };
         /** Candle */
         Candle: {
             /** Close */
@@ -1095,8 +1244,7 @@ export interface components {
             name: string;
             /** Regime */
             regime: string;
-            /** Signal */
-            signal?: null;
+            signal?: components["schemas"]["CoinSignal"] | null;
             /** Symbol */
             symbol: string;
         };
@@ -1114,6 +1262,32 @@ export interface components {
             name: string;
             /** Symbol */
             symbol: string;
+        };
+        /** CoinScore */
+        CoinScore: {
+            /** Coin */
+            coin: string;
+            stats: components["schemas"]["StatsOut"];
+        };
+        /**
+         * CoinSignal
+         * @description The desk's latest weekly signal (Stage 7.2).
+         */
+        CoinSignal: {
+            /** Confidence */
+            confidence: number;
+            /** Id */
+            id: number;
+            /**
+             * Stance
+             * @enum {string}
+             */
+            stance: "lean_long" | "flat";
+            /**
+             * Week
+             * Format: date
+             */
+            week: string;
         };
         /** ColumnInfo */
         ColumnInfo: {
@@ -1502,6 +1676,17 @@ export interface components {
             /** Sources */
             sources: components["schemas"]["Source"][];
         };
+        /** Envelope[DeskRunState] */
+        Envelope_DeskRunState_: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            data: components["schemas"]["DeskRunState"];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
         /** Envelope[DominanceData] */
         Envelope_DominanceData_: {
             /**
@@ -1546,6 +1731,17 @@ export interface components {
             /** Sources */
             sources: components["schemas"]["Source"][];
         };
+        /** Envelope[ScorecardView] */
+        Envelope_ScorecardView_: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            data: components["schemas"]["ScorecardView"];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
         /** Envelope[TablePage] */
         Envelope_TablePage_: {
             /**
@@ -1554,6 +1750,28 @@ export interface components {
              */
             as_of: string | null;
             data: components["schemas"]["TablePage"];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
+        /** Envelope[WeekView] */
+        Envelope_WeekView_: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            data: components["schemas"]["WeekView"];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
+        /** Envelope[WeeksView] */
+        Envelope_WeeksView_: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            data: components["schemas"]["WeeksView"];
             /** Sources */
             sources: components["schemas"]["Source"][];
         };
@@ -1638,6 +1856,18 @@ export interface components {
             as_of: string | null;
             /** Data */
             data: components["schemas"]["SeriesPoint"][];
+            /** Sources */
+            sources: components["schemas"]["Source"][];
+        };
+        /** Envelope[list[SignalOut]] */
+        Envelope_list_SignalOut__: {
+            /**
+             * As Of
+             * @description Last UTC date the data covers
+             */
+            as_of: string | null;
+            /** Data */
+            data: components["schemas"]["SignalOut"][];
             /** Sources */
             sources: components["schemas"]["Source"][];
         };
@@ -2076,6 +2306,26 @@ export interface components {
              */
             tool_calls: number;
         };
+        /** OutcomeOut */
+        OutcomeOut: {
+            /** Brier */
+            brier: number | null;
+            /** Direction Hit */
+            direction_hit: boolean | null;
+            /** First Hit */
+            first_hit: ("target" | "invalidation" | "neither") | null;
+            /** Paper Pnl */
+            paper_pnl: number | null;
+            /** Reference Close */
+            reference_close: number | null;
+            /**
+             * Resolved At
+             * Format: date-time
+             */
+            resolved_at: string;
+            /** Week Close */
+            week_close: number;
+        };
         /** OverviewData */
         OverviewData: {
             /** Coins */
@@ -2083,6 +2333,22 @@ export interface components {
             daily_job: components["schemas"]["JobStatus"] | null;
             /** Freshness */
             freshness: components["schemas"]["Freshness"][];
+        };
+        /** PointOut */
+        PointOut: {
+            /** Brier */
+            brier: number;
+            /** Hit Rate */
+            hit_rate: number;
+            /** Paper Return */
+            paper_return: number;
+            /** Signals */
+            signals: number;
+            /**
+             * Week
+             * Format: date
+             */
+            week: string;
         };
         /** ProviderModels */
         ProviderModels: {
@@ -2108,6 +2374,19 @@ export interface components {
              */
             role: "admin" | "member";
         };
+        /** ScorecardView */
+        ScorecardView: {
+            /** Early Weeks */
+            early_weeks: number;
+            /** Paper Cost Per Side */
+            paper_cost_per_side: number;
+            /** Sources */
+            sources: components["schemas"]["SourceScore"][];
+            /** Version */
+            version: number;
+            /** Weeks */
+            weeks: string[];
+        };
         /** SeriesPoint */
         SeriesPoint: {
             /**
@@ -2125,6 +2404,52 @@ export interface components {
         SignalEvent: {
             signal: components["schemas"]["DeskSignal"] | null;
             validation: components["schemas"]["Validation"];
+        };
+        /** SignalOut */
+        SignalOut: {
+            /** Coin */
+            coin: string;
+            /** Confidence */
+            confidence: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Entry High */
+            entry_high: number | null;
+            /** Entry Low */
+            entry_low: number | null;
+            /** Has Debate */
+            has_debate: boolean;
+            /** Hash */
+            hash: string;
+            /** Id */
+            id: number;
+            /** Invalidation */
+            invalidation: number | null;
+            outcome: components["schemas"]["OutcomeOut"] | null;
+            /** Rationale */
+            rationale: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "desk" | "coinflip" | "trend" | "mco";
+            /**
+             * Stance
+             * @enum {string}
+             */
+            stance: "lean_long" | "flat";
+            /** Target */
+            target: number | null;
+            /** Version */
+            version: number;
+            /**
+             * Week
+             * Format: date
+             */
+            week: string;
         };
         /** Snapshot */
         Snapshot: {
@@ -2171,6 +2496,19 @@ export interface components {
             /** Url */
             url?: string | null;
         };
+        /** SourceScore */
+        SourceScore: {
+            /** Coins */
+            coins: components["schemas"]["CoinScore"][];
+            /** Cumulative */
+            cumulative: components["schemas"]["PointOut"][];
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "desk" | "coinflip" | "trend" | "mco";
+            stats: components["schemas"]["StatsOut"];
+        };
         /** SpendLine */
         SpendLine: {
             /** Cost */
@@ -2181,6 +2519,35 @@ export interface components {
             tokens_in: number;
             /** Tokens Out */
             tokens_out: number;
+        };
+        /** StatsOut */
+        StatsOut: {
+            /** Brier */
+            brier: number | null;
+            /** Early Days */
+            early_days: boolean;
+            /** Hit Rate */
+            hit_rate: number | null;
+            /** Hits */
+            hits: number;
+            /** Invalidation First */
+            invalidation_first: number;
+            /** Long Weeks */
+            long_weeks: number;
+            /** Neither */
+            neither: number;
+            /** Paper Return */
+            paper_return: number;
+            /** Signals */
+            signals: number;
+            /** Target First */
+            target_first: number;
+            /** Target First Rate */
+            target_first_rate: number | null;
+            /** Weeks */
+            weeks: number;
+            /** With Levels */
+            with_levels: number;
         };
         /** TableInfo */
         TableInfo: {
@@ -2387,6 +2754,49 @@ export interface components {
             source_market: string;
             /** Symbol */
             symbol: string;
+        };
+        /** WeekSummary */
+        WeekSummary: {
+            /** Has Brief */
+            has_brief: boolean;
+            /** Resolved */
+            resolved: number;
+            /** Signals */
+            signals: number;
+            /**
+             * Week
+             * Format: date
+             */
+            week: string;
+        };
+        /** WeekView */
+        WeekView: {
+            brief: components["schemas"]["BriefView"] | null;
+            /**
+             * Resolves On
+             * Format: date
+             */
+            resolves_on: string;
+            /** Signals */
+            signals: components["schemas"]["SignalOut"][];
+            /** Version */
+            version: number;
+            /**
+             * Week
+             * Format: date
+             */
+            week: string;
+            /** Withheld */
+            withheld: string | null;
+        };
+        /** WeeksView */
+        WeeksView: {
+            /** Version */
+            version: number;
+            /** Versions */
+            versions: number[];
+            /** Weeks */
+            weeks: components["schemas"]["WeekSummary"][];
         };
     };
     responses: never;
@@ -3878,6 +4288,165 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_AnalyticsData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listSignals: {
+        parameters: {
+            query?: {
+                coin?: string | null;
+                source?: ("desk" | "coinflip" | "trend" | "mco") | null;
+                version?: number | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_SignalOut__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getScorecard: {
+        parameters: {
+            query?: {
+                version?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ScorecardView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getSignalWeek: {
+        parameters: {
+            query?: {
+                week?: string | null;
+                version?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_WeekView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listSignalWeeks: {
+        parameters: {
+            query?: {
+                version?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_WeeksView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getSignalDebate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                signal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_DeskRunState_"];
                 };
             };
             /** @description Validation Error */

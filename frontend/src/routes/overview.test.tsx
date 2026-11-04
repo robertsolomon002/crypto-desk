@@ -34,7 +34,9 @@ const OVERVIEW = envelope({
         url: 'https://www.youtube.com/watch?v=fakeVideo01',
       },
     }),
-    card('ETH', 3210.5),
+    card('ETH', 3210.5, {
+      signal: { id: 7, week: '2026-10-26', stance: 'lean_long', confidence: 0.6 },
+    }),
   ],
   freshness: [
     {
@@ -87,7 +89,13 @@ describe('OverviewPage', () => {
     expect(btc).toHaveTextContent('30d—')
     expect(btc).toHaveTextContent('−28.6% ($126,198.07, Oct 6, 2025)')
     expect(btc).toHaveTextContent('Downtrend')
-    expect(btc).toHaveTextContent('Arrives with Signals (v1.3)')
+    expect(btc).toHaveTextContent('No desk signal yet')
+    const eth = screen.getByTestId('coin-card-ETH')
+    expect(eth).toHaveTextContent('lean long 60%')
+    expect(within(eth).getByRole('link', { name: /desk, week of Oct 26, 2026/ })).toHaveAttribute(
+      'href',
+      '/signals',
+    )
     expect(screen.getByTestId('coin-card-ETH')).toHaveAttribute('aria-current', 'true')
     expect(within(btc).getByRole('link', { name: 'View data' })).toHaveAttribute(
       'href',

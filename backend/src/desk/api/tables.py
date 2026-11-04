@@ -5,12 +5,17 @@ Visibility:
 - `own`: members see only their own rows (`owner` column); admins see all.
 - `admin`: admins only. MCO-derived tables are here (Decision 6: no MCO in member exports),
   and are hidden for everyone when MCO is switched off.
+
+Tables with some MCO-derived rows (`mco_rows`: the `mco` signals, their outcomes, and the briefs
+of weeks written with MCO's views) show those rows to members on screen, but leave them out of
+members' CSV exports, and out of everything for everyone when MCO is switched off (D52).
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
-from sqlalchemy import Column, Table
+from sqlalchemy import Column, Table, select
 
 from desk.config import get_settings
 from desk.models import Base
@@ -27,6 +32,7 @@ class TableSpec:
     owner: str | None = None  # for `own`
     hidden: tuple[str, ...] = ()  # never returned
     mco: bool = False
+    mco_rows: Callable[[], Any] | None = None  # a clause keeping only non-MCO rows
 
     @property
     def table(self) -> Table:
@@ -41,6 +47,25 @@ class TableSpec:
         return is_admin or self.visibility != "admin"
 
 
+def _mco_signal_ids() -> Any:
+    signals = Base.metadata.tables["signals"]
+    return select(signals.c.id).where(signals.c.source == "mco")
+
+
+def _not_mco_signal() -> Any:
+    return Base.metadata.tables["signals"].c.source != "mco"
+
+
+def _not_mco_outcome() -> Any:
+    return Base.metadata.tables["signal_outcomes"].c.signal_id.not_in(_mco_signal_ids())
+
+
+def _not_mco_brief() -> Any:
+    signals = Base.metadata.tables["signals"]
+    weeks = select(signals.c.week).where(signals.c.source == "mco")
+    return Base.metadata.tables["briefs"].c.week.not_in(weeks)
+
+
 TABLES: dict[str, TableSpec] = {
     t.name: t
     for t in [
@@ -53,9 +78,10 @@ TABLES: dict[str, TableSpec] = {
         TableSpec("news", "RSS headlines (untrusted text)", "member", "published_at"),
         TableSpec("calendar_events", "Macro calendar (FOMC, CPI)", "member", "date"),
         TableSpec("signals", "Weekly signals (append-only, hash-chained)", "member",
-                  "created_at"),
-        TableSpec("signal_outcomes", "Resolved signal outcomes", "member", "resolved_at"),
-        TableSpec("briefs", "Weekly briefs", "member", "created_at"),
+                  "created_at", mco_rows=_not_mco_signal),
+        TableSpec("signal_outcomes", "Resolved signal outcomes", "member", "resolved_at",
+                  mco_rows=_not_mco_outcome),
+        TableSpec("briefs", "Weekly briefs", "member", "created_at", mco_rows=_not_mco_brief),
         TableSpec("conversations", "Your agent conversations", "own", "created_at", "user_id"),
         TableSpec("messages", "Your agent messages", "own", "created_at", "user_id"),
         TableSpec("agent_snapshots", "Exact data behind each agent tool call", "own",

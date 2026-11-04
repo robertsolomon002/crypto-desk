@@ -36,3 +36,10 @@ One line per substage: date, stage, what was done.
   - Jobs and alerts: `jobs/weekly.py` (job_runs with cost, `brief_ready`), `jobs/levelwatch.py` (no LLM, one `level_cross` per run, de-duplicated per day), `weekly.yml` (Mon 00:15 UTC, then `desk signals verify`), `levelwatch.yml` (01:00 UTC). Public logs hide MCO-derived rows and brief text.
   - Dry run on Neon (week of 2026-11-02): 90 s, $0.106 (3 valid desk runs about $0.02, brief $0.086); BTC, ETH and SOL flat at 0.55 from the desk, the trend rule long on all three, MCO long on BTC only.
   - Backend 525 passed. D51.
+- 2026-11-04 · Stage 7.2 · Scoring and Signals UI.
+  - `signals/score.py`: hit rate, Brier, target before invalidation, paper P&L (compounded per coin, equal weight per week per source), early days under 12 weeks, cumulative by week; hand-computed tests.
+  - `/api/signals` weeks, week (with the brief payload), history, scorecard and the desk debate per desk signal. With MCO off, MCO rows and scores are dropped and briefs and debates of weeks with MCO input are kept back.
+  - Data tab: MCO signals, their outcomes and MCO-input briefs are out of members' CSV exports (Decision 6) and out of everything when MCO is off.
+  - Overview cards show the desk's latest signal.
+  - Signals tab: brief, coin × source grid, desk debates on demand, scorecard with early-days badges and a cumulative chart, history filters, the notice and View data links; `features.signals` on.
+  - Backend 549 passed; frontend 206 unit and 89 Playwright passed. D52.

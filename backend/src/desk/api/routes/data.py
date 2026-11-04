@@ -59,6 +59,12 @@ def _spec(name: str, user: CurrentUser) -> TableSpec:
     return spec
 
 
+def mco_enabled() -> bool:
+    from desk.jobs.mco_daily import enabled
+
+    return enabled()
+
+
 def _filterable(col: Column) -> bool:
     return not isinstance(col.type, JSONB)
 
@@ -87,11 +93,13 @@ def _cast(col: Column, raw: str) -> Any:
         raise HTTPException(400, f"bad value for {col.name}") from None
 
 
-def _where(spec: TableSpec, user: CurrentUser, filters: list[str]) -> list:
+def _where(spec: TableSpec, user: CurrentUser, filters: list[str], export: bool = False) -> list:
     cols = {c.name: c for c in spec.columns()}
     clauses = []
     if spec.visibility == "own" and not user.is_admin:
         clauses.append(spec.table.c[spec.owner] == user.id)
+    if spec.mco_rows and (not mco_enabled() or (export and not user.is_admin)):
+        clauses.append(spec.mco_rows())  # Decision 6, D52
     for f in filters:
         name, op, raw = (f.split(":", 2) + ["", ""])[:3]
         col = cols.get(name)
@@ -116,10 +124,15 @@ def _where(spec: TableSpec, user: CurrentUser, filters: list[str]) -> list:
 
 
 def _query(
-    spec: TableSpec, user: CurrentUser, filters: list[str], order: str | None, desc: bool
+    spec: TableSpec,
+    user: CurrentUser,
+    filters: list[str],
+    order: str | None,
+    desc: bool,
+    export: bool = False,
 ) -> Select:
     cols = spec.columns()
-    stmt = select(*cols).where(*_where(spec, user, filters))
+    stmt = select(*cols).where(*_where(spec, user, filters, export))
     if order is not None:
         col = {c.name: c for c in cols}.get(order)
         if col is None or not _filterable(col):
@@ -232,7 +245,7 @@ def export_table(
 ) -> StreamingResponse:
     """The filtered table as CSV (at most 200,000 rows)."""
     spec = _spec(name, user)
-    stmt = _query(spec, user, filters or [], order, desc)
+    stmt = _query(spec, user, filters or [], order, desc, export=True)
     stamp = dt.datetime.now(dt.UTC).strftime("%Y%m%d")
     return StreamingResponse(
         _csv_rows(stmt, [c.name for c in spec.columns()]),

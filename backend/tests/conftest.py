@@ -141,3 +141,12 @@ def real_llm(api, monkeypatch: pytest.MonkeyPatch) -> None:
     from desk.agents import llm
 
     monkeypatch.setattr(llm, "make_chat_model", REAL_MAKE_CHAT_MODEL)
+
+
+@pytest.fixture
+def signals_data(api_sessions: sessionmaker[Session]) -> dict[str, int]:
+    """Two weeks of signals with outcomes, a brief and a desk run (`api_fakes.seed_signals`)."""
+    from tests import api_fakes
+
+    with api_sessions.begin() as s:
+        return api_fakes.seed_signals(s)

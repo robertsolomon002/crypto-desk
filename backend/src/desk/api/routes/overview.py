@@ -20,7 +20,7 @@ from desk.api.deps import AsOfDep, SessionDep, require_role
 from desk.api.schemas import Envelope, Source
 from desk.data import market, sentiment
 from desk.data.coins import active_coins
-from desk.models import CandleDaily, JobRun, News, SeriesPoint
+from desk.models import CandleDaily, JobRun, News, SeriesPoint, Signal
 
 router = APIRouter(tags=["overview"], dependencies=[Depends(require_role("member"))])
 
@@ -30,6 +30,15 @@ class McoBias(BaseModel):
     published_at: dt.datetime
     confidence: Literal["high", "medium", "low"] | None
     url: str | None
+
+
+class CoinSignal(BaseModel):
+    """The desk's latest weekly signal (Stage 7.2)."""
+
+    id: int
+    week: dt.date
+    stance: Literal["lean_long", "flat"]
+    confidence: float
 
 
 class CoinCard(BaseModel):
@@ -45,7 +54,7 @@ class CoinCard(BaseModel):
     ath_date: dt.date | None
     ath_distance: float | None
     regime: str
-    signal: None = None  # v1.3 (Signals)
+    signal: CoinSignal | None = None  # the desk's latest signal (Stage 7.2); null when none
     mco_bias: McoBias | None = None  # latest MCO view (Stage 6.2); null when off or none
 
 
@@ -126,6 +135,22 @@ def _mco_bias(session: Session, coin: str, as_of: dt.date | None) -> McoBias | N
     return McoBias(bias=v.bias, published_at=v.published_at, confidence=v.confidence, url=v.url)
 
 
+def _desk_signal(session: Session, coin: str, as_of: dt.date | None) -> CoinSignal | None:
+    """The latest desk signal of the current version made from data up to `as_of` (a week W
+    signal uses data to W - 1)."""
+    from desk.api.routes.signals import current_version
+
+    q = select(Signal).where(
+        Signal.coin == coin, Signal.source == "desk", Signal.version == current_version()
+    )
+    if as_of is not None:
+        q = q.where(Signal.week <= as_of + dt.timedelta(days=1))
+    row = session.scalars(q.order_by(Signal.week.desc()).limit(1)).first()
+    if row is None:
+        return None
+    return CoinSignal(id=row.id, week=row.week, stance=row.stance, confidence=row.confidence)
+
+
 @router.get("/overview", response_model=Envelope[OverviewData], operation_id="getOverview")
 def get_overview(session: SessionDep, as_of: AsOfDep) -> Envelope[OverviewData]:
     """Coin cards (core first, then the watchlist), source freshness and the daily job status."""
@@ -148,6 +173,7 @@ def get_overview(session: SessionDep, as_of: AsOfDep) -> Envelope[OverviewData]:
                 ath_date=s.ath_date,
                 ath_distance=s.ath_distance,
                 regime=s.regime,
+                signal=_desk_signal(session, coin.symbol, as_of),
                 mco_bias=_mco_bias(session, coin.symbol, as_of),
             )
         )

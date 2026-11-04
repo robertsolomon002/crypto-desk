@@ -19,7 +19,7 @@ test('the shell and Overview render from a mocked API', async ({ page }) => {
   await expect(page.getByTestId('headlines')).toContainText('Ether upgrade lands')
   await expect(page.getByTestId('freshness')).toContainText('(stale)')
   await expect(page.getByText('Not financial advice')).toBeVisible()
-  await expect(page.getByText('Arrives with Signals (v1.3)').first()).toBeVisible()
+  await expect(page.getByText('No desk signal yet').first()).toBeVisible()
 })
 
 test('headlines stay text and unsafe links are not links', async ({ page }) => {

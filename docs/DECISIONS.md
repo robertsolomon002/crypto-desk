@@ -608,3 +608,30 @@ The function returns the label series, the current label, and the values that pr
   - the brief on Sonnet 5.5 took 15,029 input and 5,626 output tokens ($0.086). A second brief from the same snapshots took 4,784 output tokens ($0.078), used only numbers from the data, and said where MCO had no view.
   - About $0.45 a month, in line with Section 7.
 
+
+## D52. Scorecard, Signals API and Signals tab
+
+*Stage 7.2, 2026-11-04.*
+
+- **Scoring (`signals/score.py`)** aggregates the `signal_outcomes` rows that `signals/resolve.py` writes (D51); nothing is recomputed from candles. Per source and per (source, coin):
+  - direction hit rate;
+  - mean Brier score on P(up) (the coin flip always scores 0.25);
+  - target-before-invalidation rate over the signals that have both levels, where a day touching both counts as invalidation;
+  - paper P&L on `lean_long` weeks, with 0.2% per side already in `paper_pnl` and flat weeks at 0. Per (source, coin) the weeks are compounded; per source each week is the equal-weight mean over that source's coins, then compounded;
+  - an "early days" flag under 12 distinct weeks.
+  Cumulative values per week drive the charts. Hand-computed cases are in `tests/test_score.py`.
+- **API (`/api/signals`, members):** `weeks`, `week` (default the latest, with the brief's structured payload), `history` (coin and source filters), `scorecard` and `{id}/debate`. The debate route serves the saved `desk_run` state directly, because that snapshot belongs to the admin user and the Data tab's `own` rule would hide it from members. All take a `version` that defaults to `signals.version`.
+- **MCO (Decision 6):**
+  - While MCO is on, members see MCO's signal rows on screen.
+  - When MCO is off, the API leaves out `mco` rows and their scores. A week that had an MCO row also keeps back its brief and desk debates, since both were written with MCO's views as input.
+  - Data tab (this fixes a gap from Stage 2.1's allowlist that 7.1 made real): `signals`, `signal_outcomes` and `briefs` now carry an `mco_rows` filter. It drops MCO signals, their outcomes, and the briefs of weeks with MCO rows from members' CSV exports, and from everything for everyone when MCO is off.
+- **Overview:** each coin card's `signal` is the desk's latest signal of the current version (week W counts from W − 1 for `as_of`).
+- **UI:** the Signals tab shows:
+  - the brief (from the payload, or the sanitized Markdown when there is none);
+  - a coin × source grid with levels and outcomes;
+  - desk debates fetched when opened, reusing the Agent tab's `DeskRunView` without the snapshot link;
+  - the scorecard with early-days badges;
+  - a cumulative chart (paper P&L, hit rate or Brier);
+  - history with source and coin filters;
+  - the not-advice notice, and "View data" links to `briefs`, `signals` and `signal_outcomes`.
+  `features.signals` is now on. Until the first weekly run (Monday 2026-11-09, 00:15 UTC) the tab says there are no signals yet.

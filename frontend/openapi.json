@@ -34,6 +34,121 @@
         "title": "AnalyticsData",
         "type": "object"
       },
+      "BriefCoin": {
+        "properties": {
+          "bear_case": {
+            "title": "Bear Case",
+            "type": "string"
+          },
+          "bull_case": {
+            "title": "Bull Case",
+            "type": "string"
+          },
+          "coin": {
+            "title": "Coin",
+            "type": "string"
+          },
+          "levels_to_watch": {
+            "items": {
+              "$ref": "#/components/schemas/BriefLevel"
+            },
+            "title": "Levels To Watch",
+            "type": "array"
+          },
+          "setup": {
+            "title": "Setup",
+            "type": "string"
+          },
+          "what_would_change": {
+            "title": "What Would Change",
+            "type": "string"
+          }
+        },
+        "required": [
+          "coin",
+          "setup",
+          "bull_case",
+          "bear_case",
+          "what_would_change",
+          "levels_to_watch"
+        ],
+        "title": "BriefCoin",
+        "type": "object"
+      },
+      "BriefLevel": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "price": {
+            "title": "Price",
+            "type": "number"
+          }
+        },
+        "required": [
+          "label",
+          "price"
+        ],
+        "title": "BriefLevel",
+        "type": "object"
+      },
+      "BriefView": {
+        "properties": {
+          "coins": {
+            "items": {
+              "$ref": "#/components/schemas/BriefCoin"
+            },
+            "title": "Coins",
+            "type": "array"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "summary": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Summary",
+            "type": "array"
+          },
+          "week": {
+            "format": "date",
+            "title": "Week",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "week",
+          "model",
+          "prompt_version",
+          "created_at",
+          "content",
+          "summary",
+          "coins"
+        ],
+        "title": "BriefView",
+        "type": "object"
+      },
       "Candle": {
         "properties": {
           "close": {
@@ -324,8 +439,14 @@
             "type": "string"
           },
           "signal": {
-            "title": "Signal",
-            "type": "null"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoinSignal"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "symbol": {
             "title": "Symbol",
@@ -408,6 +529,57 @@
           "last_close"
         ],
         "title": "CoinOut",
+        "type": "object"
+      },
+      "CoinScore": {
+        "properties": {
+          "coin": {
+            "title": "Coin",
+            "type": "string"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/StatsOut"
+          }
+        },
+        "required": [
+          "coin",
+          "stats"
+        ],
+        "title": "CoinScore",
+        "type": "object"
+      },
+      "CoinSignal": {
+        "description": "The desk's latest weekly signal (Stage 7.2).",
+        "properties": {
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "stance": {
+            "enum": [
+              "lean_long",
+              "flat"
+            ],
+            "title": "Stance",
+            "type": "string"
+          },
+          "week": {
+            "format": "date",
+            "title": "Week",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "week",
+          "stance",
+          "confidence"
+        ],
+        "title": "CoinSignal",
         "type": "object"
       },
       "ColumnInfo": {
@@ -1448,6 +1620,40 @@
         "title": "Envelope[DeskEstimate]",
         "type": "object"
       },
+      "Envelope_DeskRunState_": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DeskRunState"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[DeskRunState]",
+        "type": "object"
+      },
       "Envelope_DominanceData_": {
         "properties": {
           "as_of": {
@@ -1584,6 +1790,40 @@
         "title": "Envelope[OverviewData]",
         "type": "object"
       },
+      "Envelope_ScorecardView_": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ScorecardView"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[ScorecardView]",
+        "type": "object"
+      },
       "Envelope_TablePage_": {
         "properties": {
           "as_of": {
@@ -1616,6 +1856,74 @@
           "data"
         ],
         "title": "Envelope[TablePage]",
+        "type": "object"
+      },
+      "Envelope_WeekView_": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "$ref": "#/components/schemas/WeekView"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[WeekView]",
+        "type": "object"
+      },
+      "Envelope_WeeksView_": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "$ref": "#/components/schemas/WeeksView"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[WeeksView]",
         "type": "object"
       },
       "Envelope_list_Candle__": {
@@ -1882,6 +2190,44 @@
           "data"
         ],
         "title": "Envelope[list[SeriesPoint]]",
+        "type": "object"
+      },
+      "Envelope_list_SignalOut__": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last UTC date the data covers",
+            "title": "As Of"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/SignalOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "data"
+        ],
+        "title": "Envelope[list[SignalOut]]",
         "type": "object"
       },
       "Envelope_list_TableInfo__": {
@@ -3087,6 +3433,90 @@
         "title": "NodeUsage",
         "type": "object"
       },
+      "OutcomeOut": {
+        "properties": {
+          "brier": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brier"
+          },
+          "direction_hit": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction Hit"
+          },
+          "first_hit": {
+            "anyOf": [
+              {
+                "enum": [
+                  "target",
+                  "invalidation",
+                  "neither"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Hit"
+          },
+          "paper_pnl": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paper Pnl"
+          },
+          "reference_close": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Close"
+          },
+          "resolved_at": {
+            "format": "date-time",
+            "title": "Resolved At",
+            "type": "string"
+          },
+          "week_close": {
+            "title": "Week Close",
+            "type": "number"
+          }
+        },
+        "required": [
+          "reference_close",
+          "week_close",
+          "direction_hit",
+          "first_hit",
+          "paper_pnl",
+          "brier",
+          "resolved_at"
+        ],
+        "title": "OutcomeOut",
+        "type": "object"
+      },
       "OverviewData": {
         "properties": {
           "coins": {
@@ -3120,6 +3550,40 @@
           "daily_job"
         ],
         "title": "OverviewData",
+        "type": "object"
+      },
+      "PointOut": {
+        "properties": {
+          "brier": {
+            "title": "Brier",
+            "type": "number"
+          },
+          "hit_rate": {
+            "title": "Hit Rate",
+            "type": "number"
+          },
+          "paper_return": {
+            "title": "Paper Return",
+            "type": "number"
+          },
+          "signals": {
+            "title": "Signals",
+            "type": "integer"
+          },
+          "week": {
+            "format": "date",
+            "title": "Week",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week",
+          "signals",
+          "hit_rate",
+          "brier",
+          "paper_return"
+        ],
+        "title": "PointOut",
         "type": "object"
       },
       "ProviderModels": {
@@ -3187,6 +3651,46 @@
         "title": "RoleUpdate",
         "type": "object"
       },
+      "ScorecardView": {
+        "properties": {
+          "early_weeks": {
+            "title": "Early Weeks",
+            "type": "integer"
+          },
+          "paper_cost_per_side": {
+            "title": "Paper Cost Per Side",
+            "type": "number"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceScore"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "weeks": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Weeks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "version",
+          "early_weeks",
+          "paper_cost_per_side",
+          "weeks",
+          "sources"
+        ],
+        "title": "ScorecardView",
+        "type": "object"
+      },
       "SeriesPoint": {
         "properties": {
           "date": {
@@ -3235,6 +3739,147 @@
           "validation"
         ],
         "title": "SignalEvent",
+        "type": "object"
+      },
+      "SignalOut": {
+        "properties": {
+          "coin": {
+            "title": "Coin",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "entry_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry High"
+          },
+          "entry_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Low"
+          },
+          "has_debate": {
+            "title": "Has Debate",
+            "type": "boolean"
+          },
+          "hash": {
+            "title": "Hash",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "invalidation": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invalidation"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OutcomeOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "source": {
+            "enum": [
+              "desk",
+              "coinflip",
+              "trend",
+              "mco"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "stance": {
+            "enum": [
+              "lean_long",
+              "flat"
+            ],
+            "title": "Stance",
+            "type": "string"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "week": {
+            "format": "date",
+            "title": "Week",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "week",
+          "coin",
+          "source",
+          "stance",
+          "confidence",
+          "entry_low",
+          "entry_high",
+          "invalidation",
+          "target",
+          "rationale",
+          "has_debate",
+          "hash",
+          "created_at",
+          "outcome"
+        ],
+        "title": "SignalOut",
         "type": "object"
       },
       "Snapshot": {
@@ -3367,6 +4012,45 @@
         "title": "Source",
         "type": "object"
       },
+      "SourceScore": {
+        "properties": {
+          "coins": {
+            "items": {
+              "$ref": "#/components/schemas/CoinScore"
+            },
+            "title": "Coins",
+            "type": "array"
+          },
+          "cumulative": {
+            "items": {
+              "$ref": "#/components/schemas/PointOut"
+            },
+            "title": "Cumulative",
+            "type": "array"
+          },
+          "source": {
+            "enum": [
+              "desk",
+              "coinflip",
+              "trend",
+              "mco"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/StatsOut"
+          }
+        },
+        "required": [
+          "source",
+          "stats",
+          "coins",
+          "cumulative"
+        ],
+        "title": "SourceScore",
+        "type": "object"
+      },
       "SpendLine": {
         "properties": {
           "cost": {
@@ -3393,6 +4077,100 @@
           "tokens_out"
         ],
         "title": "SpendLine",
+        "type": "object"
+      },
+      "StatsOut": {
+        "properties": {
+          "brier": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brier"
+          },
+          "early_days": {
+            "title": "Early Days",
+            "type": "boolean"
+          },
+          "hit_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hit Rate"
+          },
+          "hits": {
+            "title": "Hits",
+            "type": "integer"
+          },
+          "invalidation_first": {
+            "title": "Invalidation First",
+            "type": "integer"
+          },
+          "long_weeks": {
+            "title": "Long Weeks",
+            "type": "integer"
+          },
+          "neither": {
+            "title": "Neither",
+            "type": "integer"
+          },
+          "paper_return": {
+            "title": "Paper Return",
+            "type": "number"
+          },
+          "signals": {
+            "title": "Signals",
+            "type": "integer"
+          },
+          "target_first": {
+            "title": "Target First",
+            "type": "integer"
+          },
+          "target_first_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target First Rate"
+          },
+          "weeks": {
+            "title": "Weeks",
+            "type": "integer"
+          },
+          "with_levels": {
+            "title": "With Levels",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "signals",
+          "weeks",
+          "hits",
+          "hit_rate",
+          "brier",
+          "with_levels",
+          "target_first",
+          "invalidation_first",
+          "neither",
+          "target_first_rate",
+          "long_weeks",
+          "paper_return",
+          "early_days"
+        ],
+        "title": "StatsOut",
         "type": "object"
       },
       "TableInfo": {
@@ -3953,6 +4731,120 @@
           "added_at"
         ],
         "title": "WatchlistCoin",
+        "type": "object"
+      },
+      "WeekSummary": {
+        "properties": {
+          "has_brief": {
+            "title": "Has Brief",
+            "type": "boolean"
+          },
+          "resolved": {
+            "title": "Resolved",
+            "type": "integer"
+          },
+          "signals": {
+            "title": "Signals",
+            "type": "integer"
+          },
+          "week": {
+            "format": "date",
+            "title": "Week",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week",
+          "signals",
+          "resolved",
+          "has_brief"
+        ],
+        "title": "WeekSummary",
+        "type": "object"
+      },
+      "WeekView": {
+        "properties": {
+          "brief": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BriefView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resolves_on": {
+            "format": "date",
+            "title": "Resolves On",
+            "type": "string"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/SignalOut"
+            },
+            "title": "Signals",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "week": {
+            "format": "date",
+            "title": "Week",
+            "type": "string"
+          },
+          "withheld": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Withheld"
+          }
+        },
+        "required": [
+          "week",
+          "version",
+          "resolves_on",
+          "brief",
+          "withheld",
+          "signals"
+        ],
+        "title": "WeekView",
+        "type": "object"
+      },
+      "WeeksView": {
+        "properties": {
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "versions": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Versions",
+            "type": "array"
+          },
+          "weeks": {
+            "items": {
+              "$ref": "#/components/schemas/WeekSummary"
+            },
+            "title": "Weeks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "version",
+          "versions",
+          "weeks"
+        ],
+        "title": "WeeksView",
         "type": "object"
       }
     }
@@ -6753,6 +7645,320 @@
         "summary": "Get Regime",
         "tags": [
           "indicators"
+        ]
+      }
+    },
+    "/api/signals/history": {
+      "get": {
+        "description": "Signals with their outcomes, newest week first.",
+        "operationId": "listSignals",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "coin",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Coin"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "desk",
+                    "coinflip",
+                    "trend",
+                    "mco"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_SignalOut__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "History",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/api/signals/scorecard": {
+      "get": {
+        "description": "Hit rate, Brier score, target-before-invalidation and paper P&L per source and coin, with\ncumulative values per week (`signals/score.py`).",
+        "operationId": "getScorecard",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ScorecardView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Scorecard",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/api/signals/week": {
+      "get": {
+        "description": "One week's signals (every source and coin) with outcomes and the brief. Default: the\nlatest week. 404 when there are no signals yet.",
+        "operationId": "getSignalWeek",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "week",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Week"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_WeekView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Week",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/api/signals/weeks": {
+      "get": {
+        "description": "Every signal week of `version` (default: the current one), newest first.",
+        "operationId": "listSignalWeeks",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_WeeksView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Weeks",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/api/signals/{signal_id}/debate": {
+      "get": {
+        "description": "The desk run behind one desk signal: reports, debate, the head's signal, validation.",
+        "operationId": "getSignalDebate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signal_id",
+            "required": true,
+            "schema": {
+              "title": "Signal Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_DeskRunState_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Debate",
+        "tags": [
+          "signals"
         ]
       }
     },

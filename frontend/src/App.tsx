@@ -19,6 +19,7 @@ const StatsPage = lazy(() => import('@/routes/stats').then((m) => ({ default: m.
 const OnchainPage = lazy(() => import('@/routes/onchain').then((m) => ({ default: m.OnchainPage })))
 const AgentPage = lazy(() => import('@/routes/agent').then((m) => ({ default: m.AgentPage })))
 const McoPage = lazy(() => import('@/routes/mco').then((m) => ({ default: m.McoPage })))
+const SignalsPage = lazy(() => import('@/routes/signals').then((m) => ({ default: m.SignalsPage })))
 const DataPage = lazy(() => import('@/routes/data').then((m) => ({ default: m.DataPage })))
 const SettingsPage = lazy(() =>
   import('@/routes/settings').then((m) => ({ default: m.SettingsPage })),
@@ -62,6 +63,11 @@ const BUILT: Record<string, ReactElement> = {
   '/agent': (
     <TabPage label="The Agent tab">
       <AgentPage />
+    </TabPage>
+  ),
+  '/signals': (
+    <TabPage label="The Signals tab">
+      <SignalsPage />
     </TabPage>
   ),
   '/data': (

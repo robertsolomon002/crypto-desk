@@ -279,13 +279,15 @@ function Stage({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-export function DeskRunView({ view }: { view: DeskView }) {
+export function DeskRunView({ view, title }: { view: DeskView; title?: string }) {
   const ids = findingIds(view)
   const d = view.done
   return (
     <section className="space-y-3" aria-label={`Desk run on ${view.coin}`} data-testid="desk-run">
       <p className="text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">Ask the desk · {view.coin}</span>
+        <span className="font-medium text-foreground">
+          {title ?? `Ask the desk · ${view.coin}`}
+        </span>
         {view.model && <> · {view.model}</>}
         {view.referenceClose != null && (
           <>
